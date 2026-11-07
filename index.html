@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Busters</title>
+<meta name="description" content="Events, sign-ups and crew tools for the Los Angeles Ghostbusters.">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon-64.png" type="image/png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Busters">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Yellowtail&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000;--panel:#0d0f14;--panel2:#151922;--line:#232a36;--ink:#f3f5f8;--muted:#9aa4b2;--dim:#6b7584;
+  --cyan:#35b2e8;--cyan-soft:rgba(53,178,232,.14);--coral:#ff8c78;--pink:#ff5e86;--purple:#9b6fb0;--teal:#3ba7c0;--cream:#f7e3a0;
+  --hazard:#ffd400;--good:#4ade80;--warn:#fbbf24;--bad:#f87171;
+  --sunset:linear-gradient(90deg,var(--coral),var(--pink) 35%,var(--purple) 70%,var(--teal));
+  --r:14px;--pad:16px;--tabh:64px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "DM Sans",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom))}
+img{max-width:100%;display:block}
+[hidden]{display:none!important}
+a{color:var(--cyan)}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:"Bebas Neue",Impact,sans-serif;font-weight:400;letter-spacing:.04em;margin:0}
+h2{font-size:26px}h3{font-size:20px}
+.muted{color:var(--muted)}.dim{color:var(--dim)}.small{font-size:13px}.tiny{font-size:12px}
+.wrap{max-width:760px;margin:0 auto;padding:0 var(--pad)}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.92);backdrop-filter:blur(10px);padding-top:env(safe-area-inset-top)}
+.top .bar{display:flex;align-items:center;gap:12px;height:56px;max-width:760px;margin:0 auto;padding:0 var(--pad)}
+.top .logo{height:26px;flex:0 0 auto}
+.top .sp{flex:1}
+.hz{height:5px;background:repeating-linear-gradient(-45deg,var(--hazard) 0 10px,#111 10px 20px)}
+.iconbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;padding:0}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--sunset);color:#000;font-weight:700;display:grid;place-items:center;font-size:14px;border:0;cursor:pointer}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(8,9,12,.97);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabs .in{display:flex;max-width:760px;margin:0 auto}
+.tab{flex:1;height:var(--tabh);border:0;background:none;color:var(--dim);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;cursor:pointer;position:relative}
+.tab svg{width:22px;height:22px}
+.tab.on{color:var(--cyan)}
+.tab .badge{position:absolute;top:8px;left:calc(50% + 6px);background:var(--pink);color:#fff;border-radius:9px;font-size:10px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;font-weight:700}
+@media(min-width:900px){
+  body{padding-bottom:0}
+  .tabs{position:sticky;top:61px;bottom:auto;border-top:0;border-bottom:1px solid var(--line)}
+  .tab{flex-direction:row;height:46px;font-size:14px;gap:8px}
+  .tab svg{width:18px;height:18px}
+  .tab .badge{position:static}
+}
+
+/* cards and rows */
+.sec{margin:20px 0}
+.sec>h2{margin:0 0 10px;display:flex;align-items:center;gap:10px}
+.sec>h2 .act{margin-left:auto;font-family:"DM Sans";font-size:14px;letter-spacing:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.card+.card{margin-top:10px}
+.row{display:flex;gap:12px;align-items:center;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;text-decoration:none;color:inherit}
+.row+.row{margin-top:8px}
+.row:hover{border-color:#33404f}
+.row .grow{flex:1;min-width:0}
+.row .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.datebox{width:52px;flex:0 0 52px;text-align:center;border-radius:10px;background:var(--panel2);padding:6px 0;line-height:1}
+.datebox .m{font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:.08em}
+.datebox .d{font-family:"Bebas Neue";font-size:28px}
+.datebox .w{font-size:11px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;border:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+.pill.good{color:var(--good);border-color:rgba(74,222,128,.35)}
+.pill.warn{color:var(--warn);border-color:rgba(251,191,36,.35)}
+.pill.bad{color:var(--bad);border-color:rgba(248,113,113,.35)}
+.pill.cyan{color:var(--cyan);border-color:rgba(53,178,232,.4)}
+.pill.cream{color:var(--cream);border-color:rgba(247,227,160,.35)}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+
+/* buttons and forms */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);padding:10px 16px;font-weight:700;cursor:pointer;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--cyan);border-color:var(--cyan);color:#001018}
+.btn.ghost{background:none}
+.btn.danger{color:var(--bad);border-color:rgba(248,113,113,.4);background:none}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:10px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+label.f{display:block;margin:12px 0 0}
+label.f>span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+.in,select.in,textarea.in{width:100%;background:#07080b;border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}
+.in:focus{border-color:var(--cyan)}
+textarea.in{min-height:84px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:none;padding:9px 6px;border-radius:9px;cursor:pointer;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--ink);color:#000}
+.seg.rsvp button.on.going{background:var(--good);color:#001a08}
+.seg.rsvp button.on.maybe{background:var(--warn);color:#1a1200}
+.seg.rsvp button.on.no{background:#3a4352;color:var(--ink)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 13px;white-space:nowrap;cursor:pointer;font-size:13px}
+.chip.on{background:var(--cyan-soft);border-color:var(--cyan);color:var(--cyan)}
+.check{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--cyan)}
+
+/* home */
+.gb{position:relative;overflow:hidden}
+.gb .meter{height:14px;border-radius:999px;background:#1b2029;overflow:hidden;margin:10px 0 6px;position:relative}
+.gb .meter i{position:absolute;inset:0 auto 0 0;background:var(--sunset);border-radius:999px}
+.next{border:1px solid rgba(53,178,232,.35);background:linear-gradient(180deg,rgba(53,178,232,.10),rgba(53,178,232,0) 60%),var(--panel)}
+.pke{display:flex;gap:10px;margin:12px 0}
+.pke div{flex:1;background:#07080b;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+.pke b{display:block;font-family:"Bebas Neue";font-size:30px;color:var(--cyan);line-height:1}
+.pke span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.script{font-family:Yellowtail,cursive;color:var(--cream);font-size:22px}
+
+/* brief */
+.brief h1{font-size:34px;line-height:1.05}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.tile .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.tile .v{font-family:"Bebas Neue";font-size:24px}
+.place{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.place+.place{margin-top:8px}
+.place .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--cyan)}
+.staff{height:10px;border-radius:999px;background:#1b2029;position:relative;overflow:hidden;margin:8px 0}
+.staff i{position:absolute;inset:0 auto 0 0;border-radius:999px}
+.staff .goalmark{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.6}
+.pre{white-space:pre-wrap}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:14px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.people{display:flex;flex-wrap:wrap;gap:6px}
+.missing{border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.06)}
+.back{display:inline-flex;align-items:center;gap:6px;margin:14px 0 4px;color:var(--muted);cursor:pointer;background:none;border:0;padding:0}
+
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .h{font-size:11px;color:var(--dim);text-align:center;padding:4px 0}
+.cal .d{aspect-ratio:1;border-radius:10px;background:var(--panel);border:1px solid var(--line);padding:5px;font-size:12px;cursor:pointer;position:relative}
+.cal .d.o{opacity:.35}
+.cal .d.today{border-color:var(--cyan)}
+.cal .d.sel{background:var(--cyan-soft);border-color:var(--cyan)}
+.cal .dots{position:absolute;left:5px;right:5px;bottom:5px;display:flex;gap:3px;flex-wrap:wrap}
+.cal .dots i{width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+.cal .dots i.mine{background:var(--good)}
+
+/* sheets */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;padding:18px var(--pad) calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:700px){.scrim{align-items:center}.sheet{border-radius:20px}}
+.sheet .grab{width:42px;height:5px;border-radius:3px;background:#2a3240;margin:-6px auto 12px}
+.menuitem{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink);text-decoration:none}
+.menuitem:last-child{border-bottom:0}
+.menuitem .grow{flex:1}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom));background:var(--ink);color:#000;padding:10px 16px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw}
+
+/* sign in */
+.gate{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px var(--pad) 48px;max-width:440px;margin:0 auto}
+.gate .mark{width:min(320px,80%);margin:0 auto 20px}
+
+/* personnel */
+.ptable{width:100%;border-collapse:collapse;font-size:13px}
+.ptable th{text-align:left;color:var(--muted);font-weight:500;padding:8px 6px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
+.ptable td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.ptable tr{cursor:pointer}
+.ptable tr:hover td{background:var(--panel)}
+.scrollx{overflow-x:auto}
+.log{font-size:13px}
+.log div{padding:9px 0;border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="layer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(() => {
+'use strict';
+const SB_URL = 'https://fwptdvoifkfljblyziva.supabase.co';
+const SB_KEY = 'sb_publishable_Cq_YmHplQQL1xqIE6HhCwg_JYSMIFKp';
+const CREW_SLUG = new URLSearchParams(location.search).get('crew') || 'lagb';
+const DONATE_URL = 'https://donate.starlight.org/fundraiser/3526698';
+const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' } });
+
+/* ---------- small helpers ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const linkify = s => esc(s).replace(/(https?:\/\/[^\s<]+)/g, u => `<a href="${u}" target="_blank" rel="noopener">${u.length > 48 ? u.slice(0, 45) + '...' : u}</a>`);
+const todayISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const parseDay = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+const fmtDay = (s, opt = { weekday: 'short', month: 'short', day: 'numeric' }) => s ? parseDay(s).toLocaleDateString('en-US', opt) : '';
+const fmtTime = t => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return ((h % 12) || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? ' AM' : ' PM'); };
+const daysUntil = s => Math.round((parseDay(s) - parseDay(todayISO())) / 86400000);
+const initials = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+const first = n => String(n || '').split(/\s+/)[0];
+const tel = p => 'tel:' + String(p || '').replace(/[^\d+]/g, '');
+let toastT;
+function toast(msg) { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+async function rpc(fn, args) { const { data, error } = await sb.rpc(fn, args); if (error) { toast(nice(error.message)); throw error; } return data; }
+const nice = m => /not allowed/.test(m) ? "You don't have the ability to do that." : /point of contact/.test(m) ? 'That person cannot be point of contact yet.' : m;
+
+const ICON = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
+  events: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  me: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+  crew: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 14.2c2.6.2 4.4 1.9 5 4.8"/></svg>',
+  team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L6.8 5M3.5 12l1.2 1.2 2.1-2.2M3.5 18l1.2 1.2 2.1-2.2"/></svg>',
+  list: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  nav: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
+  back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>'
+};
+
+const ABILITIES = [
+  ['add_events', 'Add events', 'Create events'],
+  ['edit_events', 'Edit events', 'Change any event'],
+  ['manage_proposals', 'Manage proposals', 'Claim proposed events and turn them into events or close them'],
+  ['pick_attendees', 'Pick attendees', 'Choose who is In and on Reserve for limited events'],
+  ['poc', 'Be point of contact', "Be assigned as an event's POC"],
+  ['take_attendance', 'Take attendance', 'Settle who attended after an event'],
+  ['approve_members', 'Approve members', 'Let new people in'],
+  ['manage_recruits', 'Personnel', 'Personnel roster, contact details, dues and rookies'],
+  ['webmaster', 'Webmaster', 'Pick event photos for the website'],
+  ['manage_abilities', 'Manage abilities', 'Change what others can do'],
+  ['inbox_alerts', 'Inbox alerts', 'Get alerts for group email'],
+  ['view_log', 'View action log', 'See who did what'],
+  ['crew_admin', 'Crew admin', 'Everything above, plus announcements']
+];
+const PRESETS = ['Member', 'Events team', 'Personnel', 'Admin'];
+const CATEGORIES = ['Hospital', 'Charity', 'Community', 'Parade', 'Convention', 'Run/Walk', 'Private', 'Social', 'Build day'];
+
+/* ---------- state ---------- */
+const S = { session: null, crew: null, me: null, priv: null, dues: {}, profile: {}, appAdmin: false,
+  events: [], places: [], people: [], rsvps: [], eplaces: [], announcements: [],
+  tab: 'home', view: null, evFilter: 'upcoming', evMode: 'list', evSearch: '', calMonth: null, calSel: null };
+const can = a => S.appAdmin || (S.me && (S.me.abilities.includes(a) || S.me.abilities.includes('crew_admin')));
+const teamAbilities = ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'take_attendance', 'approve_members', 'manage_recruits', 'webmaster', 'view_log', 'crew_admin'];
+const onTeam = () => teamAbilities.some(can);
+const personById = id => S.people.find(p => p.id === id);
+const myRsvp = eid => S.rsvps.find(r => r.event_id === eid && S.me && r.person_id === S.me.id);
+const nameOf = p => p ? (p.callsign ? `${p.full_name} (${p.callsign})` : p.full_name) : 'Someone';
+
+/* ---------- boot and sign-in ---------- */
+async function boot() {
+  const { data } = await sb.auth.getSession();
+  S.session = data.session;
+  sb.auth.onAuthStateChange((ev, session) => {
+    const had = !!S.session; S.session = session;
+    if (ev === 'SIGNED_IN' && !had) enter();
+    if (ev === 'SIGNED_OUT') renderGate();
+  });
+  if (!S.session) return renderGate();
+  enter();
+}
+
+function renderGate(step = 'email', email = '') {
+  $('#layer').innerHTML = '';
+  $('#app').innerHTML = `<div class="gate">
+    <img class="mark" src="img/wordmark-stacked.png" alt="The Los Angeles Ghostbusters">
+    <div class="card">
+      ${step === 'email' ? `
+        <h2>Sign in to Busters</h2>
+        <p class="muted small">Use the email the crew has for you. We'll send a sign-in link and a 6-digit code.</p>
+        <form id="f"><label class="f"><span>Email</span><input class="in" type="email" name="email" required autocomplete="email" value="${esc(email)}"></label>
+        <button class="btn primary block" style="margin-top:14px">Send my link</button></form>` : `
+        <h2>Check your email</h2>
+        <p class="muted small">We sent a link to <b>${esc(email)}</b>. Tap it on this device, or type the code from the email here.</p>
+        <form id="f"><label class="f"><span>6-digit code</span><input class="in" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\\d{6}" required></label>
+        <button class="btn primary block" style="margin-top:14px">Sign in</button></form>
+        <button class="btn ghost block" id="again" style="margin-top:8px">Use a different email</button>`}
+    </div>
+    <p class="dim tiny" style="text-align:center;margin-top:18px">Busters is for members of official Ghostbusters franchise crews. New here? Sign in and a crew admin will approve you.</p>
+  </div>`;
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button'); btn.disabled = true;
+    if (step === 'email') {
+      const em = e.target.email.value.trim().toLowerCase();
+      const { error } = await sb.auth.signInWithOtp({ email: em, options: { emailRedirectTo: location.origin + location.pathname + location.search } });
+      if (error) { toast(error.message); btn.disabled = false; return; }
+      renderGate('code', em);
+    } else {
+      const { error } = await sb.auth.verifyOtp({ email, token: e.target.code.value.trim(), type: 'email' });
+      if (error) { toast('That code did not work. Try again or use the link.'); btn.disabled = false; }
+    }
+  };
+  const again = $('#again'); if (again) again.onclick = () => renderGate('email', email);
+}
+
+async function enter(name) {
+  $('#app').innerHTML = '<div class="gate"><p class="muted" style="text-align:center">Loading...</p></div>';
+  let res;
+  try { res = await rpc('enter_crew', { p_slug: CREW_SLUG, p_name: name || null }); } catch (e) { return renderGate(); }
+  if (res.status === 'need_name') return renderNeedName();
+  if (res.status === 'pending') return renderWaiting(res.crew);
+  if (res.status === 'declined' || res.status === 'removed' || res.status === 'retired') return renderBlocked(res.status);
+  S.crew = { id: res.crew_id, short: res.crew };
+  await loadAll();
+  if (!S.me) return renderBlocked('removed');
+  renderShell();
+  const hash = location.hash.slice(1); if (hash.startsWith('event/')) openEvent(hash.slice(6));
+}
+
+function renderNeedName() {
+  $('#app').innerHTML = `<div class="gate"><img class="mark" src="img/wordmark-stacked.png" alt="">
+    <div class="card"><h2>Ask to join</h2>
+    <p class="muted small">We don't have this email on the crew list yet. Tell us your name and a crew admin will approve you.</p>
+    <form id="f"><label class="f"><span>Your full name</span><input class="in" name="n" required autocomplete="name"></label>
+    <button class="btn primary block" style="margin-top:14px">Ask to join</button></form>
+    <button class="btn ghost block" id="out" style="margin-top:8px">Sign out</button></div></div>`;
+  $('#f').onsubmit = e => { e.preventDefault(); enter(e.target.n.value.trim()); };
+  $('#out').onclick = () => sb.auth.signOut();
+}
+function renderWaiting(crew) {
+  $('#app').innerHTML = `<div class="gate"><img class="mark" src="img/wordmark-stacked.png" alt="">
+    <div class="card"><h2>Waiting for approval</h2>
+    <p class="muted">Your request to join ${esc(crew || 'the crew')} is in. You'll get access as soon as an admin approves it.</p>
+    <div class="btns" style="margin-top:12px"><button class="btn" id="re">Check again</button><button class="btn ghost" id="out">Sign out</button></div></div></div>`;
+  $('#re').onclick = () => enter(); $('#out').onclick = () => sb.auth.signOut();
+}
+function renderBlocked(st) {
+  $('#app').innerHTML = `<div class="gate"><div class="card"><h2>No access</h2>
+    <p class="muted">${st === 'retired' ? 'This account belongs to a retired member. Ask Personnel if you want to come back.' : "This account doesn't have access to the crew."}</p>
+    <button class="btn" id="out">Sign out</button></div></div>`;
+  $('#out').onclick = () => sb.auth.signOut();
+}
+
+/* ---------- data ---------- */
+async function loadAll() {
+  const c = S.crew.id;
+  const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
+  const [sess, ev, pl, pe, rs, ep, an] = await Promise.all([
+    rpc('my_session', { p_crew: c }),
+    sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
+    sb.from('places').select('*').eq('crew_id', c).order('name'),
+    sb.from('people').select('id,full_name,callsign,title,status,abilities,member_since,rookie_since,eligible_date,city,show_on_map,user_id,created_at').eq('crew_id', c).order('full_name'),
+    sb.from('rsvps').select('*').eq('crew_id', c),
+    sb.from('event_places').select('*').eq('crew_id', c).order('sort'),
+    sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10)
+  ]);
+  S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
+  if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
+  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || [];
+}
+async function refresh() { await loadAll(); render(); }
+
+/* ---------- shell ---------- */
+const TABS = [['home', 'Home'], ['events', 'Events'], ['me', 'My Busters'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Team']];
+function renderShell() {
+  $('#app').innerHTML = `
+    <header class="top"><div class="bar">
+      <img class="logo" src="img/wordmark-wide.png" alt="The Los Angeles Ghostbusters">
+      <div class="sp"></div>
+      <button class="avatar" id="av" title="Your profile">${esc(initials(S.me.full_name))}</button>
+      <button class="iconbtn" id="menu" title="Menu">${ICON.menu}</button>
+    </div><div class="hz"></div></header>
+    <nav class="tabs"><div class="in" id="tabs"></div></nav>
+    <main class="wrap" id="main"></main>`;
+  $('#av').onclick = openProfile; $('#menu').onclick = openMenu;
+  render();
+}
+function teamCount() {
+  let n = 0;
+  if (can('approve_members')) n += S.people.filter(p => p.status === 'pending').length;
+  if (can('add_events') || can('edit_events')) n += upcoming().filter(e => e.status === 'scheduled' && (e.missing.length || isShort(e))).length;
+  if (can('manage_proposals')) n += S.events.filter(e => e.status === 'proposed').length;
+  return n;
+}
+function render() {
+  const tabs = TABS.filter(([k]) => k !== 'team' || onTeam());
+  const tc = teamCount();
+  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab ${S.tab === k && !S.view ? 'on' : ''}" data-t="${k}">${ICON[k]}<span>${l}</span>${k === 'team' && tc ? `<b class="badge">${tc}</b>` : ''}</button>`).join('');
+  $('#tabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { S.tab = b.dataset.t; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); });
+  const m = $('#main');
+  if (S.view) return S.view();
+  ({ home: renderHome, events: renderEvents, me: renderMine, chat: renderChat, crew: renderCrew, team: renderTeam })[S.tab](m);
+}
+function show(fn) { S.view = () => fn($('#main')); render(); scrollTo(0, 0); }
+
+/* ---------- event helpers ---------- */
+const upcoming = () => S.events.filter(e => (e.end_date || e.event_date) >= todayISO() && e.status !== 'proposed');
+const isShort = e => e.min_busters != null && e.going < e.min_busters;
+const placesFor = eid => S.eplaces.filter(x => x.event_id === eid).map(x => ({ ...x, place: S.places.find(p => p.id === x.place_id) })).filter(x => x.place);
+function mapsUrl(pl) {
+  const app = S.profile.maps_app || 'google';
+  const q = pl.address || (pl.lat != null ? `${pl.lat},${pl.lng}` : pl.name);
+  const ll = pl.lat != null ? `${pl.lat},${pl.lng}` : null;
+  if (app === 'apple') return 'https://maps.apple.com/?daddr=' + encodeURIComponent(q);
+  if (app === 'waze') return ll && !pl.address ? `https://waze.com/ul?ll=${ll}&navigate=yes` : 'https://waze.com/ul?q=' + encodeURIComponent(q) + '&navigate=yes';
+  return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(q);
+}
+function staffPill(e) {
+  if (e.status === 'cancelled') return '<span class="pill bad">Cancelled</span>';
+  if (e.max_busters) return `<span class="pill ${e.spots_in >= e.max_busters ? 'good' : 'cyan'}">${e.going} want in, ${e.max_busters} spots</span>`;
+  if (e.min_busters == null) return e.going ? `<span class="pill">${e.going} going</span>` : '';
+  if (e.going < e.min_busters) return `<span class="pill bad">${e.going} of ${e.min_busters} min</span>`;
+  if (e.goal_busters && e.going < e.goal_busters) return `<span class="pill warn">${e.going}, goal ${e.goal_busters}</span>`;
+  return `<span class="pill good">${e.going} going</span>`;
+}
+function answerPill(eid) { const r = myRsvp(eid); if (!r) return ''; return { going: '<span class="pill good">You: Going</span>', maybe: '<span class="pill warn">You: Maybe</span>', no: '<span class="pill">You: No</span>' }[r.answer]; }
+function timeLine(e) { const bits = []; if (e.call_time) bits.push('Call ' + fmtTime(e.call_time)); if (e.start_time) bits.push((e.wrap_time ? fmtTime(e.start_time) + ' to ' + fmtTime(e.wrap_time) : 'Starts ' + fmtTime(e.start_time))); return bits.join(' · '); }
+function eventRow(e) {
+  const pls = placesFor(e.id); const where = pls[0] ? pls[0].place.name : '';
+  return `<a class="row" data-ev="${e.id}">
+    <div class="datebox"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${parseDay(e.event_date).getDate()}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>
+    <div class="grow"><div class="t">${esc(e.title)}</div>
+      <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([timeLine(e), where].filter(Boolean).join(' · ')) || 'Details coming'}</div>
+      <div class="pills">${staffPill(e)}${answerPill(e.id)}${e.missing.length && e.status === 'scheduled' ? '<span class="pill cream">Details coming</span>' : ''}${e.max_busters ? '<span class="pill cyan">Limited</span>' : ''}</div>
+    </div></a>`;
+}
+function wireRows(el) { el.querySelectorAll('[data-ev]').forEach(a => a.onclick = () => openEvent(a.dataset.ev)); }
+
+/* ---------- Home ---------- */
+function renderHome(m) {
+  const up = upcoming().filter(e => e.status === 'scheduled');
+  const mine = up.filter(e => { const r = myRsvp(e.id); return r && r.answer === 'going'; });
+  const next = mine[0] || null;
+  const waiting = up.filter(e => daysUntil(e.event_date) <= 30 && !myRsvp(e.id));
+  const needsMe = up.filter(e => e.missing.length && (e.poc_id === S.me.id || e.created_by === S.me.id));
+  const goal = 65000;
+  m.innerHTML = `
+    <div class="sec"><div class="script">Welcome back, ${esc(first(S.me.callsign || S.me.full_name))}</div></div>
+    <div class="card gb">
+      <div style="display:flex;align-items:baseline;gap:8px"><h3>Ghostbusters Give Back</h3><span class="muted small" style="margin-left:auto">LA goal $${goal.toLocaleString()}</span></div>
+      <div class="meter"><i style="width:7.6%"></i></div>
+      <div class="small muted">LA has raised <b style="color:var(--ink)">$4,928</b> so far (Nov 6 snapshot). Live totals arrive with the Give Back tracker.</div>
+      <div class="btns" style="margin-top:10px"><a class="btn sm primary" href="${DONATE_URL}" target="_blank" rel="noopener">Donate to Starlight</a></div>
+    </div>
+    <div class="sec"><h2>Your next event</h2>${next ? nextCard(next) : `<div class="empty">You're not marked Going on anything yet. <a href="#" id="toev">Browse events</a></div>`}</div>
+    ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
+    <div class="sec"><h2>Waiting on you</h2>${waiting.length ? waiting.map(eventRow).join('') : '<div class="empty">Nothing waiting. You have answered every event in the next 30 days.</div>'}</div>
+    <div class="sec"><h2>Announcements ${can('crew_admin') ? '<button class="btn sm act" id="post">Post</button>' : ''}</h2>
+      ${S.announcements.length ? S.announcements.map(a => `<div class="card"><div class="pre">${linkify(a.body)}</div><div class="tiny dim" style="margin-top:6px">${esc(nameOf(personById(a.author_id)))} · ${new Date(a.created_at).toLocaleDateString()}${can('crew_admin') ? ` · <a href="#" data-del="${a.id}">Remove</a>` : ''}</div></div>`).join('') : '<div class="empty">No announcements.</div>'}</div>`;
+  wireRows(m);
+  const toev = $('#toev'); if (toev) toev.onclick = e => { e.preventDefault(); S.tab = 'events'; render(); };
+  const post = $('#post'); if (post) post.onclick = postAnnouncement;
+  m.querySelectorAll('[data-del]').forEach(a => a.onclick = async e => { e.preventDefault(); if (!confirmBox('Remove this announcement?')) return; await rpc('delete_announcement', { p_id: a.dataset.del }); refresh(); });
+  const nb = $('#nextbrief'); if (nb) nb.onclick = () => openEvent(next.id);
+}
+function nextCard(e) {
+  const d = daysUntil(e.event_date); const pls = placesFor(e.id);
+  return `<div class="card next">
+    <div style="display:flex;gap:10px;align-items:flex-start"><div class="grow" style="flex:1"><h3 style="font-size:24px">${esc(e.title)}</h3><div class="muted small">${fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric' })}</div></div>${staffPill(e)}</div>
+    <div class="pke"><div><b>${d <= 0 ? 'Today' : d}</b><span>${d <= 0 ? 'Go time' : d === 1 ? 'Day to go' : 'Days to go'}</span></div><div><b>${esc(fmtTime(e.call_time) || 'TBD')}</b><span>Call</span></div><div><b>${esc(fmtTime(e.start_time) || 'TBD')}</b><span>Start</span></div></div>
+    ${e.parking ? `<div class="small"><span class="muted">Parking:</span> ${esc(e.parking.slice(0, 140))}${e.parking.length > 140 ? '...' : ''}</div>` : ''}
+    <div class="btns" style="margin-top:12px"><button class="btn primary sm" id="nextbrief">Open brief</button>${pls[0] ? `<a class="btn sm" href="${mapsUrl(pls[0].place)}" target="_blank" rel="noopener">${ICON.nav} Navigate</a>` : ''}</div>
+  </div>`;
+}
+function postAnnouncement() {
+  sheet(`<h3>Post an announcement</h3><p class="muted small">Everyone in the crew sees it at the bottom of Home.</p>
+    <textarea class="in" id="ab" maxlength="2000" placeholder="What does the crew need to know?"></textarea>
+    <div class="btns" style="margin-top:12px"><button class="btn primary" id="go">Post</button><button class="btn ghost" data-close>Cancel</button></div>`, s => {
+    $('#go', s).onclick = async () => { const b = $('#ab', s).value.trim(); if (!b) return; await rpc('post_announcement', { p_crew: S.crew.id, p_body: b }); closeSheet(); toast('Posted'); refresh(); };
+  });
+}
+
+/* ---------- Events ---------- */
+const FILTERS = [['upcoming', 'Upcoming'], ['mine', 'Mine'], ['need', 'Need Busters'], ['charity', 'Hospital & charity'], ['incomplete', 'Details coming'], ['past', 'Past']];
+function filtered() {
+  const q = S.evSearch.toLowerCase(); const t = todayISO();
+  let list = S.events.filter(e => e.status !== 'proposed');
+  switch (S.evFilter) {
+    case 'past': list = list.filter(e => (e.end_date || e.event_date) < t).reverse(); break;
+    case 'mine': list = list.filter(e => (e.end_date || e.event_date) >= t && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer)); break;
+    case 'need': list = list.filter(e => (e.end_date || e.event_date) >= t && e.status === 'scheduled' && (isShort(e) || (e.goal_busters && e.going < e.goal_busters))); break;
+    case 'charity': list = list.filter(e => (e.end_date || e.event_date) >= t && ['Hospital', 'Charity'].includes(e.category)); break;
+    case 'incomplete': list = list.filter(e => (e.end_date || e.event_date) >= t && e.status === 'scheduled' && e.missing.length); break;
+    default: list = list.filter(e => (e.end_date || e.event_date) >= t);
+  }
+  if (q) list = list.filter(e => (e.title + ' ' + (e.category || '') + ' ' + placesFor(e.id).map(p => p.place.name + ' ' + (p.place.address || '')).join(' ')).toLowerCase().includes(q));
+  return list;
+}
+function renderEvents(m) {
+  m.innerHTML = `
+    <div class="sec" style="display:flex;gap:8px;align-items:center">
+      <input class="in" id="q" placeholder="Search events" value="${esc(S.evSearch)}" style="flex:1">
+      <div class="seg" style="flex:0 0 auto"><button class="${S.evMode === 'list' ? 'on' : ''}" data-mode="list" title="List">${ICON.list}</button><button class="${S.evMode === 'cal' ? 'on' : ''}" data-mode="cal" title="Calendar">${ICON.cal}</button></div>
+    </div>
+    ${S.evMode === 'list' ? `<div class="chips">${FILTERS.map(([k, l]) => `<button class="chip ${S.evFilter === k ? 'on' : ''}" data-f="${k}">${l}</button>`).join('')}</div>` : ''}
+    ${can('add_events') ? '<div class="btns" style="margin-top:12px"><button class="btn primary sm" id="new">+ New event</button></div>' : '<div class="btns" style="margin-top:12px"><button class="btn sm" id="suggest">Suggest an event</button></div>'}
+    <div class="sec" id="list"></div>`;
+  const q = $('#q'); q.oninput = () => { S.evSearch = q.value; fillList(); };
+  m.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { S.evMode = b.dataset.mode; render(); });
+  m.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.evFilter = b.dataset.f; render(); });
+  const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
+  const sg = $('#suggest'); if (sg) sg.onclick = () => editEvent(null, true);
+  fillList();
+}
+function fillList() {
+  const box = $('#list'); if (!box) return;
+  if (S.evMode === 'cal') return renderCal(box);
+  const list = filtered();
+  box.innerHTML = list.length ? list.map(eventRow).join('') : '<div class="empty">No events here.</div>';
+  wireRows(box);
+}
+function renderCal(box) {
+  const base = S.calMonth || todayISO().slice(0, 7);
+  const [y, mo] = base.split('-').map(Number);
+  const firstDay = new Date(y, mo - 1, 1); const start = new Date(firstDay); start.setDate(1 - firstDay.getDay());
+  const t = todayISO(); const q = S.evSearch.toLowerCase();
+  const evs = S.events.filter(e => e.status !== 'proposed' && (!q || e.title.toLowerCase().includes(q)));
+  const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  let cells = ''; const d = new Date(start);
+  for (let i = 0; i < 42; i++) {
+    const s = iso(d); const on = evs.filter(e => s >= e.event_date && s <= (e.end_date || e.event_date));
+    cells += `<div class="d ${d.getMonth() !== mo - 1 ? 'o' : ''} ${s === t ? 'today' : ''} ${s === S.calSel ? 'sel' : ''}" data-day="${s}">${d.getDate()}<div class="dots">${on.slice(0, 4).map(e => `<i class="${(myRsvp(e.id) || {}).answer === 'going' ? 'mine' : ''}"></i>`).join('')}</div></div>`;
+    d.setDate(d.getDate() + 1);
+  }
+  const sel = S.calSel ? evs.filter(e => S.calSel >= e.event_date && S.calSel <= (e.end_date || e.event_date)) : [];
+  box.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><button class="btn sm" id="pm">${ICON.back}</button><h3 style="flex:1;text-align:center">${firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3><button class="btn sm" id="nm" style="transform:scaleX(-1)">${ICON.back}</button></div>
+    <div class="cal">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(x => `<div class="h">${x}</div>`).join('')}${cells}</div>
+    <div style="margin-top:14px">${S.calSel ? (sel.length ? sel.map(eventRow).join('') : `<div class="empty">Nothing on ${fmtDay(S.calSel)}.</div>`) : '<p class="muted small">Tap a day to see its events. Green dots are events you are going to.</p>'}</div>`;
+  const shift = n => { const nd = new Date(y, mo - 1 + n, 1); S.calMonth = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0'); renderCal(box); };
+  $('#pm').onclick = () => shift(-1); $('#nm').onclick = () => shift(1);
+  box.querySelectorAll('[data-day]').forEach(c => c.onclick = () => { S.calSel = c.dataset.day; renderCal(box); });
+  wireRows(box);
+}
+
+/* ---------- Event brief ---------- */
+function openEvent(id) {
+  const e = S.events.find(x => x.id === id);
+  if (!e) return toast('That event is not available.');
+  history.replaceState(null, '', '#event/' + id);
+  show(m => renderBrief(m, e));
+}
+function renderBrief(m, e) {
+  const r = myRsvp(e.id) || {};
+  const pls = placesFor(e.id);
+  const poc = personById(e.poc_id);
+  const canEdit = can('edit_events') || (e.poc_id && e.poc_id === S.me.id);
+  const going = S.rsvps.filter(x => x.event_id === e.id && x.answer === 'going').map(x => ({ ...x, p: personById(x.person_id) }));
+  const maybe = S.rsvps.filter(x => x.event_id === e.id && x.answer === 'maybe').map(x => ({ ...x, p: personById(x.person_id) }));
+  const sameDay = S.events.filter(x => x.id !== e.id && x.status === 'scheduled' && x.event_date <= (e.end_date || e.event_date) && (x.end_date || x.event_date) >= e.event_date);
+  const open = e.status === 'scheduled' && (e.end_date || e.event_date) >= todayISO();
+  const pct = n => Math.min(100, Math.round(100 * n / Math.max(e.goal_busters || e.min_busters || e.max_busters || 1, 1)));
+  const barColor = isShort(e) ? 'var(--bad)' : (e.goal_busters && e.going < e.goal_busters) ? 'var(--warn)' : 'var(--good)';
+  m.innerHTML = `<div class="brief">
+    <button class="back" id="bk">${ICON.back} Back</button>
+    <div class="pills" style="margin-bottom:8px">${e.category ? `<span class="pill">${esc(e.category)}</span>` : ''}${e.status === 'cancelled' ? '<span class="pill bad">Cancelled</span>' : ''}${e.max_busters ? `<span class="pill cyan">Limited to ${e.max_busters}</span>` : ''}${e.missing.length && e.status === 'scheduled' ? '<span class="pill cream">Details coming</span>' : ''}</div>
+    <h1>${esc(e.title)}</h1>
+    <div class="muted">${fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}${e.end_date ? ' to ' + fmtDay(e.end_date, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}</div>
+    ${sameDay.length ? `<div class="small" style="margin-top:8px;color:var(--warn)">Also on this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>${x.start_time ? ', ' + esc(timeLine(x)) : ''}`).join('; ')}</div>` : ''}
+
+    ${open ? `<div class="card" style="margin-top:16px">
+      <div class="small muted" style="margin-bottom:8px">${e.max_busters ? 'Put in for a spot' : 'Are you going?'}</div>
+      <div class="seg rsvp">${['going', 'maybe', 'no'].map(a => `<button class="${r.answer === a ? 'on ' + a : ''}" data-a="${a}">${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>
+      ${r.answer && r.answer !== 'no' ? `<div class="grid2" style="margin-top:10px">
+        <label class="f" style="margin:0"><span>Ride</span><select class="in" id="ride"><option value="">Not set</option><option value="own" ${r.ride === 'own' ? 'selected' : ''}>Getting there myself</option><option value="driving" ${r.ride === 'driving' ? 'selected' : ''}>Driving, have seats</option><option value="need" ${r.ride === 'need' ? 'selected' : ''}>Need a ride</option></select></label>
+        <label class="f" style="margin:0" ${r.ride === 'driving' ? '' : 'hidden'} id="seatsw"><span>Open seats</span><input class="in" id="seats" type="number" min="0" max="8" value="${r.seats ?? ''}"></label></div>
+        <label class="f"><span>Note for the team</span><input class="in" id="note" maxlength="300" value="${esc(r.note || '')}" placeholder="Arriving late, bringing the Ecto..."></label>
+        <button class="btn sm" id="saveride" style="margin-top:10px">Save</button>` : ''}
+      ${e.max_busters && r.spot ? `<div style="margin-top:10px"><span class="pill ${r.spot === 'in' ? 'good' : 'warn'}">${r.spot === 'in' ? "You're in" : 'You are on Reserve'}</span></div>` : ''}
+    </div>` : ''}
+
+    <div class="tiles"><div class="tile"><div class="k">Call</div><div class="v">${esc(fmtTime(e.call_time) || 'TBD')}</div></div><div class="tile"><div class="k">Start</div><div class="v">${esc(fmtTime(e.start_time) || 'TBD')}</div></div><div class="tile"><div class="k">Wrap</div><div class="v">${esc(fmtTime(e.wrap_time) || 'TBD')}</div></div></div>
+
+    <div class="card"><div style="display:flex;align-items:center;gap:8px"><b>Busters</b>${staffPill(e)}<span class="muted small" style="margin-left:auto">${e.min_busters != null ? 'Min ' + e.min_busters : ''}${e.goal_busters != null ? ' · Goal ' + e.goal_busters : ''}${e.max_busters ? ' · Max ' + e.max_busters : ''}</span></div>
+      ${(e.min_busters || e.goal_busters || e.max_busters) ? `<div class="staff"><i style="width:${pct(e.going)}%;background:${barColor}"></i></div>` : ''}
+      <div class="people" style="margin-top:8px">${going.map(x => `<span class="pill ${x.spot === 'in' ? 'good' : x.spot === 'reserve' ? 'warn' : ''}">${esc(x.p ? first(x.p.full_name) + (x.p.full_name.split(' ')[1] ? ' ' + x.p.full_name.split(' ')[1][0] + '.' : '') : '?')}${x.ride === 'driving' ? ' 🚗' + (x.seats ? x.seats : '') : x.ride === 'need' ? ' (needs ride)' : ''}${x.spot ? ' · ' + (x.spot === 'in' ? 'In' : 'Reserve') : ''}</span>`).join('') || '<span class="muted small">Nobody in Busters yet.</span>'}</div>
+      ${maybe.length ? `<div class="small muted" style="margin-top:8px">Maybe: ${maybe.map(x => esc(x.p ? x.p.full_name : '?')).join(', ')}</div>` : ''}
+      ${going.some(x => x.note) ? `<div class="small" style="margin-top:8px">${going.filter(x => x.note).map(x => `<div><span class="muted">${esc(first(x.p && x.p.full_name))}:</span> ${esc(x.note)}</div>`).join('')}</div>` : ''}
+      ${e.max_busters && can('pick_attendees') && going.length ? '<button class="btn sm" id="pick" style="margin-top:10px">Pick who is In</button>' : ''}
+      ${e.sheet_attendees || e.sheet_reserve ? `<details style="margin-top:10px"><summary class="small muted" style="cursor:pointer">Also listed on the 2026 Sheet</summary><div class="small pre" style="margin-top:6px">${esc(e.sheet_attendees || '')}</div>${e.sheet_reserve ? `<div class="small muted" style="margin-top:6px">Reserve:</div><div class="small pre">${esc(e.sheet_reserve)}</div>` : ''}</details>` : ''}
+    </div>
+
+    <div class="sec"><h2>Where</h2>${pls.length ? pls.map(x => `<div class="place"><div class="grow" style="flex:1;min-width:0"><div class="lbl">${esc(x.label)}</div><div><b>${esc(x.place.name)}</b></div>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="btn sm primary" href="${mapsUrl(x.place)}" target="_blank" rel="noopener">${ICON.nav} Navigate</a></div>`).join('') : '<div class="empty">Address coming.</div>'}</div>
+
+    ${e.schedule ? `<div class="sec"><h2>Schedule</h2><div class="card pre small">${linkify(e.schedule)}</div></div>` : ''}
+    ${e.parking ? `<div class="sec"><h2>Driving and parking</h2><div class="card pre small">${linkify(e.parking)}</div></div>` : ''}
+
+    <div class="sec"><h2>Contacts</h2><div class="card"><dl class="kv">
+      <dt>Point of contact</dt><dd>${poc ? `<b>${esc(nameOf(poc))}</b>` : '<span class="muted">Not set yet</span>'}</dd>
+      <dt>Event contact</dt><dd>${e.contact_name ? esc(e.contact_name) : '<span class="muted">Not set yet</span>'}${e.contact_phone ? `<br><a href="${tel(e.contact_phone)}">${esc(e.contact_phone)}</a>` : ''}${e.contact_email ? `<br><a href="mailto:${esc(e.contact_email)}">${esc(e.contact_email)}</a>` : ''}</dd>
+      ${e.lagb_contact && !poc ? `<dt>Sheet says</dt><dd>${esc(e.lagb_contact)}</dd>` : ''}
+    </dl></div></div>
+
+    ${e.conditions ? `<div class="sec"><h2>Conditions</h2><div class="card small">${esc(e.conditions)}</div></div>` : ''}
+    ${e.notes ? `<div class="sec"><h2>Details</h2><div class="card pre small">${linkify(e.notes)}</div></div>` : ''}
+
+    ${canEdit && e.missing.length && e.status === 'scheduled' ? `<div class="card missing" style="margin-top:16px"><b>${8 - e.missing.length} of 8 done.</b> <span class="small">Still needs: ${esc(e.missing.join(', '))}</span></div>` : ''}
+    ${canEdit ? `<div class="btns" style="margin:18px 0 30px"><button class="btn primary" id="edit">Edit event</button>${e.status === 'scheduled' ? '<button class="btn danger" id="cancel">Cancel event</button>' : e.status === 'cancelled' ? '<button class="btn" id="restore">Put back on</button>' : ''}</div>` : '<div style="height:30px"></div>'}
+  </div>`;
+  $('#bk').onclick = () => { S.view = null; history.replaceState(null, '', location.pathname); render(); };
+  wireRows(m);
+  m.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+    await rpc('rsvp', { p_event: e.id, p_answer: b.dataset.a, p_ride: r.ride || null, p_seats: r.seats || null, p_note: r.note || null });
+    await refresh(); openEvent(e.id);
+    toast({ going: e.max_busters ? "You're on the list" : "You're going", maybe: 'Marked maybe', no: 'Marked not going' }[b.dataset.a]);
+  });
+  const ride = $('#ride'); if (ride) ride.onchange = () => { $('#seatsw').hidden = ride.value !== 'driving'; };
+  const sr = $('#saveride'); if (sr) sr.onclick = async () => {
+    await rpc('rsvp', { p_event: e.id, p_answer: r.answer, p_ride: $('#ride').value || null, p_seats: parseInt($('#seats').value) || null, p_note: $('#note').value.trim() || null });
+    await refresh(); openEvent(e.id); toast('Saved');
+  };
+  const ed = $('#edit'); if (ed) ed.onclick = () => editEvent(e);
+  const ca = $('#cancel'); if (ca) ca.onclick = () => cancelEvent(e);
+  const rs = $('#restore'); if (rs) rs.onclick = async () => { await rpc('set_event_status', { p_event: e.id, p_status: 'scheduled', p_reason: null }); await refresh(); openEvent(e.id); };
+  const pk = $('#pick'); if (pk) pk.onclick = () => pickSpots(e, going);
+}
+function cancelEvent(e) {
+  const going = S.rsvps.filter(x => x.event_id === e.id && x.answer !== 'no').length;
+  sheet(`<h3>Cancel ${esc(e.title)}?</h3>
+    <p class="muted small">It is marked Cancelled for everyone and logged. ${going} ${going === 1 ? 'person has' : 'people have'} signed up. Alerts, the calendar and Discord updates arrive in later builds; for now, let the event contact know yourself.</p>
+    ${e.contact_name ? `<div class="card small"><b>${esc(e.contact_name)}</b>${e.contact_phone ? `<br><a href="${tel(e.contact_phone)}">${esc(e.contact_phone)}</a>` : ''}${e.contact_email ? `<br><a href="mailto:${esc(e.contact_email)}">${esc(e.contact_email)}</a>` : ''}</div>` : ''}
+    <label class="f"><span>Reason (goes in the action log)</span><input class="in" id="why"></label>
+    <div class="btns" style="margin-top:14px"><button class="btn danger" id="yes">Cancel the event</button><button class="btn ghost" data-close>Keep it</button></div>`, s => {
+    $('#yes', s).onclick = async () => { await rpc('set_event_status', { p_event: e.id, p_status: 'cancelled', p_reason: $('#why', s).value.trim() || null }); closeSheet(); await refresh(); openEvent(e.id); toast('Event cancelled'); };
+  });
+}
+function pickSpots(e, going) {
+  sheet(`<h3>Who is In?</h3><p class="muted small">${e.max_busters} spots. Tap In or Reserve for each person.</p>
+    ${going.map(x => `<div class="place" style="margin-top:8px"><div class="grow" style="flex:1"><b>${esc(nameOf(x.p))}</b>${x.note ? `<div class="small muted">${esc(x.note)}</div>` : ''}</div>
+      <div class="seg" style="width:200px">${['in', 'reserve', ''].map(s => `<button class="${(x.spot || '') === s ? 'on' : ''}" data-p="${x.person_id}" data-s="${s}">${s === 'in' ? 'In' : s === 'reserve' ? 'Reserve' : 'Undecided'}</button>`).join('')}</div></div>`).join('')}
+    <div class="btns" style="margin-top:14px"><button class="btn" data-close>Done</button></div>`, s => {
+    s.querySelectorAll('[data-p]').forEach(b => b.onclick = async () => { await rpc('set_spot', { p_event: e.id, p_person: b.dataset.p, p_spot: b.dataset.s }); b.parentNode.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
+  }, async () => { await refresh(); openEvent(e.id); });
+}
+
+/* ---------- Event editor ---------- */
+function editEvent(e, propose = false) {
+  const isNew = !e; e = e || { title: '', event_date: todayISO() };
+  const pocs = S.people.filter(p => ['active', 'rookie'].includes(p.status) && (p.abilities.includes('poc') || p.abilities.includes('crew_admin')));
+  let pls = isNew ? [{ label: 'Event', name: '', address: '' }] : placesFor(e.id).map(x => ({ place_id: x.place_id, label: x.label, name: x.place.name, address: x.place.address || '' }));
+  if (!pls.length) pls = [{ label: 'Event', name: '', address: '' }];
+  const v = k => esc(e[k] == null ? '' : e[k]);
+  const t = k => e[k] ? e[k].slice(0, 5) : '';
+  show(m => {
+    m.innerHTML = `<button class="back" id="bk">${ICON.back} ${isNew ? 'Events' : 'Back to brief'}</button>
+      <h2 style="font-size:30px">${propose ? 'Suggest an event' : isNew ? 'New event' : 'Edit event'}</h2>
+      <p class="muted small">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, times, minimum and goal are in.'}</p>
+      <form id="ef">
+        <label class="f"><span>Event name</span><input class="in" name="title" required value="${v('title')}"></label>
+        <div class="grid2"><label class="f"><span>Date</span><input class="in" type="date" name="event_date" required value="${v('event_date')}"></label><label class="f"><span>Ends (multi-day only)</span><input class="in" type="date" name="end_date" value="${v('end_date')}"></label></div>
+        <label class="f"><span>Category</span><select class="in" name="category"><option value="">Choose</option>${CATEGORIES.map(c => `<option ${e.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+        <div class="grid3"><label class="f"><span>Call</span><input class="in" type="time" name="call_time" value="${t('call_time')}"></label><label class="f"><span>Start</span><input class="in" type="time" name="start_time" value="${t('start_time')}"></label><label class="f"><span>Wrap</span><input class="in" type="time" name="wrap_time" value="${t('wrap_time')}"></label></div>
+        <h3 style="margin-top:20px">Places</h3><p class="muted small" style="margin:2px 0 0">Each place gets its own Navigate button. Pick a saved place or type a new one; new ones are saved for next time.</p>
+        <div id="pls"></div><button type="button" class="btn sm" id="addpl" style="margin-top:8px">+ Add a place</button>
+        <datalist id="saved">${S.places.filter(p => !p.retired_at).map(p => `<option value="${esc(p.name)}">`).join('')}</datalist>
+        ${propose ? '' : `<h3 style="margin-top:20px">People</h3>
+        <label class="f"><span>Point of contact</span><select class="in" name="poc_id"><option value="">Choose</option>${pocs.map(p => `<option value="${p.id}" ${e.poc_id === p.id ? 'selected' : ''}>${esc(nameOf(p))}</option>`).join('')}</select></label>
+        <div class="grid3"><label class="f"><span>Minimum</span><input class="in" type="number" min="0" name="min_busters" value="${v('min_busters')}"></label><label class="f"><span>Goal</span><input class="in" type="number" min="0" name="goal_busters" value="${v('goal_busters')}"></label><label class="f"><span>Maximum</span><input class="in" type="number" min="0" name="max_busters" value="${v('max_busters')}" placeholder="Only if limited"></label></div>`}
+        <h3 style="margin-top:20px">Event contact</h3>
+        <label class="f"><span>Name</span><input class="in" name="contact_name" value="${v('contact_name')}"></label>
+        <div class="grid2"><label class="f"><span>Phone</span><input class="in" type="tel" name="contact_phone" value="${v('contact_phone')}"></label><label class="f"><span>Email</span><input class="in" type="email" name="contact_email" value="${v('contact_email')}"></label></div>
+        <h3 style="margin-top:20px">Details</h3>
+        <label class="f"><span>Schedule</span><textarea class="in" name="schedule">${v('schedule')}</textarea></label>
+        <label class="f"><span>Driving and parking</span><textarea class="in" name="parking">${v('parking')}</textarea></label>
+        <label class="f"><span>Conditions (indoors, weather, uniform)</span><input class="in" name="conditions" value="${v('conditions')}"></label>
+        <label class="f"><span>Notes</span><textarea class="in" name="notes" style="min-height:140px">${v('notes')}</textarea></label>
+        <div class="btns" style="margin:20px 0 10px"><button class="btn primary">${propose ? 'Send suggestion' : 'Save event'}</button><button type="button" class="btn ghost" id="cx">Cancel</button>${!isNew && can('edit_events') ? '<button type="button" class="btn danger" id="del" style="margin-left:auto">Delete</button>' : ''}</div>
+      </form><div style="height:40px"></div>`;
+    const drawPls = () => {
+      $('#pls').innerHTML = pls.map((p, i) => `<div class="card" style="margin-top:8px"><div class="grid2">
+        <label class="f" style="margin:0"><span>Label</span><input class="in" data-i="${i}" data-k="label" list="labels" value="${esc(p.label)}"></label>
+        <label class="f" style="margin:0"><span>Place name</span><input class="in" data-i="${i}" data-k="name" list="saved" value="${esc(p.name)}"></label></div>
+        <label class="f"><span>Address</span><input class="in" data-i="${i}" data-k="address" value="${esc(p.address)}"></label>
+        <button type="button" class="btn sm ghost" data-rm="${i}" style="margin-top:8px">Remove</button></div>`).join('') + '<datalist id="labels"><option value="Event"><option value="Parking"><option value="Staging"><option value="Meeting point"><option value="Dinner spot"></datalist>';
+      $('#pls').querySelectorAll('input').forEach(inp => inp.oninput = () => {
+        const p = pls[inp.dataset.i]; p[inp.dataset.k] = inp.value;
+        if (inp.dataset.k === 'name') {
+          const hit = S.places.find(x => !x.retired_at && x.name === inp.value);
+          if (hit) { p.place_id = hit.id; p.address = hit.address || ''; if (!p.label || p.label === 'Event') p.label = hit.kind || p.label; drawPls(); } else delete p.place_id;
+        }
+        if (inp.dataset.k === 'address') delete p.place_id;
+      });
+      $('#pls').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { pls.splice(+b.dataset.rm, 1); drawPls(); });
+    };
+    drawPls();
+    $('#addpl').onclick = () => { pls.push({ label: 'Parking', name: '', address: '' }); drawPls(); };
+    const leave = () => isNew ? (S.view = null, render()) : openEvent(e.id);
+    $('#bk').onclick = leave; $('#cx').onclick = leave;
+    const del = $('#del'); if (del) del.onclick = async () => { if (!confirmBox('Delete this event for good? Use Cancel instead if it was called off.')) return; await rpc('delete_event', { p_event: e.id }); await refresh(); S.view = null; S.tab = 'events'; render(); toast('Deleted'); };
+    $('#ef').onsubmit = async ev => {
+      ev.preventDefault();
+      const fd = new FormData(ev.target); const p = {};
+      for (const [k, val] of fd.entries()) p[k] = String(val).trim();
+      if (!isNew) p.id = e.id;
+      if (propose) p.status = 'proposed';
+      ev.target.querySelector('button.primary').disabled = true;
+      try {
+        const id = await rpc('save_event', { p_crew: S.crew.id, p });
+        if (!propose || pls.some(x => x.name || x.address)) await rpc('set_event_places', { p_event: id, p_places: pls.filter(x => x.name || x.address || x.place_id) });
+        await refresh();
+        if (propose) { S.view = null; render(); toast('Thanks! The events team will take a look.'); }
+        else { openEvent(id); toast('Saved'); }
+      } catch (err) { ev.target.querySelector('button.primary').disabled = false; }
+    };
+  });
+}
+
+/* ---------- My Busters ---------- */
+function renderMine(m) {
+  const t = todayISO();
+  const mineUp = S.events.filter(e => (e.end_date || e.event_date) >= t && e.status !== 'proposed' && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer));
+  const past = S.events.filter(e => e.event_date < t && e.status !== 'cancelled' && (myRsvp(e.id) || {}).answer === 'going');
+  const yr = t.slice(0, 4);
+  const thisYear = past.filter(e => e.event_date.startsWith(yr));
+  const hosp = past.filter(e => e.category === 'Hospital');
+  const me = S.me;
+  m.innerHTML = `
+    <div class="sec" style="display:flex;gap:14px;align-items:center"><div class="avatar" style="width:58px;height:58px;font-size:22px;cursor:default">${esc(initials(me.full_name))}</div>
+      <div><h2>${esc(me.full_name)}</h2><div class="muted small">${esc([me.callsign, me.title].filter(Boolean).join(' · '))}</div>
+      <div class="pills">${me.status === 'rookie' ? '<span class="pill cream">Rookie</span>' : '<span class="pill good">Active member</span>'}${me.member_since ? `<span class="pill">Since ${fmtDay(me.member_since, { month: 'short', year: 'numeric' })}</span>` : ''}</div></div></div>
+    <div class="tiles"><div class="tile"><div class="k">${yr} events</div><div class="v">${thisYear.length}</div></div><div class="tile"><div class="k">All events</div><div class="v">${past.length}</div></div><div class="tile"><div class="k">Hospital visits</div><div class="v">${hosp.length}</div></div></div>
+    <p class="tiny dim">Counts start from Busters sign-ups. Check-in attendance and your fundraising total arrive in Phase 2.</p>
+    <div class="sec"><h2>Coming up</h2>${mineUp.length ? mineUp.map(eventRow).join('') : '<div class="empty">Nothing yet. Answer Going on an event and it shows here.</div>'}</div>
+    <div class="sec"><h2>Dues</h2><div class="card">${Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span><span class="pill ${/paid|exempt/i.test(s) ? 'good' : 'warn'}">${esc(s)}</span></div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
+    <div class="sec"><h2>My details</h2><div class="card">
+      <p class="muted small" style="margin-top:0">Only you, Personnel and the crew admin see these.</p>
+      <form id="mf">
+        <label class="f"><span>Callsign</span><input class="in" name="callsign" value="${esc(me.callsign || '')}"></label>
+        <div class="grid2"><label class="f"><span>Phone</span><input class="in" type="tel" name="phone" value="${esc(S.priv.phone || '')}"></label><label class="f"><span>Discord name</span><input class="in" name="discord" value="${esc(S.priv.discord || '')}"></label></div>
+        <div class="grid2"><label class="f"><span>Instagram</span><input class="in" name="instagram" value="${esc(S.priv.instagram || '')}"></label><label class="f"><span>Birthday (month and day)</span><input class="in" name="birthday" placeholder="MM-DD" pattern="\\d{2}-\\d{2}" value="${esc(S.priv.birthday || '')}"></label></div>
+        <label class="f"><span>City (for the member map, city level only)</span><input class="in" name="city" value="${esc(me.city || '')}"></label>
+        <label class="check"><input type="checkbox" name="show_on_map" ${me.show_on_map ? 'checked' : ''}> Show me on the member map</label>
+        <div class="small muted">Sign-in email: ${esc(S.priv.email || (S.session.user && S.session.user.email) || '')}</div>
+        <button class="btn primary" style="margin-top:12px">Save my details</button>
+      </form></div></div><div style="height:30px"></div>`;
+  wireRows(m);
+  $('#mf').onsubmit = async ev => {
+    ev.preventDefault(); const f = ev.target;
+    await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked } });
+    await refresh(); toast('Saved');
+  };
+}
+
+/* ---------- Chat (placeholder until the chat build) ---------- */
+function renderChat(m) {
+  const t = todayISO();
+  const mine = S.events.filter(e => (e.end_date || e.event_date) >= t && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer));
+  m.innerHTML = `<div class="sec"><div class="seg"><button class="on">Busters</button><button id="dc">Discord</button></div></div>
+    <a class="row" style="cursor:default"><div class="datebox" style="display:grid;place-items:center"><img src="img/emblem.png" alt="" style="width:38px"></div><div class="grow"><div class="t">LAGB Everyone</div><div class="small muted">Crew-wide chat</div></div><span class="pill">Next build</span></a>
+    ${mine.map(e => `<a class="row" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">${fmtDay(e.event_date)} · event chat</div></div><span class="pill">Next build</span></a>`).join('')}
+    <p class="muted small" style="margin-top:16px">Chat is the next piece being built. Your events show here already; their chats open once it lands. Until then, keep using Discord.</p>`;
+  wireRows(m);
+  $('#dc').onclick = () => toast('The Discord switch arrives with the Busters bot in Phase 2.');
+}
+
+/* ---------- Crew ---------- */
+let crewQ = '';
+function renderCrew(m) {
+  const list = S.people.filter(p => ['active', 'rookie'].includes(p.status));
+  m.innerHTML = `<div class="sec"><h2>The crew <span class="muted" style="font-family:'DM Sans';font-size:14px;letter-spacing:0">${list.filter(p => p.status === 'active').length} members, ${list.filter(p => p.status === 'rookie').length} rookies</span></h2>
+    <input class="in" id="cq" placeholder="Search names, callsigns, roles" value="${esc(crewQ)}"></div>
+    <div class="card" style="display:flex;gap:12px;align-items:center"><div class="grow" style="flex:1"><b>Member map</b><div class="small muted">Arrives in Phase 2. Turn on "Show me on the member map" in My Busters to be on it from day one.</div></div></div>
+    <div class="sec" id="cl"></div>`;
+  const draw = () => {
+    const q = crewQ.toLowerCase();
+    const rows = list.filter(p => !q || (p.full_name + ' ' + (p.callsign || '') + ' ' + (p.title || '')).toLowerCase().includes(q));
+    $('#cl').innerHTML = rows.map(p => `<div class="row" data-p="${p.id}"><div class="avatar" style="cursor:inherit">${esc(initials(p.full_name))}</div><div class="grow"><div class="t">${esc(p.full_name)}${p.callsign ? ` <span class="muted">"${esc(p.callsign)}"</span>` : ''}</div><div class="small muted">${esc(p.title || (p.status === 'rookie' ? 'Rookie' : 'Buster'))}${p.member_since ? ' · since ' + fmtDay(p.member_since, { year: 'numeric' }) : ''}</div></div>${p.status === 'rookie' ? '<span class="pill cream">Rookie</span>' : ''}</div>`).join('') || '<div class="empty">Nobody matches.</div>';
+    $('#cl').querySelectorAll('[data-p]').forEach(r => r.onclick = () => openPerson(r.dataset.p));
+  };
+  $('#cq').oninput = e => { crewQ = e.target.value; draw(); };
+  draw();
+}
+function openPerson(id) {
+  const p = personById(id); if (!p) return;
+  const t = todayISO();
+  const up = S.events.filter(e => (e.end_date || e.event_date) >= t && S.rsvps.some(r => r.event_id === e.id && r.person_id === id && r.answer === 'going'));
+  sheet(`<div style="display:flex;gap:12px;align-items:center"><div class="avatar" style="width:52px;height:52px;font-size:20px;cursor:default">${esc(initials(p.full_name))}</div><div><h3 style="font-size:24px">${esc(p.full_name)}</h3><div class="small muted">${esc([p.callsign && '"' + p.callsign + '"', p.title].filter(Boolean).join(' · '))}</div></div></div>
+    ${up.length ? `<div class="sec"><b class="small">Going to</b>${up.map(e => `<div class="small">${fmtDay(e.event_date)} · ${esc(e.title)}</div>`).join('')}</div>` : ''}
+    ${can('manage_abilities') ? `<div class="sec"><b>Abilities</b><p class="muted small" style="margin:2px 0 6px">Changes are saved right away and logged.</p>
+      <div class="btns" style="margin-bottom:8px">${PRESETS.map(x => `<button class="btn sm" data-preset="${x}">${x}</button>`).join('')}</div>
+      ${ABILITIES.map(([k, l, d]) => `<label class="check"><input type="checkbox" data-ab="${k}" ${p.abilities.includes(k) ? 'checked' : ''}><span><b>${l}</b><br><span class="tiny muted">${d}</span></span></label>`).join('')}</div>` : (p.abilities.length ? `<div class="sec small muted">Abilities: ${esc(p.abilities.map(a => (ABILITIES.find(x => x[0] === a) || [a, a])[1]).join(', '))}</div>` : '')}
+    <div class="btns" style="margin-top:12px"><button class="btn" data-close>Close</button></div>`, s => {
+    const save = async list => { await rpc('set_abilities', { p_person: p.id, p_abilities: list }); p.abilities = list; s.querySelectorAll('[data-ab]').forEach(c => c.checked = list.includes(c.dataset.ab)); toast('Abilities saved'); };
+    s.querySelectorAll('[data-ab]').forEach(c => c.onchange = () => save([...s.querySelectorAll('[data-ab]:checked')].map(x => x.dataset.ab)));
+    s.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => save({ Member: [], 'Events team': ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'poc', 'take_attendance'], Personnel: ['approve_members', 'manage_recruits'], Admin: ['crew_admin'] }[b.dataset.preset]));
+  }, () => refresh());
+}
+
+/* ---------- Team ---------- */
+function renderTeam(m) {
+  const pending = can('approve_members') ? S.people.filter(p => p.status === 'pending') : [];
+  const ev = can('add_events') || can('edit_events');
+  const incomplete = ev ? upcoming().filter(e => e.status === 'scheduled' && e.missing.length) : [];
+  const short = ev ? upcoming().filter(e => e.status === 'scheduled' && isShort(e)) : [];
+  const limited = can('pick_attendees') ? upcoming().filter(e => e.status === 'scheduled' && e.max_busters && e.going > 0 && e.spots_in < e.max_busters) : [];
+  const proposals = can('manage_proposals') ? S.events.filter(e => e.status === 'proposed') : [];
+  const item = (tag, title, sub, attrs, action) => `<div class="row" ${attrs}><div class="grow"><div class="small" style="color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;font-size:11px">${tag}</div><div class="t">${esc(title)}</div><div class="small muted">${sub}</div></div><span class="btn sm">${action}</span></div>`;
+  const todo = [
+    ...pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')),
+    ...proposals.map(e => item('Proposed event', e.title, fmtDay(e.event_date) + ' · suggested by ' + esc(nameOf(personById(e.proposed_by))), `data-prop="${e.id}"`, 'Review')),
+    ...short.map(e => item('Short on Busters', e.title, `${fmtDay(e.event_date)} · ${e.going} of ${e.min_busters} minimum`, `data-ev="${e.id}"`, 'Open')),
+    ...limited.map(e => item('Pick who is In', e.title, `${fmtDay(e.event_date)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')),
+    ...incomplete.map(e => item('Details coming', e.title, `${fmtDay(e.event_date)} · needs ${esc(e.missing.join(', '))}`, `data-ev="${e.id}"`, 'Finish'))
+  ];
+  m.innerHTML = `<div class="sec"><h2>Team ${ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
+    <div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div></div>
+    <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>`;
+  const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
+  const ro = $('#roster'); if (ro) ro.onclick = () => show(renderRoster);
+  const lg = $('#log'); if (lg) lg.onclick = () => show(renderLog);
+  wireRows(m);
+  m.querySelectorAll('[data-join]').forEach(r => r.onclick = () => reviewJoin(personById(r.dataset.join)));
+  m.querySelectorAll('[data-prop]').forEach(r => r.onclick = () => reviewProposal(S.events.find(e => e.id === r.dataset.prop)));
+}
+function reviewJoin(p) {
+  sheet(`<h3>${esc(p.full_name)} wants to join</h3><p class="muted small">Approve with a starting preset. You can fine-tune abilities later from Crew.</p>
+    <div class="seg" id="ps">${PRESETS.map((x, i) => `<button class="${i === 0 ? 'on' : ''}" data-v="${x}">${x}</button>`).join('')}</div>
+    <div class="btns" style="margin-top:14px"><button class="btn primary" id="ok">Approve</button><button class="btn danger" id="no">Decline</button><button class="btn ghost" data-close>Later</button></div>`, s => {
+    let preset = 'Member';
+    s.querySelectorAll('#ps button').forEach(b => b.onclick = () => { preset = b.dataset.v; s.querySelectorAll('#ps button').forEach(x => x.classList.toggle('on', x === b)); });
+    $('#ok', s).onclick = async () => { await rpc('decide_member', { p_person: p.id, p_approve: true, p_preset: preset }); closeSheet(); toast('Approved'); refresh(); };
+    $('#no', s).onclick = async () => { if (!confirmBox('Decline ' + p.full_name + '?')) return; await rpc('decide_member', { p_person: p.id, p_approve: false, p_preset: null }); closeSheet(); refresh(); };
+  });
+}
+function reviewProposal(e) {
+  sheet(`<h3>${esc(e.title)}</h3><div class="muted small">${fmtDay(e.event_date)} · suggested by ${esc(nameOf(personById(e.proposed_by)))}</div>
+    ${e.notes ? `<div class="card pre small" style="margin-top:10px">${linkify(e.notes)}</div>` : ''}
+    <div class="btns" style="margin-top:14px"><button class="btn primary" id="take">Make it an event</button><button class="btn danger" id="close">Close it</button><button class="btn ghost" data-close>Later</button></div>`, s => {
+    $('#take', s).onclick = async () => { await rpc('set_event_status', { p_event: e.id, p_status: 'scheduled', p_reason: 'from a proposal' }); closeSheet(); await refresh(); editEvent(S.events.find(x => x.id === e.id)); };
+    $('#close', s).onclick = async () => { await rpc('set_event_status', { p_event: e.id, p_status: 'closed', p_reason: 'proposal closed' }); closeSheet(); refresh(); };
+  });
+}
+
+/* ---------- Personnel roster ---------- */
+let rosterData = [], rosterQ = '', rosterF = 'current';
+async function renderRoster(m) {
+  m.innerHTML = '<p class="muted">Loading roster...</p>';
+  rosterData = await rpc('personnel_roster', { p_crew: S.crew.id });
+  const yr = +todayISO().slice(0, 4);
+  const draw = () => {
+    const q = rosterQ.toLowerCase();
+    const rows = rosterData.filter(p => (rosterF === 'all' || (rosterF === 'current' ? ['active', 'rookie', 'pending'].includes(p.status) : p.status === rosterF)) &&
+      (!q || [p.full_name, p.callsign, p.title, p.email, p.discord, p.phone].join(' ').toLowerCase().includes(q)));
+    $('#rt').innerHTML = `<table class="ptable"><thead><tr><th>Name</th><th>Role</th><th>Contact</th><th>Discord</th><th>Birthday</th><th>${yr - 1} dues</th><th>${yr} dues</th><th>Rookie</th></tr></thead><tbody>
+      ${rows.map(p => `<tr data-p="${p.id}"><td><b>${esc(p.full_name)}</b>${p.callsign ? `<div class="tiny muted">"${esc(p.callsign)}"</div>` : ''}${p.status !== 'active' ? `<div><span class="pill ${p.status === 'rookie' ? 'cream' : p.status === 'pending' ? 'cyan' : ''}" style="margin-top:4px">${esc(p.status)}</span></div>` : ''}${!p.signed_in && p.status !== 'retired' ? '<div class="tiny dim">not signed in yet</div>' : ''}</td>
+        <td>${esc(p.title || '')}${p.member_since ? `<div class="tiny muted">since ${esc(p.member_since)}</div>` : ''}</td>
+        <td>${p.email ? `<a href="mailto:${esc(p.email)}" onclick="event.stopPropagation()">${esc(p.email)}</a>` : '<span class="pill warn">no email</span>'}${p.phone ? `<div><a href="${tel(p.phone)}" onclick="event.stopPropagation()">${esc(p.phone)}</a></div>` : ''}</td>
+        <td>${esc(p.discord || '')}${p.instagram ? `<div class="tiny muted">${esc(p.instagram)}</div>` : ''}</td>
+        <td>${esc(p.birthday ? fmtDay('2000-' + p.birthday, { month: 'short', day: 'numeric' }) : '')}</td>
+        <td>${duesPill(p.dues[yr - 1])}</td><td>${duesPill(p.dues[yr])}</td>
+        <td>${p.status === 'rookie' ? `${(p.rookie_events_before || 0) + p.events_done} of 4 events${p.eligible_date ? `<div class="tiny muted">eligible ${esc(p.eligible_date)}</div>` : ''}` : ''}</td></tr>`).join('')}
+      </tbody></table>${rows.length ? '' : '<div class="empty">Nobody matches.</div>'}`;
+    $('#rt').querySelectorAll('[data-p]').forEach(r => r.onclick = () => editPerson(rosterData.find(x => x.id === r.dataset.p)));
+    $('#cnt').textContent = rows.length + ' shown';
+  };
+  m.innerHTML = `<button class="back" id="bk">${ICON.back} Team</button>
+    <h2 style="font-size:30px">Personnel roster</h2>
+    <p class="muted small">Only Personnel and the crew admin see this screen. Tap a row to edit. Every download is logged.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><input class="in" id="rq" placeholder="Search" style="flex:1;min-width:180px" value="${esc(rosterQ)}"><button class="btn sm primary" id="add">+ Add person</button><button class="btn sm" id="exp">Download spreadsheet</button></div>
+    <div class="chips">${[['current', 'Current'], ['active', 'Members'], ['rookie', 'Rookies'], ['pending', 'Waiting'], ['retired', 'Retired'], ['all', 'Everyone']].map(([k, l]) => `<button class="chip ${rosterF === k ? 'on' : ''}" data-rf="${k}">${l}</button>`).join('')}<span class="small muted" id="cnt" style="align-self:center;margin-left:6px"></span></div>
+    <div class="scrollx" id="rt" style="margin-top:10px"></div><div style="height:40px"></div>`;
+  $('#bk').onclick = () => { S.view = null; render(); };
+  $('#rq').oninput = e => { rosterQ = e.target.value; draw(); };
+  m.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => { rosterF = b.dataset.rf; m.querySelectorAll('[data-rf]').forEach(x => x.classList.toggle('on', x === b)); draw(); });
+  $('#add').onclick = () => editPerson(null);
+  $('#exp').onclick = exportRoster;
+  draw();
+}
+const duesPill = s => s ? `<span class="pill ${/^paid$|exempt/i.test(s) ? 'good' : /paid/i.test(s) ? 'cyan' : 'warn'}">${esc(s)}</span>` : '<span class="dim">none</span>';
+function editPerson(p) {
+  const isNew = !p; p = p || { status: 'active', dues: {} };
+  const yr = +todayISO().slice(0, 4);
+  const v = k => esc(p[k] == null ? '' : p[k]);
+  sheet(`<h3>${isNew ? 'Add to roster' : esc(p.full_name)}</h3>
+    <p class="muted small">${isNew ? 'Adding someone with an email pre-approves them: they get straight in the first time they sign in.' : 'Changes are saved to the database and logged.'}</p>
+    <form id="pf">
+      <div class="grid2"><label class="f"><span>Full name</span><input class="in" name="full_name" required value="${v('full_name')}"></label><label class="f"><span>Callsign</span><input class="in" name="callsign" value="${v('callsign')}"></label></div>
+      <div class="grid2"><label class="f"><span>Crew role</span><input class="in" name="title" value="${v('title')}" placeholder="Buster, Quartermaster..."></label>
+        <label class="f"><span>Status</span><select class="in" name="status">${['active', 'rookie', 'retired'].concat(p.status === 'pending' ? ['pending'] : []).map(s => `<option ${p.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label></div>
+      <div class="grid2"><label class="f"><span>Email</span><input class="in" type="email" name="email" value="${v('email')}"></label><label class="f"><span>Phone</span><input class="in" type="tel" name="phone" value="${v('phone')}"></label></div>
+      <div class="grid2"><label class="f"><span>Discord</span><input class="in" name="discord" value="${v('discord')}"></label><label class="f"><span>Instagram</span><input class="in" name="instagram" value="${v('instagram')}"></label></div>
+      <div class="grid2"><label class="f"><span>Birthday (MM-DD)</span><input class="in" name="birthday" pattern="\\d{2}-\\d{2}" value="${v('birthday')}"></label><label class="f"><span>Member since</span><input class="in" type="date" name="member_since" value="${v('member_since')}"></label></div>
+      <div class="grid2"><label class="f"><span>Rookie since</span><input class="in" type="date" name="rookie_since" value="${v('rookie_since')}"></label><label class="f"><span>Member eligible</span><input class="in" type="date" name="eligible_date" value="${v('eligible_date')}"></label></div>
+      ${isNew ? '' : `<h3 style="margin-top:16px">Dues</h3><div class="grid2">${[yr - 1, yr, yr + 1].slice(0, 2).map(y => `<label class="f"><span>${y}</span><select class="in" data-dues="${y}">${['', 'PAID', 'EXEMPT', 'EXTENSION', 'UNPAID'].concat(p.dues[y] && !['PAID', 'EXEMPT', 'EXTENSION', 'UNPAID'].includes(p.dues[y]) ? [p.dues[y]] : []).map(o => `<option value="${esc(o)}" ${(p.dues[y] || '') === o ? 'selected' : ''}>${o || 'None'}</option>`).join('')}</select></label>`).join('')}</div>`}
+      <div class="btns" style="margin-top:16px"><button class="btn primary">Save</button><button type="button" class="btn ghost" data-close>Cancel</button></div>
+    </form>`, s => {
+    s.querySelectorAll('[data-dues]').forEach(sel => sel.onchange = async () => { await rpc('set_dues', { p_person: p.id, p_year: +sel.dataset.dues, p_status: sel.value }); p.dues[sel.dataset.dues] = sel.value; toast('Dues saved'); });
+    $('#pf', s).onsubmit = async ev => {
+      ev.preventDefault();
+      const fd = new FormData(ev.target); const body = {}; for (const [k, val] of fd.entries()) body[k] = String(val).trim();
+      if (!isNew) body.id = p.id;
+      if (p.status === 'pending' && body.status === 'pending') delete body.status;
+      await rpc('save_person', { p_crew: S.crew.id, p: body });
+      if (!isNew && body.status && body.status !== p.status && p.status !== 'pending') await rpc('set_status', { p_person: p.id, p_status: body.status });
+      closeSheet(); toast('Saved'); await refresh(); show(renderRoster);
+    };
+  });
+}
+async function exportRoster() {
+  const yr = +todayISO().slice(0, 4);
+  const cols = ['Name', 'Callsign', 'Role', 'Status', 'Member since', 'Email', 'Phone', 'Discord', 'Instagram', 'Birthday', `${yr - 1} dues`, `${yr} dues`, 'Rookie since', 'Eligible date', 'Signed in to Busters'];
+  const rows = rosterData.map(p => [p.full_name, p.callsign, p.title, p.status, p.member_since, p.email, p.phone, p.discord, p.instagram, p.birthday, p.dues[yr - 1], p.dues[yr], p.rookie_since, p.eligible_date, p.signed_in ? 'yes' : 'no']);
+  const cell = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) || /^[=+\-@]/.test(s) ? '"' + (/^[=+\-@]/.test(s) ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
+  const csv = [cols, ...rows].map(r => r.map(cell).join(',')).join('\r\n');
+  await rpc('log_export', { p_crew: S.crew.id, p_what: 'the Personnel roster (' + rows.length + ' people)' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+  a.download = `LAGB roster ${todayISO()}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  toast('Downloaded. Opens in Excel or Google Sheets.');
+}
+
+/* ---------- Action log ---------- */
+async function renderLog(m) {
+  m.innerHTML = '<p class="muted">Loading...</p>';
+  const { data } = await sb.from('action_log').select('*').eq('crew_id', S.crew.id).order('at', { ascending: false }).limit(200);
+  m.innerHTML = `<button class="back" id="bk">${ICON.back} Team</button><h2 style="font-size:30px">Action log</h2><p class="muted small">The last 200 changes: who did what, and when.</p>
+    <div class="log">${(data || []).map(l => `<div><b>${esc(nameOf(personById(l.actor_id)))}</b> <span class="muted">${esc(l.summary || l.action)}</span><div class="tiny dim">${new Date(l.at).toLocaleString()}</div></div>`).join('') || '<div class="empty">Nothing logged yet.</div>'}</div>`;
+  $('#bk').onclick = () => { S.view = null; render(); };
+}
+
+/* ---------- profile and menu ---------- */
+function openProfile() {
+  sheet(`<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:48px;height:48px;cursor:default">${esc(initials(S.me.full_name))}</div><div><b>${esc(S.me.full_name)}</b><div class="small muted">${esc((S.session.user || {}).email || '')}</div></div></div>
+    <a class="menuitem" id="pm-me"><span class="grow">My details</span><span class="muted">›</span></a>
+    <div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>
+    <div class="menuitem"><span class="grow">Alert settings</span><span class="pill">Next build</span></div>
+    <a class="menuitem" id="out"><span class="grow" style="color:var(--bad)">Sign out</span></a>`, s => {
+    $('#pm-me', s).onclick = () => { closeSheet(); S.tab = 'me'; S.view = null; render(); };
+    s.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => { await rpc('set_maps_app', { p_app: b.dataset.m }); S.profile.maps_app = b.dataset.m; s.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); toast('Saved'); });
+    $('#out', s).onclick = () => { closeSheet(); sb.auth.signOut(); };
+  });
+}
+function openMenu() {
+  sheet(`<img src="img/emblem.png" alt="" style="width:70px;margin:0 auto 8px">
+    <a class="menuitem" href="${DONATE_URL}" target="_blank" rel="noopener"><span class="grow">Give Back: donate to Starlight</span><span class="muted">↗</span></a>
+    <a class="menuitem" href="https://forms.wix.com/r/7168473352057652079" target="_blank" rel="noopener"><span class="grow">Event request form</span><span class="muted">↗</span></a>
+    <a class="menuitem" href="https://forms.wix.com/r/6936122162306613874" target="_blank" rel="noopener"><span class="grow">Recruit form</span><span class="muted">↗</span></a>
+    <a class="menuitem" href="https://www.losangelesgb.com/" target="_blank" rel="noopener"><span class="grow">About LAGB</span><span class="muted">↗</span></a>
+    <a class="menuitem" id="how"><span class="grow">How to use Busters</span><span class="muted">›</span></a>
+    <a class="menuitem" href="mailto:deftspyder@gmail.com?subject=Busters%20feedback"><span class="grow">Send feedback</span><span class="muted">↗</span></a>
+    ${can('crew_admin') ? `<div class="small muted" style="margin:14px 0 4px;text-transform:uppercase;letter-spacing:.08em">Admin</div>
+      <a class="menuitem" id="adm-ann"><span class="grow">Post an announcement</span><span class="muted">›</span></a>
+      <a class="menuitem" id="adm-log"><span class="grow">Action log</span><span class="muted">›</span></a>` : ''}
+    <p class="tiny dim" style="margin-top:14px">Busters beta for ${esc(S.crew.short)}. Ghostbusters and the No-Ghost logo are trademarks of Columbia Pictures.</p>`, s => {
+    $('#how', s).onclick = () => sheet(`<h3>How to use Busters</h3>
+      <p><b>Home</b> shows what needs you now: your next event, anything you haven't answered, and announcements.</p>
+      <p><b>Events</b> has everything coming up. Tap one for its brief, then answer Going, Maybe or No, with your ride and a note.</p>
+      <p><b>Navigate</b> buttons open your maps app. Pick Google Maps, Apple Maps or Waze from your profile picture.</p>
+      <p><b>My Busters</b> is your own record and your contact details.</p>
+      <p><b>Add to your home screen</b> so Busters opens like an app: on iPhone tap Share then "Add to Home Screen"; on Android tap the ⋮ menu then "Install app".</p>
+      <button class="btn" data-close>Got it</button>`);
+    const a1 = $('#adm-ann', s); if (a1) a1.onclick = postAnnouncement;
+    const a2 = $('#adm-log', s); if (a2) a2.onclick = () => { closeSheet(); show(renderLog); };
+  });
+}
+
+/* ---------- sheets ---------- */
+let onSheetClose = null;
+function sheet(html, wire, onClose) {
+  onSheetClose = onClose || null;
+  $('#layer').innerHTML = `<div class="scrim"><div class="sheet" role="dialog"><div class="grab"></div>${html}</div></div>`;
+  const s = $('#layer .sheet');
+  $('#layer .scrim').onclick = e => { if (e.target.classList.contains('scrim')) closeSheet(); };
+  s.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheet);
+  if (wire) wire(s);
+}
+function closeSheet() { $('#layer').innerHTML = ''; const f = onSheetClose; onSheetClose = null; if (f) f(); }
+const confirmBox = msg => window.confirm(msg);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+boot();
+})();
+</script>
+</body>
+</html>
