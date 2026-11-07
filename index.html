@@ -62,7 +62,7 @@ h2{font-size:26px}h3{font-size:20px}
 /* cards and rows */
 .sec{margin:20px 0}
 .sec>h2{margin:0 0 10px;display:flex;align-items:center;gap:10px}
-.sec>h2 .act{margin-left:auto;font-family:"DM Sans";font-size:14px;letter-spacing:0}
+.sec>h2 .act{margin-left:auto;font-family:"DM Sans",system-ui,sans-serif;font-size:14px;letter-spacing:0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
 .card+.card{margin-top:10px}
 .row{display:flex;gap:12px;align-items:center;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;text-decoration:none;color:inherit}
@@ -99,6 +99,8 @@ label.f>span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
 textarea.in{min-height:84px;resize:vertical}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid2>*,.grid3>*{min-width:0}
+input.in{min-width:0}
 .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:none;padding:9px 6px;border-radius:9px;cursor:pointer;font-weight:700;color:var(--muted)}
 .seg button.on{background:var(--ink);color:#000}
@@ -372,11 +374,11 @@ function renderShell() {
   render();
 }
 function teamCount() {
-  let n = 0;
-  if (can('approve_members')) n += S.people.filter(p => p.status === 'pending').length;
-  if (can('add_events') || can('edit_events')) n += upcoming().filter(e => e.status === 'scheduled' && (e.missing.length || isShort(e))).length;
-  if (can('manage_proposals')) n += S.events.filter(e => e.status === 'proposed').length;
-  return n;
+  const ev = can('add_events') || can('edit_events'); const up = upcoming().filter(e => e.status === 'scheduled');
+  return (can('approve_members') ? S.people.filter(p => p.status === 'pending').length : 0)
+    + (can('manage_proposals') ? S.events.filter(e => e.status === 'proposed').length : 0)
+    + (ev ? up.filter(isShort).length + up.filter(e => e.missing.length).length : 0)
+    + (can('pick_attendees') ? up.filter(e => e.max_busters && e.going > 0 && e.spots_in < e.max_busters).length : 0);
 }
 function render() {
   const tabs = TABS.filter(([k]) => k !== 'team' || onTeam());
@@ -836,6 +838,18 @@ async function renderRoster(m) {
     const q = rosterQ.toLowerCase();
     const rows = rosterData.filter(p => (rosterF === 'all' || (rosterF === 'current' ? ['active', 'rookie', 'pending'].includes(p.status) : p.status === rosterF)) &&
       (!q || [p.full_name, p.callsign, p.title, p.email, p.discord, p.phone].join(' ').toLowerCase().includes(q)));
+    if (innerWidth < 700) {
+      $('#rt').innerHTML = rows.map(p => `<div class="row" data-p="${p.id}" style="align-items:flex-start"><div class="grow">
+        <div class="t">${esc(p.full_name)}${p.callsign ? ` <span class="muted">"${esc(p.callsign)}"</span>` : ''}</div>
+        <div class="small muted">${esc(p.title || '')}${p.member_since ? ' · since ' + esc(p.member_since.slice(0, 4)) : ''}</div>
+        <div class="small" style="margin-top:4px">${p.email ? esc(p.email) : '<span class="pill warn">no email</span>'}${p.phone ? ' · ' + esc(p.phone) : ''}</div>
+        ${p.discord || p.birthday ? `<div class="small muted">${esc([p.discord && 'Discord ' + p.discord, p.birthday && 'Birthday ' + fmtDay('2000-' + p.birthday, { month: 'short', day: 'numeric' })].filter(Boolean).join(' · '))}</div>` : ''}
+        <div class="pills">${p.status !== 'active' ? `<span class="pill ${p.status === 'rookie' ? 'cream' : p.status === 'pending' ? 'cyan' : ''}">${esc(p.status)}</span>` : ''}<span class="tiny muted" style="align-self:center">${yr - 1}</span>${duesPill(p.dues[yr - 1])}<span class="tiny muted" style="align-self:center">${yr}</span>${duesPill(p.dues[yr])}${p.status === 'rookie' ? `<span class="pill cream">${(p.rookie_events_before || 0) + p.events_done} of 4 events${p.eligible_date ? ', eligible ' + esc(p.eligible_date) : ''}</span>` : ''}${!p.signed_in && p.status !== 'retired' ? '<span class="pill">not signed in yet</span>' : ''}</div>
+      </div></div>`).join('') || '<div class="empty">Nobody matches.</div>';
+      $('#rt').querySelectorAll('[data-p]').forEach(r => r.onclick = () => editPerson(rosterData.find(x => x.id === r.dataset.p)));
+      $('#cnt').textContent = rows.length + ' shown';
+      return;
+    }
     $('#rt').innerHTML = `<table class="ptable"><thead><tr><th>Name</th><th>Role</th><th>Contact</th><th>Discord</th><th>Birthday</th><th>${yr - 1} dues</th><th>${yr} dues</th><th>Rookie</th></tr></thead><tbody>
       ${rows.map(p => `<tr data-p="${p.id}"><td><b>${esc(p.full_name)}</b>${p.callsign ? `<div class="tiny muted">"${esc(p.callsign)}"</div>` : ''}${p.status !== 'active' ? `<div><span class="pill ${p.status === 'rookie' ? 'cream' : p.status === 'pending' ? 'cyan' : ''}" style="margin-top:4px">${esc(p.status)}</span></div>` : ''}${!p.signed_in && p.status !== 'retired' ? '<div class="tiny dim">not signed in yet</div>' : ''}</td>
         <td>${esc(p.title || '')}${p.member_since ? `<div class="tiny muted">since ${esc(p.member_since)}</div>` : ''}</td>
