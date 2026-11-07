@@ -801,8 +801,15 @@ function renderTeam(m) {
   ];
   m.innerHTML = `<div class="sec"><h2>Team ${ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
     <div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div></div>
-    <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>`;
+    <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>
+    ${can('crew_admin') ? '<div class="sec small" id="bridge"></div>' : ''}`;
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
+  if (can('crew_admin')) rpc('bridge_status', { p_crew: S.crew.id }).then(b => {
+    if (!b || !$('#bridge')) return;
+    const ago = x => x ? Math.round((Date.now() - new Date(x.at)) / 60000) : null;
+    const line = (label, x, okMin) => `<div>${label}: ${x ? `<span class="${ago(x) > okMin ? 'muted' : ''}">${ago(x) < 60 ? ago(x) + ' min ago' : Math.round(ago(x) / 60) + ' h ago'}</span> <span class="dim">(${esc(x.summary)})</span>` : '<span class="muted">not connected yet</span>'}</div>`;
+    $('#bridge').innerHTML = line('Google Calendar sync', b.calendar, 20) + line('Sheet sync', b.sheet, 130);
+  }).catch(() => {});
   const ro = $('#roster'); if (ro) ro.onclick = () => show(renderRoster);
   const lg = $('#log'); if (lg) lg.onclick = () => show(renderLog);
   wireRows(m);
@@ -922,7 +929,7 @@ async function renderLog(m) {
   m.innerHTML = '<p class="muted">Loading...</p>';
   const { data } = await sb.from('action_log').select('*').eq('crew_id', S.crew.id).order('at', { ascending: false }).limit(200);
   m.innerHTML = `<button class="back" id="bk">${ICON.back} Team</button><h2 style="font-size:30px">Action log</h2><p class="muted small">The last 200 changes: who did what, and when.</p>
-    <div class="log">${(data || []).map(l => `<div><b>${esc(nameOf(personById(l.actor_id)))}</b> <span class="muted">${esc(l.summary || l.action)}</span><div class="tiny dim">${new Date(l.at).toLocaleString()}</div></div>`).join('') || '<div class="empty">Nothing logged yet.</div>'}</div>`;
+    <div class="log">${(data || []).map(l => `<div><b>${esc(l.actor_id ? nameOf(personById(l.actor_id)) : /sheet|calendar/.test(l.action) ? 'Google bridge' : 'Busters')}</b> <span class="muted">${esc(l.summary || l.action)}</span><div class="tiny dim">${new Date(l.at).toLocaleString()}</div></div>`).join('') || '<div class="empty">Nothing logged yet.</div>'}</div>`;
   $('#bk').onclick = () => { S.view = null; render(); };
 }
 
