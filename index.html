@@ -200,6 +200,9 @@ input.in{min-width:0}
 .menuitem:last-child{border-bottom:0}
 .menuitem .grow{flex:1}
 
+.fab{position:fixed;right:max(16px,calc((100vw - 760px) / 2 + 16px));bottom:calc(var(--tabh) + 40px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:18px;border:0;background:var(--cyan);color:#001018;display:grid;place-items:center;cursor:pointer;z-index:40;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.fab:active{transform:scale(.95)}
+@media (min-width:900px){.fab{bottom:24px}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom));background:var(--ink);color:#000;padding:10px 16px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw}
 
 /* sign in */
@@ -548,14 +551,11 @@ function renderEvents(m) {
       <input class="in" id="q" placeholder="Search events" value="${esc(S.evSearch)}" style="flex:1">
       <div class="seg" style="flex:0 0 auto"><button class="${S.evMode === 'list' ? 'on' : ''}" data-mode="list" title="List">${ICON.list}</button><button class="${S.evMode === 'cal' ? 'on' : ''}" data-mode="cal" title="Calendar">${ICON.cal}</button></div>
     </div>
-    ${S.evMode === 'list' ? `<div class="chips">${FILTERS.map(([k, l]) => `<button class="chip ${S.evFilter === k ? 'on' : ''}" data-f="${k}">${l}</button>`).join('')}</div>` : ''}
-    ${can('add_events') ? '<div class="btns" style="margin-top:12px"><button class="btn primary sm" id="new">+ New event</button></div>' : '<div class="btns" style="margin-top:12px"><button class="btn sm" id="suggest">Suggest an event</button></div>'}
-    <div class="sec" id="list"></div>`;
+    <div class="sec" id="list"></div><div style="height:72px"></div>
+    <button class="fab" id="fab" title="${can('add_events') ? 'New event' : 'Suggest an event'}" aria-label="${can('add_events') ? 'New event' : 'Suggest an event'}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>`;
   const q = $('#q'); q.oninput = () => { S.evSearch = q.value; fillList(); };
   m.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { S.evMode = b.dataset.mode; render(); });
-  m.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.evFilter = b.dataset.f; render(); });
-  const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
-  const sg = $('#suggest'); if (sg) sg.onclick = () => editEvent(null, true);
+  $('#fab').onclick = () => can('add_events') ? editEvent(null) : editEvent(null, true);
   fillList();
 }
 function fillList() {
