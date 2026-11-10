@@ -835,7 +835,7 @@ function renderBrief(m, e) {
 
 
     ${canEdit && e.missing.length && e.status === 'scheduled' ? `<div class="card missing" style="margin-top:16px"><b>${8 - e.missing.length} of 8 done.</b> <span class="small">Still needs: ${esc(e.missing.join(', '))}</span></div>` : ''}
-    ${canEdit ? `<div class="btns" style="margin:18px 0 30px"><button class="btn primary" id="edit">Edit event</button>${e.status === 'scheduled' ? '<button class="btn danger" id="cancel">Cancel event</button>' : e.status === 'cancelled' ? '<button class="btn" id="restore">Put back on</button>' : ''}</div>` : '<div style="height:30px"></div>'}
+    ${canEdit ? `<div class="btns" style="margin:18px 0 30px"><button class="btn primary" id="edit">Edit event</button>${e.status === 'scheduled' ? '<button class="btn" id="todc">Post to Discord</button>' : ''}${e.status === 'scheduled' ? '<button class="btn danger" id="cancel">Cancel event</button>' : e.status === 'cancelled' ? '<button class="btn" id="restore">Put back on</button>' : ''}</div>` : '<div style="height:30px"></div>'}
   </div>`;
   $('#bk').onclick = () => { S.view = null; history.replaceState(null, '', location.pathname); render(); };
   wireRows(m);
@@ -861,6 +861,14 @@ function renderBrief(m, e) {
     await refresh(); openEvent(e.id); toast('Saved');
   };
   const ed = $('#edit'); if (ed) ed.onclick = () => editEvent(e);
+  const td = $('#todc'); if (td) td.onclick = () => sheet(`<h3>Post to Discord</h3><p class="small muted">Posts ${esc(e.title)} with its date, how many are going, and a sign-up link.</p>
+    <label class="f"><span>Add a line (optional)</span><input class="in" id="dc-note" maxlength="300" placeholder="We could use a few more for this one!"></label>
+    <div class="btns" style="margin-top:12px"><button class="btn primary" id="dc-go">Post it</button><button class="btn ghost" data-close>Not now</button></div>`, sh => {
+    $('#dc-go', sh).onclick = async () => {
+      const st = await rpc('discord_post_event', { p_event: e.id, p_note: $('#dc-note', sh).value });
+      closeSheet(); toast(st == null ? 'Discord is not connected yet (Team tab).' : st >= 200 && st < 300 ? 'Posted to Discord' : 'Discord said no (code ' + st + ')');
+    };
+  });
   const ca = $('#cancel'); if (ca) ca.onclick = () => cancelEvent(e);
   const rs = $('#restore'); if (rs) rs.onclick = async () => { await rpc('set_event_status', { p_event: e.id, p_status: 'scheduled', p_reason: null }); await refresh(); openEvent(e.id); };
   const pk = $('#pick'); if (pk) pk.onclick = () => pickSpots(e, going);
@@ -1138,6 +1146,36 @@ function goalCard() {
     <button class="btn sm" id="gb-save" style="margin-top:10px">Save goal</button>
   </div></div>`;
 }
+function discordCard(d) {
+  d = d || {};
+  const when = d.last ? new Date(d.last.at).toLocaleString() : '';
+  return `<h2>Discord posts</h2><div class="card">
+    ${d.has_hook ? `<div style="display:flex;align-items:center;gap:8px"><span class="pill good">Connected</span><span class="small muted">webhook ending ${esc(d.tail)}</span></div>
+      ${d.last ? `<div class="tiny dim" style="margin-top:6px">Last post: ${esc(d.last.kind)}, ${when}${d.last.status >= 200 && d.last.status < 300 ? '' : ' <span style="color:var(--bad)">(failed, code ' + esc(String(d.last.status)) + ')</span>'}</div>` : ''}
+      <div class="btns" style="margin-top:10px"><button class="btn sm" id="dc-test">Send a test post</button><button class="btn sm ghost" id="dc-off">Disconnect</button></div>`
+    : `<div class="small muted">Busters can post into an LAGB Discord channel. In Discord, open the channel's settings: Edit Channel, Integrations, Webhooks, New Webhook, then Copy Webhook URL and paste it here. <a href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks" target="_blank" rel="noopener">How webhooks work</a></div>
+      <label class="f"><span>Webhook link (kept private)</span><input class="in" id="dc-url" type="url" autocomplete="off" placeholder="https://discord.com/api/webhooks/..."></label>`}
+    <label class="check" style="margin-top:12px"><input type="checkbox" id="dc-short" ${d.post_short !== false ? 'checked' : ''}><span>Nudge when an event is short on Busters, <select class="in" id="dc-days" style="width:auto;display:inline-block;padding:2px 6px">${[1, 2, 3, 5, 7, 14].map(n => `<option ${(d.short_days || 3) === n ? 'selected' : ''} value="${n}">${n} ${n === 1 ? 'day' : 'days'}</option>`).join('')}</select> ahead</span></label>
+    <label class="check"><input type="checkbox" id="dc-photos" ${d.post_photos !== false ? 'checked' : ''}><span>Ask for photos and videos the day after an event</span></label>
+    <div class="tiny dim" style="margin-top:6px">Posts go out between 9am and 9pm, once per event, and never ping @everyone. Editors can also post any event from its page.</div>
+    <button class="btn sm primary" id="dc-save" style="margin-top:10px">Save</button>
+  </div>`;
+}
+function wireDiscord() {
+  const box = $('#discord'); if (!box) return;
+  rpc('discord_settings', { p_crew: S.crew.id }).then(d => {
+    box.innerHTML = discordCard(d);
+    const save = async url => {
+      try {
+        await rpc('set_discord', { p_crew: S.crew.id, p_url: url, p_short: $('#dc-short').checked, p_days: Number($('#dc-days').value), p_photos: $('#dc-photos').checked });
+      } catch (err) { return; }
+      toast(url === '' ? 'Disconnected' : 'Saved'); wireDiscord();
+    };
+    $('#dc-save').onclick = () => { const u = $('#dc-url'); save(u && u.value.trim() ? u.value.trim() : null); };
+    const off = $('#dc-off'); if (off) off.onclick = () => { if (confirmBox('Disconnect Busters from Discord?')) save(''); };
+    const t = $('#dc-test'); if (t) t.onclick = async () => { const st = await rpc('discord_test', { p_crew: S.crew.id }); toast(st >= 200 && st < 300 ? 'Posted. Check the channel.' : 'Discord said no (code ' + st + ')'); wireDiscord(); };
+  }).catch(() => {});
+}
 function renderTeam(m) {
   const pending = can('approve_members') ? S.people.filter(p => p.status === 'pending') : [];
   const ev = can('add_events') || can('edit_events');
@@ -1158,7 +1196,7 @@ function renderTeam(m) {
   m.innerHTML = `<div class="sec"><h2>Team ${ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
     <div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div></div>
     <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>
-    ${can('crew_admin') ? adoptionCard() + goalCard() + '<div class="sec small" id="bridge"></div>' : ''}`;
+    ${can('crew_admin') ? adoptionCard() + goalCard() + '<div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`;
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
   const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
     const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
@@ -1173,6 +1211,7 @@ function renderTeam(m) {
     const line = (label, x, okMin) => `<div>${label}: ${x ? `<span class="${ago(x) > okMin ? 'muted' : ''}">${ago(x) < 60 ? ago(x) + ' min ago' : Math.round(ago(x) / 60) + ' h ago'}</span> <span class="dim">(${esc(x.summary)})</span>` : '<span class="muted">not connected yet</span>'}</div>`;
     $('#bridge').innerHTML = line('Google Calendar sync', b.calendar, 20) + line('Sheet sync', b.sheet, 130);
   }).catch(() => {});
+  if (can('crew_admin')) wireDiscord();
   const ro = $('#roster'); if (ro) ro.onclick = () => show(renderRoster);
   const lg = $('#log'); if (lg) lg.onclick = () => show(renderLog);
   wireRows(m);
@@ -1288,12 +1327,20 @@ async function exportRoster() {
 }
 
 /* ---------- Action log ---------- */
+const LOGF = [['all', 'All'], ['changes', 'Changes'], ['answers', 'Answers'], ['signins', 'Sign-ins']];
 async function renderLog(m) {
+  const f = S.logf || 'all';
   m.innerHTML = '<p class="muted">Loading...</p>';
-  const { data } = await sb.from('action_log').select('*').eq('crew_id', S.crew.id).order('at', { ascending: false }).limit(200);
-  m.innerHTML = `<button class="back" id="bk">${ICON.back} Team</button><h2 style="font-size:30px">Action log</h2><p class="muted small">The last 200 changes: who did what, and when.</p>
-    <div class="log">${(data || []).map(l => `<div><b>${esc(l.actor_id ? nameOf(personById(l.actor_id)) : /sheet|calendar/.test(l.action) ? 'Google bridge' : 'Busters')}</b> <span class="muted">${esc(l.summary || l.action)}</span><div class="tiny dim">${new Date(l.at).toLocaleString()}</div></div>`).join('') || '<div class="empty">Nothing logged yet.</div>'}</div>`;
+  let q = sb.from('action_log').select('*').eq('crew_id', S.crew.id);
+  if (f === 'changes') q = q.not('action', 'in', '(rsvp,signed_in,signed_out)');
+  if (f === 'answers') q = q.eq('action', 'rsvp');
+  if (f === 'signins') q = q.in('action', ['signed_in', 'signed_out']);
+  const { data } = await q.order('at', { ascending: false }).limit(200);
+  m.innerHTML = `<button class="back" id="bk">${ICON.back} Team</button><h2 style="font-size:30px">Action log</h2><p class="muted small">The last 200 entries: who did what, and when.</p>
+    <div class="seg" id="logf" style="margin:10px 0 12px">${LOGF.map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-f="${k}">${l}</button>`).join('')}</div>
+    <div class="log">${(data || []).map(l => `<div><b>${esc(l.actor_id ? nameOf(personById(l.actor_id)) : /sheet|calendar/.test(l.action) ? 'Google bridge' : 'Busters')}</b> <span class="muted">${esc(l.summary || l.action)}</span><div class="tiny dim">${new Date(l.at).toLocaleString()}</div></div>`).join('') || '<div class="empty">Nothing here yet.</div>'}</div>`;
   $('#bk').onclick = () => { S.view = null; render(); };
+  m.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.logf = b.dataset.f; renderLog(m); });
 }
 
 /* ---------- profile and menu ---------- */
