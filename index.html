@@ -443,13 +443,16 @@ function mapsUrl(pl) {
   if (app === 'waze') return ll && !pl.address ? `https://waze.com/ul?ll=${ll}&navigate=yes` : 'https://waze.com/ul?q=' + encodeURIComponent(q) + '&navigate=yes';
   return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(q);
 }
+function staffText(e) {
+  if (e.max_busters) return `${Math.min(e.going, e.max_busters)} of ${e.max_busters}${e.going > e.max_busters ? ' +' + (e.going - e.max_busters) : ''}`;
+  const y = e.goal_busters || e.min_busters;
+  return y ? `${e.going} of ${y}` : `${e.going} going`;
+}
 function staffPill(e) {
   if (e.status === 'cancelled') return '<span class="pill bad">Cancelled</span>';
-  if (e.max_busters) return `<span class="pill ${e.spots_in >= e.max_busters ? 'good' : 'cyan'}">${e.going} want in, ${e.max_busters} spots</span>`;
-  if (e.min_busters == null) return e.going ? `<span class="pill">${e.going} going</span>` : '';
-  if (e.going < e.min_busters) return `<span class="pill bad">${e.going} of ${e.min_busters} min</span>`;
-  if (e.goal_busters && e.going < e.goal_busters) return `<span class="pill warn">${e.going}, goal ${e.goal_busters}</span>`;
-  return `<span class="pill good">${e.going} going</span>`;
+  if (!e.max_busters && e.min_busters == null && !e.goal_busters && !e.going) return '';
+  const cls = e.max_busters ? (e.going >= e.max_busters ? 'good' : 'cyan') : isShort(e) ? 'bad' : (e.goal_busters && e.going < e.goal_busters) ? 'warn' : 'good';
+  return `<span class="pill ${cls}" title="${e.max_busters ? e.going + ' want in, ' + e.max_busters + ' spots' : 'Busters going' + (e.min_busters != null ? ', minimum ' + e.min_busters : '') + (e.goal_busters ? ', goal ' + e.goal_busters : '')}">${staffText(e)}</span>`;
 }
 function answerPill(eid) { const r = myRsvp(eid); if (!r) return ''; return { going: '<span class="pill good">You: Going</span>', maybe: '<span class="pill warn">You: Maybe</span>', no: '<span class="pill">You: No</span>' }[r.answer]; }
 function timeLine(e) { const bits = []; if (e.call_time) bits.push('Call ' + fmtTime(e.call_time)); if (e.start_time) bits.push((e.wrap_time ? fmtTime(e.start_time) + ' to ' + fmtTime(e.wrap_time) : 'Starts ' + fmtTime(e.start_time))); return bits.join(' · '); }
@@ -612,7 +615,7 @@ function renderBrief(m, e) {
   const kicker = [e.category && esc(e.category), e.max_busters && 'Limited to ' + e.max_busters, e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>', e.missing.length && e.status === 'scheduled' && '<span style="color:var(--cream)">Details coming</span>'].filter(Boolean).join(' · ');
   const tl = timeLine(e);
   const p1 = pls[0];
-  const need = e.max_busters ? `${e.going} want in · ${e.max_busters} spots` : e.min_busters != null && e.going < e.min_busters ? `${e.going} going · need ${e.min_busters}` : e.goal_busters ? `${e.going} going · goal ${e.goal_busters}` : `${e.going} going`;
+  const need = staffText(e);
   m.innerHTML = `<div class="brief">
     <button class="back" id="bk">${ICON.back} Back</button>
     ${kicker ? `<div class="kick">${kicker}</div>` : ''}
