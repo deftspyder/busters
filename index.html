@@ -128,11 +128,20 @@ input.in{min-width:0}
 .brief h1{font-size:28px;line-height:1.05}
 .brief .back{margin:8px 0 4px}
 .kick{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px}
-.facts{margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.fact{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:14px;min-height:42px;flex-wrap:wrap}
-.fact+.fact{border-top:1px solid var(--line)}
+.when{display:flex;align-items:center;gap:12px;margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+.cdate{width:56px;flex:0 0 56px;border-radius:12px;overflow:hidden;background:var(--panel2);border:1px solid var(--line);text-align:center;line-height:1}
+.cdate .cm{background:var(--bad);color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;padding:4px 0;text-transform:uppercase}
+.cdate .cd{font-family:"Bebas Neue";font-size:30px;padding:4px 0 0}
+.cdate .cw{font-size:10px;color:var(--muted);padding:0 0 5px;letter-spacing:.06em;text-transform:uppercase}
+.when .tl{font-size:15px;margin-bottom:2px}
+.navic{width:46px;height:46px;flex:0 0 46px;border-radius:50%;background:var(--cyan);color:#001018;display:grid;place-items:center}.navic svg{width:20px;height:20px}
+.choices{display:flex;gap:8px;margin-top:12px}
+.choices .ch{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:10px 6px;font:700 14px "DM Sans",sans-serif;cursor:pointer}
+.choices .ch.going{flex:1.4;color:var(--good);border-color:rgba(74,222,128,.5)}
+.choices .ch.going.on{background:var(--good);color:#001a08;border-color:var(--good)}
+.choices .ch.maybe.on{background:var(--warn);color:#1a1200;border-color:var(--warn)}
+.choices .ch.no.on{background:#3a4352;border-color:#3a4352}
 .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.seg.rsvp button{padding:8px 6px}
 .ridebox summary{cursor:pointer;list-style:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ridebox summary::-webkit-details-marker{display:none}
 .grp{margin-top:8px}.grp .gl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
@@ -563,13 +572,17 @@ function renderBrief(m, e) {
     <button class="back" id="bk">${ICON.back} Back</button>
     ${kicker ? `<div class="kick">${kicker}</div>` : ''}
     <h1>${esc(e.title)}</h1>
-    <div class="facts">
-      <div class="fact"><b>${fmtDay(e.event_date, { weekday: 'short', month: 'short', day: 'numeric' })}${e.end_date ? ' to ' + fmtDay(e.end_date, { weekday: 'short', month: 'short', day: 'numeric' }) : ''}</b>${tl ? `<span class="muted"> · ${esc(tl)}</span>` : '<span class="muted"> · Times coming</span>'}</div>
-      <div class="fact">${p1 ? `<div style="flex:1;min-width:0"><b>${esc(p1.place.name)}</b>${p1.place.address ? `<div class="small muted ell">${esc(p1.place.address)}</div>` : ''}</div><a class="btn sm primary" href="${mapsUrl(p1.place)}" target="_blank" rel="noopener">${ICON.nav} Go</a>` : '<span class="muted">Address coming</span>'}</div>
+    <div class="when"><div class="cdate"><div class="cm">${fmtDay(e.event_date, { month: 'short' })}</div><div class="cd">${parseDay(e.event_date).getDate()}</div><div class="cw">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>
+      <div style="flex:1;min-width:0">
+        <div class="tl">${e.call_time ? `<b>Call ${esc(fmtTime(e.call_time))}</b>` : ''}${e.call_time && e.start_time ? ' · ' : ''}${e.start_time ? esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) : '') : ''}${!e.call_time && !e.start_time ? '<span class="muted">Times coming</span>' : ''}</div>
+        ${e.end_date ? `<div class="small muted">Through ${fmtDay(e.end_date, { weekday: 'short', month: 'short', day: 'numeric' })}</div>` : ''}
+        <div class="small muted ell">${p1 ? esc(p1.place.name) : 'Address coming'}</div>
+      </div>
+      ${p1 ? `<a class="navic" href="${mapsUrl(p1.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate">${ICON.nav}</a>` : ''}
     </div>
     ${sameDay.length ? `<div class="small" style="margin-top:6px;color:var(--warn)">Also this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>`).join(', ')}</div>` : ''}
 
-    ${open ? `<div class="seg rsvp" style="margin-top:10px">${['going', 'maybe', 'no'].map(a => `<button class="${r.answer === a ? 'on ' + a : ''}" data-a="${a}">${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>
+    ${open ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-a="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>
       ${(e.max_busters && r.spot) || (r.answer && r.answer !== 'no') ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">${e.max_busters && r.spot ? `<span class="pill ${r.spot === 'in' ? 'good' : 'warn'}">${r.spot === 'in' ? "You're in" : "You're on reserve"}</span>` : ''}${r.answer && r.answer !== 'no' ? `<details class="ridebox" style="flex:1"><summary class="small muted">${r.ride ? { own: 'Getting there myself', driving: 'Driving' + (r.seats ? ', ' + r.seats + ' seats' : ''), need: 'Need a ride' }[r.ride] : 'Add ride'}${r.note ? ' · ' + esc(r.note) : ' · add note'} ›</summary>
         <div class="grid2" style="margin-top:8px">
         <label class="f" style="margin:0"><span>Ride</span><select class="in" id="ride"><option value="">Not set</option><option value="own" ${r.ride === 'own' ? 'selected' : ''}>Getting there myself</option><option value="driving" ${r.ride === 'driving' ? 'selected' : ''}>Driving, have seats</option><option value="need" ${r.ride === 'need' ? 'selected' : ''}>Need a ride</option></select></label>
