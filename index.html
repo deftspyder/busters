@@ -429,7 +429,7 @@ function renderBlocked(st) {
 async function loadAll() {
   const c = S.crew.id;
   const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
-  const [sess, ev, pl, pe, rs, ep, an, gb, fb] = await Promise.all([
+  const [sess, ev, pl, pe, rs, ep, an, gb, fb, sp] = await Promise.all([
     rpc('my_session', { p_crew: c }),
     sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
     sb.from('places').select('*').eq('crew_id', c).order('name'),
@@ -438,11 +438,12 @@ async function loadAll() {
     sb.from('event_places').select('*').eq('crew_id', c).order('sort'),
     sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10),
     sb.rpc('giveback_for_crew', { p_crew: c }),
-    sb.rpc('fundraising_board', { p_crew: c, p_year: Number(todayISO().slice(0, 4)) })
+    sb.rpc('fundraising_board', { p_crew: c, p_year: Number(todayISO().slice(0, 4)) }),
+    sb.rpc('shared_phones', { p_crew: c })
   ]);
   S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
   if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
-  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || [];
+  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.phones = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x.phone]));
 }
 async function refresh() { await loadAll(); render(); }
 
@@ -952,6 +953,8 @@ function renderMine(m) {
         <label class="f"><span>Callsign</span><input class="in" name="callsign" value="${esc(me.callsign || '')}"></label>
         <div class="grid2"><label class="f"><span>Phone</span><input class="in" type="tel" name="phone" value="${esc(S.priv.phone || '')}"></label><label class="f"><span>Discord name</span><input class="in" name="discord" value="${esc(S.priv.discord || '')}"></label></div>
         <div class="grid2"><label class="f"><span>Instagram</span><input class="in" name="instagram" value="${esc(S.priv.instagram || '')}"></label><label class="f"><span>Birthday (month and day)</span><input class="in" name="birthday" placeholder="MM-DD" pattern="\\d{2}-\\d{2}" value="${esc(S.priv.birthday || '')}"></label></div>
+        <label class="check" style="margin-top:-2px"><input type="checkbox" name="share_phone" ${S.priv.share_phone ? 'checked' : ''}> Show my phone number to other members</label>
+        <div class="tiny dim" style="margin:-4px 0 8px 30px">Members can call or text you from your profile. Off by default; Personnel always sees it.</div>
         <label class="f"><span>City (for the member map, city level only)</span><input class="in" name="city" value="${esc(me.city || '')}"></label>
         <label class="check"><input type="checkbox" name="show_on_map" ${me.show_on_map ? 'checked' : ''}> Show me on the member map</label>
         <div class="small muted">Sign-in email: ${esc(S.priv.email || (S.session.user && S.session.user.email) || '')}</div>
@@ -961,7 +964,7 @@ function renderMine(m) {
   $('#bk').onclick = () => { S.view = null; render(); scrollTo(0, 0); };
   $('#mf').onsubmit = async ev => {
     ev.preventDefault(); const f = ev.target;
-    await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked } });
+    await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked, share_phone: f.share_phone.checked } });
     await refresh(); toast('Saved');
   };
 }
@@ -1000,11 +1003,13 @@ function openPerson(id) {
   const t = todayISO();
   const up = S.events.filter(e => (e.end_date || e.event_date) >= t && S.rsvps.some(r => r.event_id === e.id && r.person_id === id && r.answer === 'going'));
   sheet(`<div style="display:flex;gap:12px;align-items:center"><div class="avatar" style="width:52px;height:52px;font-size:20px;cursor:default">${esc(initials(p.full_name))}</div><div><h3 style="font-size:24px">${esc(p.full_name)}</h3><div class="small muted">${esc([p.callsign && '"' + p.callsign + '"', p.title].filter(Boolean).join(' · '))}</div></div></div>
+    ${S.phones && S.phones[p.id] ? `<div class="ct" style="margin-top:14px"><div class="ct-who small"><span class="gc-lbl">Phone</span><div>${esc(S.phones[p.id])} · <a href="#" data-copy="${esc(S.phones[p.id])}" style="color:var(--cyan)">Copy</a></div></div>${contactBtns(S.phones[p.id], null)}</div>` : ''}
     ${up.length ? `<div class="sec"><b class="small">Going to</b>${up.map(e => `<div class="small">${fmtDay(e.event_date)} · ${esc(e.title)}</div>`).join('')}</div>` : ''}
     ${can('manage_abilities') ? `<div class="sec"><b>Abilities</b><p class="muted small" style="margin:2px 0 6px">Changes are saved right away and logged.</p>
       <div class="btns" style="margin-bottom:8px">${PRESETS.map(x => `<button class="btn sm" data-preset="${x}">${x}</button>`).join('')}</div>
       ${ABILITIES.map(([k, l, d]) => `<label class="check"><input type="checkbox" data-ab="${k}" ${p.abilities.includes(k) ? 'checked' : ''}><span><b>${l}</b><br><span class="tiny muted">${d}</span></span></label>`).join('')}</div>` : (p.abilities.length ? `<div class="sec small muted">Abilities: ${esc(p.abilities.map(a => (ABILITIES.find(x => x[0] === a) || [a, a])[1]).join(', '))}</div>` : '')}
     <div class="btns" style="margin-top:12px"><button class="btn" data-close>Close</button></div>`, s => {
+    s.querySelectorAll('[data-copy]').forEach(c => c.onclick = async ev => { ev.preventDefault(); try { await navigator.clipboard.writeText(c.dataset.copy); toast('Copied'); } catch (err) { toast(c.dataset.copy); } });
     const save = async list => { await rpc('set_abilities', { p_person: p.id, p_abilities: list }); p.abilities = list; s.querySelectorAll('[data-ab]').forEach(c => c.checked = list.includes(c.dataset.ab)); toast('Abilities saved'); };
     s.querySelectorAll('[data-ab]').forEach(c => c.onchange = () => save([...s.querySelectorAll('[data-ab]:checked')].map(x => x.dataset.ab)));
     s.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => save({ Member: [], 'Events team': ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'poc', 'take_attendance'], Personnel: ['approve_members', 'manage_recruits'], Admin: ['crew_admin'] }[b.dataset.preset]));
