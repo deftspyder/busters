@@ -417,7 +417,7 @@ async function loadAll() {
 async function refresh() { await loadAll(); render(); }
 
 /* ---------- shell ---------- */
-const TABS = [['home', 'Home'], ['events', 'Events'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Team']];
+const TABS = [['home', 'Home'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Team']];
 function renderShell() {
   $('#app').innerHTML = `
     <header class="top"><div class="bar">
@@ -442,7 +442,7 @@ function teamCount() {
 function render() {
   const tabs = TABS.filter(([k]) => k !== 'team' || onTeam());
   const tc = teamCount(); const wc = upcoming().filter(isWaiting).length;
-  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab ${S.tab === k && !S.view ? 'on' : ''}" data-t="${k}">${ICON[k]}<span>${l}</span>${k === 'team' && tc ? `<b class="badge">${tc}</b>` : ''}${k === 'events' && wc ? `<b class="badge pulse" title="${wc} waiting on your answer">${wc}</b>` : ''}</button>`).join('');
+  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab ${S.tab === k && !S.view ? 'on' : ''}" data-t="${k}">${ICON[k]}<span>${l}</span>${k === 'team' && tc ? `<b class="badge">${tc}</b>` : ''}${k === 'home' && wc ? `<b class="badge pulse" title="${wc} waiting on your answer">${wc}</b>` : ''}</button>`).join('');
   $('#tabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { S.tab = b.dataset.t; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); });
   const m = $('#main');
   if (S.view) return S.view();
@@ -577,17 +577,17 @@ function renderHome(m) {
       <a href="#" class="mypill${done >= MIN ? ' met' : ''}" id="myev" title="${done} event${done === 1 ? '' : 's'} done in ${yr}${soon ? ', ' + soon + ' signed up' : ''}. Members do at least ${MIN} a year."><span class="pips">${pips}</span><b>${done}</b> event${done === 1 ? '' : 's'} in ${yr}${soon ? `<span class="muted"> +${soon}</span>` : ''}</a>
       <a href="#" class="mypill" id="myraised" title="Fundraising credited to you in ${yr}. Tap for the leaderboard."><span style="color:#f87171">&#9829;</span>${myRaised() ? `<b>${money0(myRaised())}</b>` : '<b class="muted">$0</b>'} raised</a>
     </div>
-    <div class="sec"><h2>Your next event</h2>${next ? nextCard(next) : `<div class="empty">You're not marked Going on anything yet. <a href="#" id="toev">Browse events</a></div>`}</div>
+    ${S.announcements[0] && (Date.now() - new Date(S.announcements[0].created_at)) < 14 * 86400000 ? `<div class="card ann" style="margin-top:12px"><div class="tiny dim" style="margin-bottom:4px">Latest from ${esc(first(nameOf(personById(S.announcements[0].author_id))))}</div><div class="pre small">${linkify(S.announcements[0].body)}</div></div>` : ''}
     ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
+    <div id="evwrap"></div>
     <div class="sec"><h2>Announcements ${can('crew_admin') ? '<button class="btn sm act" id="post">Post</button>' : ''}</h2>
-      ${S.announcements.length ? S.announcements.map(a => `<div class="card"><div class="pre">${linkify(a.body)}</div><div class="tiny dim" style="margin-top:6px">${esc(nameOf(personById(a.author_id)))} · ${new Date(a.created_at).toLocaleDateString()}${can('crew_admin') ? ` · <a href="#" data-del="${a.id}">Remove</a>` : ''}</div></div>`).join('') : '<div class="empty">No announcements.</div>'}</div>`;
+      ${S.announcements.length ? S.announcements.map(a => `<div class="card"><div class="pre">${linkify(a.body)}</div><div class="tiny dim" style="margin-top:6px">${esc(nameOf(personById(a.author_id)))} · ${new Date(a.created_at).toLocaleDateString()}${can('crew_admin') ? ` · <a href="#" data-del="${a.id}">Remove</a>` : ''}</div></div>`).join('') : '<div class="empty">No announcements.</div>'}</div><div style="height:72px"></div>`;
   wireRows(m);
+  renderEvents($('#evwrap'));
   $('#myev').onclick = ev => { ev.preventDefault(); show(renderMine); };
   $('#myraised').onclick = ev => { ev.preventDefault(); openBoard(); };
-  const toev = $('#toev'); if (toev) toev.onclick = e => { e.preventDefault(); S.tab = 'events'; render(); };
   const post = $('#post'); if (post) post.onclick = postAnnouncement;
   m.querySelectorAll('[data-del]').forEach(a => a.onclick = async e => { e.preventDefault(); if (!confirmBox('Remove this announcement?')) return; await rpc('delete_announcement', { p_id: a.dataset.del }); refresh(); });
-  const nb = $('#nextbrief'); if (nb) nb.onclick = () => openEvent(next.id);
 }
 function nextCard(e) {
   const d = daysUntil(e.event_date); const pls = placesFor(e.id);
@@ -625,11 +625,11 @@ function filtered() {
 }
 function renderEvents(m) {
   m.innerHTML = `
-    <div class="sec" style="display:flex;gap:8px;align-items:center">
-      <input class="in" id="q" placeholder="Search events" value="${esc(S.evSearch)}" style="flex:1">
+    <div class="sec" style="display:flex;gap:8px;align-items:center"><h2 style="margin:0;flex:0 0 auto">Events</h2>
+      <input class="in" id="q" placeholder="Search" aria-label="Search events" value="${esc(S.evSearch)}" style="flex:1">
       <div class="seg" style="flex:0 0 auto"><button class="${S.evMode === 'list' ? 'on' : ''}" data-mode="list" title="List">${ICON.list}</button><button class="${S.evMode === 'cal' ? 'on' : ''}" data-mode="cal" title="Calendar">${ICON.cal}</button></div>
     </div>
-    <div class="sec" id="list"></div><div style="height:72px"></div>
+    <div class="sec" id="list" style="margin-top:10px"></div>
     <button class="fab" id="fab" title="${can('add_events') ? 'New event' : 'Suggest an event'}" aria-label="${can('add_events') ? 'New event' : 'Suggest an event'}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>`;
   const q = $('#q'); q.oninput = () => { S.evSearch = q.value; fillList(); };
   m.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { S.evMode = b.dataset.mode; render(); });
@@ -841,7 +841,7 @@ function editEvent(e, propose = false) {
     $('#addpl').onclick = () => { pls.push({ label: 'Parking', name: '', address: '' }); drawPls(); };
     const leave = () => isNew ? (S.view = null, render()) : openEvent(e.id);
     $('#bk').onclick = leave; $('#cx').onclick = leave;
-    const del = $('#del'); if (del) del.onclick = async () => { if (!confirmBox('Delete this event for good? Use Cancel instead if it was called off.')) return; await rpc('delete_event', { p_event: e.id }); await refresh(); S.view = null; S.tab = 'events'; render(); toast('Deleted'); };
+    const del = $('#del'); if (del) del.onclick = async () => { if (!confirmBox('Delete this event for good? Use Cancel instead if it was called off.')) return; await rpc('delete_event', { p_event: e.id }); await refresh(); S.view = null; S.tab = 'home'; render(); toast('Deleted'); };
     $('#ef').onsubmit = async ev => {
       ev.preventDefault();
       const fd = new FormData(ev.target); const p = {};
@@ -1227,7 +1227,7 @@ function openMenu() {
     <p class="tiny dim" style="margin-top:14px">Busters beta for ${esc(S.crew.short)}. Ghostbusters and the No-Ghost logo are trademarks of Columbia Pictures.</p>`, s => {
     $('#how', s).onclick = () => sheet(`<h3>How to use Busters</h3>
       <p><b>Home</b> shows what needs you now: your next event, anything you haven't answered, and announcements.</p>
-      <p><b>Events</b> has everything coming up. Tap one for its brief, then answer Going, Maybe or No, with your ride and a note.</p>
+      <p><b>Home</b> lists every event coming up. Tap one to open it, then answer right there or open its full brief, then answer Going, Maybe or No, with your ride and a note.</p>
       <p><b>Navigate</b> buttons open your maps app. Pick Google Maps, Apple Maps or Waze from your profile picture.</p>
       <p><b>Alerts</b>: turn them on from your profile picture to hear when an event is short on Busters.</p>
       <p><b>My Busters</b> is your own record and your contact details. Tap your initials at the top to open it.</p>
