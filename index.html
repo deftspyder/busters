@@ -176,6 +176,13 @@ input.in{min-width:0}
 .gc-body{flex:1;min-width:0}
 .gc-lbl{font-size:12px;color:var(--muted)}
 .gc-names{font-size:14px;line-height:1.6;margin-top:2px}
+.ct{display:flex;align-items:center;gap:10px}
+.ct-who{flex:1;min-width:0}
+.ct-name{background:none;border:0;padding:0;color:var(--ink);font:inherit;cursor:pointer;text-align:left}
+.ct-num{color:var(--muted);margin-top:3px}
+.ct-num a{color:var(--cyan)}
+.ct-btns{display:flex;gap:8px;flex:0 0 auto}
+.cbtn{width:42px;height:42px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--cyan);display:grid;place-items:center}
 .gc-nm{color:var(--ink);text-decoration:none;border-bottom:1px dotted #4a5262}
 .gc-nm:hover{color:var(--cyan);border-color:var(--cyan)}
 .brief .choices{margin:6px 0 12px}
@@ -714,6 +721,16 @@ const GI = {
   tag: gsv('<path d="M3.5 12.5 12 4h8v8l-8.5 8.5z"/><circle cx="16" cy="8" r="1.3"/>'),
   cal: gsv('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>')
 };
+function contactBtns(phone, email) {
+  const sv = d => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ph = sv('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>');
+  const tx = sv('<path d="M4 5h16v11H8l-4 4z"/>');
+  const em = sv('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/>');
+  const sms = p => 'sms:' + String(p).replace(/[^\d+]/g, '');
+  if (phone) return `<span class="ct-btns"><a class="cbtn" href="${tel(phone)}" aria-label="Call" title="Call">${ph}</a><a class="cbtn" href="${sms(phone)}" aria-label="Text" title="Text">${tx}</a></span>`;
+  if (email) return `<span class="ct-btns"><a class="cbtn" href="mailto:${esc(email)}" aria-label="Email" title="Email">${em}</a></span>`;
+  return '';
+}
 function renderBrief(m, e) {
   const r = myRsvp(e.id) || {};
   const pls = placesFor(e.id);
@@ -765,8 +782,10 @@ function renderBrief(m, e) {
     ${e.schedule ? `<div class="gc-row">${GI.list}<div class="gc-body"><div class="gc-lbl">Schedule</div><div class="pre small">${linkify(e.schedule)}</div></div></div>` : ''}
     ${e.conditions ? `<div class="gc-row">${GI.alert}<div class="gc-body"><div class="gc-lbl">Conditions</div><div class="small">${esc(e.conditions)}</div></div></div>` : ''}
     <div class="gc-row">${GI.user}<div class="gc-body small">
-      <div><span class="gc-lbl">Point of contact:</span> ${poc ? `<a href="#" data-person="${poc.id}"><b>${esc(nameOf(poc))}</b></a>` : e.lagb_contact ? esc(e.lagb_contact) : '<span class="muted">Not set yet</span>'}</div>
-      <div><span class="gc-lbl">Event contact:</span> ${e.contact_name ? esc(e.contact_name) : '<span class="muted">Not set yet</span>'}${e.contact_phone ? ` · <a href="${tel(e.contact_phone)}">${esc(e.contact_phone)}</a>` : ''}${e.contact_email ? ` · <a href="mailto:${esc(e.contact_email)}">${esc(e.contact_email)}</a>` : ''}</div>
+      <div class="ct"><div class="ct-who"><span class="gc-lbl">Point of contact</span><div>${poc ? `<a href="#" class="gc-nm" data-person="${poc.id}"><b>${esc(nameOf(poc))}</b></a>` : e.lagb_contact ? esc(e.lagb_contact) : '<span class="muted">Not set yet</span>'}</div><div class="ct-num" id="poc-num" hidden></div></div><span id="poc-btns"></span></div>
+      <div class="ct" style="margin-top:12px"><div class="ct-who"><span class="gc-lbl">Event contact</span><div>${e.contact_name ? `${e.contact_phone || e.contact_email ? `<button class="ct-name" data-reveal="ec-num"><b>${esc(e.contact_name)}</b> <span class="dim">&#9662;</span></button>` : `<b>${esc(e.contact_name)}</b>`}` : (e.contact_phone || e.contact_email ? `<button class="ct-name" data-reveal="ec-num"><b>Event contact</b> <span class="dim">&#9662;</span></button>` : '<span class="muted">Not set yet</span>')}</div>
+        <div class="ct-num" id="ec-num" hidden>${[e.contact_phone && `${esc(e.contact_phone)} · <a href="#" data-copy="${esc(e.contact_phone)}">Copy</a>`, e.contact_email && `<a href="mailto:${esc(e.contact_email)}">${esc(e.contact_email)}</a>`].filter(Boolean).join('<br>')}</div></div>
+        ${contactBtns(e.contact_phone, e.contact_email)}</div>
     </div></div>
     ${kicker ? `<div class="gc-row">${GI.tag}<div class="gc-body small muted">${kicker}</div></div>` : ''}
 
@@ -782,6 +801,16 @@ function renderBrief(m, e) {
   $('#bk').onclick = () => { S.view = null; history.replaceState(null, '', location.pathname); render(); };
   wireRows(m);
   m.querySelectorAll('[data-person]').forEach(x => x.onclick = ev => { ev.preventDefault(); openPerson(x.dataset.person); });
+  m.querySelectorAll('[data-reveal]').forEach(b => b.onclick = () => { const n = $('#' + b.dataset.reveal); n.hidden = !n.hidden; });
+  m.querySelectorAll('[data-copy]').forEach(c => c.onclick = async ev => { ev.preventDefault(); try { await navigator.clipboard.writeText(c.dataset.copy); toast('Copied'); } catch (err) { toast(c.dataset.copy); } });
+  if (e.poc_id) rpc('poc_phone', { p_event: e.id }).then(ph => {
+    if (!ph || !$('#poc-btns')) return;
+    $('#poc-btns').outerHTML = contactBtns(ph, null);
+    const n = $('#poc-num'); n.innerHTML = `${esc(ph)} · <a href="#" data-copy="${esc(ph)}">Copy</a>`;
+    const nm2 = m.querySelector('#poc-num').previousElementSibling.querySelector('a'); 
+    if (nm2) { const b = document.createElement('button'); b.className = 'ct-name'; b.style.marginLeft = '6px'; b.setAttribute('aria-label', 'Show number'); b.innerHTML = '<span class="dim">&#9662;</span>'; b.onclick = () => { n.hidden = !n.hidden; }; nm2.after(b); }
+    n.querySelector('[data-copy]').onclick = async ev => { ev.preventDefault(); try { await navigator.clipboard.writeText(ph); toast('Copied'); } catch (err) { toast(ph); } };
+  }).catch(() => {});
   m.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
     await rpc('rsvp', { p_event: e.id, p_answer: b.dataset.a, p_ride: r.ride || null, p_seats: r.seats || null, p_note: r.note || null });
     await refresh(); openEvent(e.id);
