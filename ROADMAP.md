@@ -8,13 +8,13 @@ What's planned for Busters, roughly in order. Done items move to the bottom.
 - **Check-in attendance.** Mark who actually showed up, so event counts, the yearly minimum and fundraising credit go to who worked it, not just who said Going.
 - **Saved spots you can retire.** Reusable venues and parking spots that editors can archive when they're no longer used.
 - **Chat**, with Discord as a switch inside it.
-- **Sheet write-back (optional).** Let the Google bridge add and remove app sign-ups on the Master Events List, so the sheet and the app agree. Needs the sheet owner's OK.
 
 ## Later
 
 - Member map.
 - Logo and app icon (paused; Round 3 "gear" directions are on the logo canvas).
 - Other franchises as their own crews.
+- Retire the Master Events List: once LAGB runs sign-ups in Busters, stop the sheet sync. The bridge stays read-only on the sheet until then (no edit access, since LAGB owns it).
 
 ## Done
 
