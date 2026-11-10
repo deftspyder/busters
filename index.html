@@ -392,18 +392,19 @@ function renderBlocked(st) {
 async function loadAll() {
   const c = S.crew.id;
   const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
-  const [sess, ev, pl, pe, rs, ep, an] = await Promise.all([
+  const [sess, ev, pl, pe, rs, ep, an, gb] = await Promise.all([
     rpc('my_session', { p_crew: c }),
     sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
     sb.from('places').select('*').eq('crew_id', c).order('name'),
     sb.from('people').select('id,full_name,callsign,title,status,abilities,member_since,rookie_since,eligible_date,city,show_on_map,user_id,created_at').eq('crew_id', c).order('full_name'),
     sb.from('rsvps').select('*').eq('crew_id', c),
     sb.from('event_places').select('*').eq('crew_id', c).order('sort'),
-    sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10)
+    sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10),
+    sb.rpc('giveback_for_crew', { p_crew: c })
   ]);
   S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
   if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
-  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || [];
+  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null;
 }
 async function refresh() { await loadAll(); render(); }
 
@@ -513,6 +514,14 @@ function wireRows(el) {
 }
 
 /* ---------- Home ---------- */
+function gbPill() {
+  const g = S.gb; const money = n => '$' + Math.round(n).toLocaleString();
+  if (!g || g.amount == null) return `<a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="Ghostbusters Give Back. Tap to donate to Starlight."><span class="ic">&#9829;</span>GIVEBACK</a>`;
+  const when = new Date(g.taken_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const tip = `Ghostbusters Give Back: ${S.crew.short || 'we'} raised ${money(g.amount)}, #${g.rank} of ${g.groups} crews. Campaign total ${money(g.total)}. Official numbers lag while Sony approves donations. Checked ${when}. Tap to donate to Starlight.`;
+  return `<a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="${esc(tip)}"><span class="ic">&#9829;</span>GIVEBACK ${money(g.amount)} · #${g.rank}</a>`;
+}
+
 function renderHome(m) {
   const up = upcoming().filter(e => e.status === 'scheduled');
   const mine = up.filter(e => { const r = myRsvp(e.id); return r && r.answer === 'going'; });
@@ -523,7 +532,7 @@ function renderHome(m) {
   const done = myYr.filter(e => e.event_date < todayISO()).length, soon = myYr.length - done, MIN = 2;
   const pips = Array.from({ length: MIN }, (_, i) => `<i class="${i < done ? 'f' : i < done + soon ? 'r' : ''}"></i>`).join('');
   m.innerHTML = `
-    <div class="sec hello"><div class="script">Welcome back, ${esc(first(S.me.callsign || S.me.full_name))}</div><a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="Ghostbusters Give Back: LA raised $4,928, #5 of 35 (Nov 6). Tap to donate to Starlight."><span class="ic">&#9829;</span>GIVEBACK $4,928 · #5</a></div>
+    <div class="sec hello"><div class="script">Welcome back, ${esc(first(S.me.callsign || S.me.full_name))}</div>${gbPill()}</div>
     <div class="mystripe">
       <a href="#" class="mypill${done >= MIN ? ' met' : ''}" id="myev" title="${done} event${done === 1 ? '' : 's'} done in ${yr}${soon ? ', ' + soon + ' signed up' : ''}. Members do at least ${MIN} a year."><span class="pips">${pips}</span><b>${done}</b> event${done === 1 ? '' : 's'} in ${yr}${soon ? `<span class="muted"> +${soon}</span>` : ''}</a>
       <span class="mypill" title="Donations credited to you. Tracking starts with the fundraising leaderboard."><span style="color:#f87171">&#9829;</span><b class="muted">$&#8212;</b> raised</span>
