@@ -100,6 +100,13 @@ h2{font-size:26px}h3{font-size:20px}
 .pill.cyan{color:var(--cyan);border-color:rgba(53,178,232,.4)}
 .pill.cream{color:var(--cream);border-color:rgba(247,227,160,.35)}
 .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.qa{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.qa .qal{font-size:12px;font-weight:700;color:var(--muted)}
+.qa.hot .qal{color:#f87171}
+.qa .qb{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);font:700 16px "DM Sans",sans-serif;cursor:pointer;padding:0;display:grid;place-items:center}
+.qa .qb.y{border-color:var(--good);color:var(--good)}.qa .qb.m{border-color:var(--warn);color:var(--warn)}.qa .qb.n{color:var(--muted)}
+.qa .qb:active{transform:scale(.94)}
+.qa .qsp{flex:1}
 .empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
 
 /* buttons and forms */
@@ -473,6 +480,11 @@ function staffPill(e) {
   const cls = e.max_busters ? (e.going >= e.max_busters ? 'good' : 'cyan') : isShort(e) ? 'bad' : (e.goal_busters && e.going < e.goal_busters) ? 'warn' : 'good';
   return `<span class="pill ${cls}" title="${e.max_busters ? e.going + ' want in, ' + e.max_busters + ' spots' : 'Busters going' + (e.min_busters != null ? ', minimum ' + e.min_busters : '') + (e.goal_busters ? ', goal ' + e.goal_busters : '')}">${staffText(e)}</span>`;
 }
+function myStatus(e, r) {
+  if (!r || !r.answer) return '';
+  if (r.answer === 'going') return e.max_busters ? (r.spot === 'in' ? '<span class="pill good">&#10003; You\'re in</span>' : r.spot === 'reserve' ? '<span class="pill warn">You\'re on reserve</span>' : '<span class="pill good">&#10003; You want in</span>') : '<span class="pill good">&#10003; You\'re going</span>';
+  return r.answer === 'maybe' ? '<span class="pill warn">? Maybe</span>' : '<span class="pill">&#10005; Not going</span>';
+}
 function answerPill(eid) { const r = myRsvp(eid); if (!r) return ''; return { going: '<span class="pill good">You: Going</span>', maybe: '<span class="pill warn">You: Maybe</span>', no: '<span class="pill">You: No</span>' }[r.answer]; }
 function durText(e) {
   if (!e.start_time || !e.wrap_time) return '';
@@ -493,7 +505,8 @@ function eventRow(e) {
     <div class="datebox"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${parseDay(e.event_date).getDate()}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>
     <div class="grow"><div class="t">${esc(e.title)}</div>
       <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([tl, where].filter(Boolean).join(' · ')) || 'Times and place coming'}</div>
-      <div class="pills">${w ? '<span class="wait"><i></i>Waiting</span>' : ''}${staffPill(e)}${answerPill(e.id)}${e.max_busters ? '<span class="pill cyan">Limited</span>' : ''}</div>
+      ${canAns && !r.answer ? `<div class="qa${w ? ' hot' : ''}"><span class="qal">${e.max_busters ? 'Want in?' : 'Are you in?'}</span><button class="qb y" data-qa="going" aria-label="${e.max_busters ? 'Count me in' : 'Going'}" title="${e.max_busters ? 'Count me in' : 'Going'}">&#10003;</button><button class="qb m" data-qa="maybe" aria-label="Maybe" title="Maybe">?</button><button class="qb n" data-qa="no" aria-label="Not going" title="Not going">&#10005;</button><span class="qsp"></span>${staffPill(e)}</div>`
+        : `<div class="pills">${myStatus(e, r)}${staffPill(e)}</div>`}
     </div>${can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id) ? `<button class="xedit" data-edit="${e.id}" title="Edit event" aria-label="Edit ${esc(e.title)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>` : ''}<span class="chev">${ICON.back}</span></div>
     ${open ? `<div class="xb">
       <div class="xl"><div style="flex:1;min-width:0"><div class="tl">${tl ? esc(tl).replace(/^(Call [^·]+)/, '<b>$1</b>') : '<span class="muted">Times coming</span>'}</div><div class="small muted ell">${p1 ? esc(p1.place.name) + (p1.place.address ? ', ' + esc(p1.place.address) : '') : 'Address coming'}</div></div>
@@ -558,7 +571,7 @@ function gbPill() {
   const g = S.gb; const money = n => '$' + Math.round(n).toLocaleString();
   if (!g || g.amount == null) return `<a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="Ghostbusters Give Back. Tap to donate to Starlight."><span class="ic">&#9829;</span>GIVEBACK</a>`;
   const when = new Date(g.taken_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  const tip = `Ghostbusters Give Back: ${S.crew.short || 'we'} raised ${money(g.amount)}, #${g.rank} of ${g.groups} crews. Campaign total ${money(g.total)}.${g.goal ? ' ' + Math.round(100 * g.amount / g.goal) + '% of our ' + money(g.goal) + ' goal.' : ''} Official numbers lag while Sony approves donations. Checked ${when}. Tap to donate to Starlight.`;
+  const tip = `Ghostbusters Give Back: ${S.crew.short || 'we'} raised ${money(g.amount)}, #${g.rank} of ${g.groups} crews. Campaign total ${money(g.total)}.${g.ends ? ' Drive ends ' + fmtDay(g.ends, { month: 'short', day: 'numeric' }) + ' (' + Math.max(0, daysUntil(g.ends)) + ' days left).' : ''}${g.goal ? ' ' + Math.round(100 * g.amount / g.goal) + '% of our ' + money(g.goal) + ' goal.' : ''} Official numbers lag while Sony approves donations. Checked ${when}. Tap to donate to Starlight.`;
   return `<a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="${esc(tip)}"><span class="ic">&#9829;</span>GIVEBACK ${money(g.amount)} · #${g.rank}</a>`;
 }
 
@@ -962,11 +975,12 @@ function goalCard() {
   const g = S.gb || {}; const money = n => '$' + Math.round(n).toLocaleString();
   const pct = g.goal && g.amount != null ? Math.min(100, Math.round(100 * g.amount / g.goal)) : null;
   return `<div class="sec"><h2>Give Back goal</h2><div class="card">
-    ${pct != null ? `<div style="display:flex;align-items:baseline;gap:8px"><b>${money(g.amount)}</b><span class="muted small">of ${money(g.goal)} this drive</span><span class="small" style="margin-left:auto;color:var(--good)">${pct}%</span></div><div class="staff" style="height:6px;margin:8px 0 12px"><i style="width:${pct}%;background:var(--good)"></i></div>` : ''}
+    ${pct != null ? `<div style="display:flex;align-items:baseline;gap:8px"><b>${money(g.amount)}</b><span class="muted small">of ${money(g.goal)} this drive${g.ends ? ' · ' + Math.max(0, daysUntil(g.ends)) + ' days left' : ''}</span><span class="small" style="margin-left:auto;color:var(--good)">${pct}%</span></div><div class="staff" style="height:6px;margin:8px 0 12px"><i style="width:${pct}%;background:var(--good)"></i></div>` : ''}
     <div class="grid2">
       <label class="f" style="margin:0"><span>This drive's goal ($)</span><input class="in" id="gb-goal" type="number" min="0" step="100" inputmode="numeric" value="${g.goal ?? ''}" placeholder="${g.last_total ?? ''}"></label>
       <label class="f" style="margin:0"><span>Last drive's total ($)</span><input class="in" id="gb-last" type="number" min="0" step="1" inputmode="numeric" value="${g.last_total ?? ''}"></label>
     </div>
+    <label class="f"><span>Drive ends</span><input class="in" id="gb-ends" type="date" value="${g.ends || ''}"></label>
     <div class="tiny dim" style="margin-top:6px">Leave the goal blank to use last drive's total.</div>
     <button class="btn sm" id="gb-save" style="margin-top:10px">Save goal</button>
   </div></div>`;
@@ -997,7 +1011,7 @@ function renderTeam(m) {
     const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
     const goal = num('#gb-goal'), last = num('#gb-last');
     if (goal == null && last == null) return toast('Enter a goal or last drive\'s total.');
-    await rpc('set_giveback_goal', { p_crew: S.crew.id, p_goal: goal, p_last_total: last });
+    await rpc('set_giveback_goal', { p_crew: S.crew.id, p_goal: goal, p_last_total: last, p_ends: $('#gb-ends').value || null });
     await refresh(); toast('Goal saved');
   };
   if (can('crew_admin')) rpc('bridge_status', { p_crew: S.crew.id }).then(b => {
