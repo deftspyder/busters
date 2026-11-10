@@ -359,7 +359,7 @@ async function loadAll() {
 async function refresh() { await loadAll(); render(); }
 
 /* ---------- shell ---------- */
-const TABS = [['home', 'Home'], ['events', 'Events'], ['me', 'My Busters'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Team']];
+const TABS = [['home', 'Home'], ['events', 'Events'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Team']];
 function renderShell() {
   $('#app').innerHTML = `
     <header class="top"><div class="bar">
@@ -704,7 +704,7 @@ function renderMine(m) {
   const thisYear = past.filter(e => e.event_date.startsWith(yr));
   const hosp = past.filter(e => e.category === 'Hospital');
   const me = S.me;
-  m.innerHTML = `
+  m.innerHTML = `<button class="back" id="bk">${ICON.back} Back</button>
     <div class="sec" style="display:flex;gap:14px;align-items:center"><div class="avatar" style="width:58px;height:58px;font-size:22px;cursor:default">${esc(initials(me.full_name))}</div>
       <div><h2>${esc(me.full_name)}</h2><div class="muted small">${esc([me.callsign, me.title].filter(Boolean).join(' · '))}</div>
       <div class="pills">${me.status === 'rookie' ? '<span class="pill cream">Rookie</span>' : '<span class="pill good">Active member</span>'}${me.member_since ? `<span class="pill">Since ${fmtDay(me.member_since, { month: 'short', year: 'numeric' })}</span>` : ''}</div></div></div>
@@ -724,6 +724,7 @@ function renderMine(m) {
         <button class="btn primary" style="margin-top:12px">Save my details</button>
       </form></div></div><div style="height:30px"></div>`;
   wireRows(m);
+  $('#bk').onclick = () => { S.view = null; render(); scrollTo(0, 0); };
   $('#mf').onsubmit = async ev => {
     ev.preventDefault(); const f = ev.target;
     await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked } });
@@ -929,11 +930,11 @@ async function renderLog(m) {
 /* ---------- profile and menu ---------- */
 function openProfile() {
   sheet(`<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:48px;height:48px;cursor:default">${esc(initials(S.me.full_name))}</div><div><b>${esc(S.me.full_name)}</b><div class="small muted">${esc((S.session.user || {}).email || '')}</div></div></div>
-    <a class="menuitem" id="pm-me"><span class="grow">My details</span><span class="muted">›</span></a>
+    <a class="menuitem" id="pm-me"><span class="grow">My Busters<div class="small muted">Your events, stats, dues and details</div></span><span class="muted">›</span></a>
     <div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>
     <div class="menuitem"><span class="grow">Alert settings</span><span class="pill">Next build</span></div>
     <a class="menuitem" id="out"><span class="grow" style="color:var(--bad)">Sign out</span></a>`, s => {
-    $('#pm-me', s).onclick = () => { closeSheet(); S.tab = 'me'; S.view = null; render(); };
+    $('#pm-me', s).onclick = () => { closeSheet(); show(renderMine); };
     s.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => { await rpc('set_maps_app', { p_app: b.dataset.m }); S.profile.maps_app = b.dataset.m; s.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); toast('Saved'); });
     $('#out', s).onclick = () => { closeSheet(); sb.auth.signOut(); };
   });
@@ -954,7 +955,7 @@ function openMenu() {
       <p><b>Home</b> shows what needs you now: your next event, anything you haven't answered, and announcements.</p>
       <p><b>Events</b> has everything coming up. Tap one for its brief, then answer Going, Maybe or No, with your ride and a note.</p>
       <p><b>Navigate</b> buttons open your maps app. Pick Google Maps, Apple Maps or Waze from your profile picture.</p>
-      <p><b>My Busters</b> is your own record and your contact details.</p>
+      <p><b>My Busters</b> is your own record and your contact details. Tap your initials at the top to open it.</p>
       <p><b>Add to your home screen</b> so Busters opens like an app: on iPhone tap Share then "Add to Home Screen"; on Android tap the ⋮ menu then "Install app".</p>
       <button class="btn" data-close>Got it</button>`);
     const a1 = $('#adm-ann', s); if (a1) a1.onclick = postAnnouncement;
