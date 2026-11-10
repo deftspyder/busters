@@ -727,6 +727,9 @@ function renderBrief(m, e) {
   const barColor = isShort(e) ? 'var(--bad)' : (e.goal_busters && e.going < e.goal_busters) ? 'var(--warn)' : 'var(--good)';
   const short = x => x.p ? first(x.p.full_name) + (x.p.full_name.split(' ')[1] ? ' ' + x.p.full_name.split(' ')[1][0] + '.' : '') : '?';
   const who = x => `<span class="pill ${x.spot === 'in' ? 'good' : x.spot === 'reserve' ? 'warn' : ''}">${esc(short(x))}${x.ride === 'driving' ? ' 🚗' + (x.seats || '') : x.ride === 'need' ? ' (ride?)' : ''}${x.note ? ` <span class="nt">${esc(x.note)}</span>` : ''}</span>`;
+  const parkPl = pls.find(x => /park/i.test(x.label || ''));
+  const mainPl = pls.find(x => x !== parkPl) || null;
+  const parkNav = parkPl ? mapsUrl(parkPl.place) : (e.parking && mainPl) ? mapsUrl({ name: 'parking near ' + (mainPl.place.address || mainPl.place.name) }) : null;
   const nm = x => `<a href="#" class="gc-nm" data-person="${x.person_id}">${esc(short(x))}</a>${x.ride === 'driving' ? ' 🚗' + (x.seats || '') : x.ride === 'need' ? ' <span class="muted">(needs ride)</span>' : ''}${x.note ? ` <span class="muted">(${esc(x.note)})</span>` : ''}`;
   const groups = e.max_busters ? [['In', going.filter(x => x.spot === 'in')], ['Want in', going.filter(x => !x.spot)], ['Reserve', going.filter(x => x.spot === 'reserve')]] : [['', going]];
   const kicker = [e.category && esc(e.category), e.max_busters && 'Limited to ' + e.max_busters, e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>'].filter(Boolean).join(' · ');
@@ -738,7 +741,7 @@ function renderBrief(m, e) {
     <div class="gc-title"><span class="gc-sq" style="background:${e.status === 'cancelled' ? 'var(--bad)' : 'var(--cyan)'}"></span><div style="flex:1;min-width:0"><h1>${esc(e.title)}</h1>
       <div class="gc-when">${fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric' })}${e.end_date ? ' to ' + fmtDay(e.end_date, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}${e.start_time ? ' · ' + esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) : '') : ''}</div>
       <div class="gc-sub">${[e.call_time && '<b>Call ' + esc(fmtTime(e.call_time)) + '</b>', durText(e) && esc(durText(e)), !e.call_time && !e.start_time && 'Times coming', e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>'].filter(Boolean).join(' · ')}</div></div></div>
-    ${pls.length ? pls.map(x => `<div class="gc-row">${GI.pin}<div class="gc-body">${pls.length > 1 ? `<div class="gc-lbl">${esc(x.label)}</div>` : ''}<b>${esc(x.place.name)}</b>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(x.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(x.place.name)}">${ICON.nav}</a></div>`).join('') : `<div class="gc-row">${GI.pin}<div class="gc-body muted">Address coming</div></div>`}
+    ${pls.filter(x => x !== parkPl).length ? pls.filter(x => x !== parkPl).map(x => `<div class="gc-row">${GI.pin}<div class="gc-body">${pls.filter(y => y !== parkPl).length > 1 ? `<div class="gc-lbl">${esc(x.label)}</div>` : ''}<b>${esc(x.place.name)}</b>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(x.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(x.place.name)}">${ICON.nav}</a></div>`).join('') : `<div class="gc-row">${GI.pin}<div class="gc-body muted">Address coming</div></div>`}
     ${sameDay.length ? `<div class="gc-row">${GI.cal}<div class="gc-body small" style="color:var(--warn)">Also this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>`).join(', ')}</div></div>` : ''}
 
     ${open ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-a="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>
@@ -759,7 +762,7 @@ function renderBrief(m, e) {
     </div></div>
     ${e.notes ? `<div class="gc-row">${GI.text}<div class="gc-body pre small">${linkify(e.notes)}</div></div>` : ''}
     ${e.schedule ? `<div class="gc-row">${GI.list}<div class="gc-body"><div class="gc-lbl">Schedule</div><div class="pre small">${linkify(e.schedule)}</div></div></div>` : ''}
-    ${e.parking ? `<div class="gc-row">${GI.car}<div class="gc-body"><div class="gc-lbl">Driving and parking</div><div class="pre small">${linkify(e.parking)}</div></div></div>` : ''}
+    ${e.parking || parkPl ? `<div class="gc-row">${GI.car}<div class="gc-body"><div class="gc-lbl">Driving and parking</div>${parkPl ? `<b class="small">${esc(parkPl.place.name)}</b>${parkPl.place.address ? `<div class="small muted">${esc(parkPl.place.address)}</div>` : ''}` : ''}${e.parking ? `<div class="pre small">${linkify(e.parking)}</div>` : ''}</div>${parkNav ? `<a class="navic" href="${parkNav}" target="_blank" rel="noopener" title="Navigate to parking" aria-label="Navigate to parking">${ICON.nav}</a>` : ''}</div>` : ''}
     ${e.conditions ? `<div class="gc-row">${GI.alert}<div class="gc-body"><div class="gc-lbl">Conditions</div><div class="small">${esc(e.conditions)}</div></div></div>` : ''}
     <div class="gc-row">${GI.user}<div class="gc-body small">
       <div><span class="gc-lbl">Point of contact:</span> ${poc ? `<a href="#" data-person="${poc.id}"><b>${esc(nameOf(poc))}</b></a>` : e.lagb_contact ? esc(e.lagb_contact) : '<span class="muted">Not set yet</span>'}</div>
