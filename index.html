@@ -150,6 +150,7 @@ input.in{min-width:0}
 .gbpill{margin-left:auto;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:12px;white-space:nowrap}
 .gbpill .ic{color:#f87171}
 .mmap{height:300px;background:#0d0f14}
+.gmap{display:block;width:100%;height:380px;border:0}
 .crewgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .crewgrid .row{margin:0;min-width:0}
 .crewgrid .row .grow{min-width:0}
@@ -451,7 +452,7 @@ function renderBlocked(st) {
 async function loadAll() {
   const c = S.crew.id;
   const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
-  const [sess, ev, pl, pe, rs, ep, an, gb, fb, sp] = await Promise.all([
+  const [sess, ev, pl, pe, rs, ep, an, gb, fb, sp, cs] = await Promise.all([
     rpc('my_session', { p_crew: c }),
     sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
     sb.from('places').select('*').eq('crew_id', c).order('name'),
@@ -461,11 +462,12 @@ async function loadAll() {
     sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10),
     sb.rpc('giveback_for_crew', { p_crew: c }),
     sb.rpc('fundraising_board', { p_crew: c, p_year: Number(todayISO().slice(0, 4)) }),
-    sb.rpc('shared_phones', { p_crew: c })
+    sb.rpc('shared_phones', { p_crew: c }),
+    sb.rpc('crew_settings', { p_crew: c })
   ]);
   S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
   if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
-  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.phones = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x.phone]));
+  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.settings = (cs && cs.data) || {}; S.phones = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x.phone]));
 }
 async function refresh() { await loadAll(); render(); }
 
@@ -1052,8 +1054,9 @@ function renderCrew(m) {
   const list = S.people.filter(p => ['active', 'rookie'].includes(p.status));
   m.innerHTML = `<div class="sec"><h2>The crew <span class="muted" style="font-family:'DM Sans';font-size:14px;letter-spacing:0">${list.filter(p => p.status === 'active').length} members, ${list.filter(p => p.status === 'rookie').length} rookies</span></h2>
     <input class="in" id="cq" placeholder="Search names, callsigns, roles" value="${esc(crewQ)}"></div>
-    <div class="card" style="padding:0;overflow:hidden"><div id="mmap" class="mmap"></div>
-      <div class="small" style="padding:10px 12px;display:flex;gap:8px;align-items:center"><span class="muted" id="mmcount">Loading the member map...</span><a href="#" id="mmme" style="margin-left:auto;color:var(--cyan)">${S.me && S.me.show_on_map && S.me.city ? 'Your map settings' : 'Add yourself'}</a></div></div>
+    ${S.settings && S.settings.members_map_mid ? `<div class="card" style="padding:0;overflow:hidden"><iframe class="mmap gmap" title="Crew map" loading="lazy" src="https://www.google.com/maps/d/embed?mid=${encodeURIComponent(S.settings.members_map_mid)}&ehbc=000000"></iframe>
+      <div class="small" style="padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="muted" style="flex:1;min-width:180px">Members, meetup spots and film locations. Open it once in Google Maps and it stays under Saved, Maps.</span><a class="btn sm primary" href="https://www.google.com/maps/d/viewer?mid=${encodeURIComponent(S.settings.members_map_mid)}" target="_blank" rel="noopener">Open in Google Maps</a></div></div>` : `<div class="card" style="padding:0;overflow:hidden"><div id="mmap" class="mmap"></div>
+      <div class="small" style="padding:10px 12px;display:flex;gap:8px;align-items:center"><span class="muted" id="mmcount">Loading the member map...</span><a href="#" id="mmme" style="margin-left:auto;color:var(--cyan)">${S.me && S.me.show_on_map && S.me.city ? 'Your map settings' : 'Add yourself'}</a></div></div>`}
     <div class="sec crewgrid" id="cl"></div>`;
   const draw = () => {
     const q = crewQ.toLowerCase();
@@ -1063,8 +1066,8 @@ function renderCrew(m) {
   };
   $('#cq').oninput = e => { crewQ = e.target.value; draw(); };
   draw();
-  $('#mmme').onclick = ev => { ev.preventDefault(); show(renderMine); setTimeout(() => { const c = document.querySelector('[name=city]'); if (c) { c.scrollIntoView({ block: 'center' }); c.focus(); } }, 50); };
-  drawMemberMap();
+  if ($('#mmme')) $('#mmme').onclick = ev => { ev.preventDefault(); show(renderMine); setTimeout(() => { const c = document.querySelector('[name=city]'); if (c) { c.scrollIntoView({ block: 'center' }); c.focus(); } }, 50); };
+  if ($('#mmap') && !$('.gmap')) drawMemberMap();
 }
 function openPerson(id) {
   const p = personById(id); if (!p) return;
