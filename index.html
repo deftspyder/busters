@@ -166,6 +166,19 @@ input.in{min-width:0}
 .script{font-family:Yellowtail,cursive;color:var(--cream);font-size:22px}
 
 /* brief */
+.gc-title{display:flex;gap:14px;align-items:flex-start;margin:6px 0 6px}
+.gc-sq{flex:0 0 auto;width:16px;height:16px;border-radius:4px;margin-top:8px}
+.gc-when{font-size:15px;margin-top:4px}
+.gc-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.gc-row{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.gc-row .gc-ic{flex:0 0 auto;color:var(--muted);margin:1px 0 0 -2px}
+.gc-row .navic{margin:-4px 0}
+.gc-body{flex:1;min-width:0}
+.gc-lbl{font-size:12px;color:var(--muted)}
+.gc-names{font-size:14px;line-height:1.6;margin-top:2px}
+.gc-nm{color:var(--ink);text-decoration:none;border-bottom:1px dotted #4a5262}
+.gc-nm:hover{color:var(--cyan);border-color:var(--cyan)}
+.brief .choices{margin:6px 0 12px}
 .brief h1{font-size:28px;line-height:1.05}
 .brief .back{margin:8px 0 4px}
 .kick{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px}
@@ -689,6 +702,18 @@ function openEvent(id) {
   history.replaceState(null, '', '#event/' + id);
   show(m => renderBrief(m, e));
 }
+const gsv = d => `<svg class="gc-ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const GI = {
+  pin: gsv('<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'),
+  people: gsv('<circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3.1-5 6-5s5.4 1.7 6 5"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2c2.5.2 4.4 1.8 5 4.8"/>'),
+  text: gsv('<path d="M4 6h16M4 10h16M4 14h10M4 18h12"/>'),
+  list: gsv('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  car: gsv('<path d="M5 16V11l2-4.5h10L19 11v5"/><path d="M3.5 16h17v2.5h-17z"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>'),
+  alert: gsv('<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4M12 17v.2"/>'),
+  user: gsv('<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-4 3.7-6 7-6s6.2 2 7 6"/>'),
+  tag: gsv('<path d="M3.5 12.5 12 4h8v8l-8.5 8.5z"/><circle cx="16" cy="8" r="1.3"/>'),
+  cal: gsv('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>')
+};
 function renderBrief(m, e) {
   const r = myRsvp(e.id) || {};
   const pls = placesFor(e.id);
@@ -702,6 +727,7 @@ function renderBrief(m, e) {
   const barColor = isShort(e) ? 'var(--bad)' : (e.goal_busters && e.going < e.goal_busters) ? 'var(--warn)' : 'var(--good)';
   const short = x => x.p ? first(x.p.full_name) + (x.p.full_name.split(' ')[1] ? ' ' + x.p.full_name.split(' ')[1][0] + '.' : '') : '?';
   const who = x => `<span class="pill ${x.spot === 'in' ? 'good' : x.spot === 'reserve' ? 'warn' : ''}">${esc(short(x))}${x.ride === 'driving' ? ' 🚗' + (x.seats || '') : x.ride === 'need' ? ' (ride?)' : ''}${x.note ? ` <span class="nt">${esc(x.note)}</span>` : ''}</span>`;
+  const nm = x => `<a href="#" class="gc-nm" data-person="${x.person_id}">${esc(short(x))}</a>${x.ride === 'driving' ? ' 🚗' + (x.seats || '') : x.ride === 'need' ? ' <span class="muted">(needs ride)</span>' : ''}${x.note ? ` <span class="muted">(${esc(x.note)})</span>` : ''}`;
   const groups = e.max_busters ? [['In', going.filter(x => x.spot === 'in')], ['Want in', going.filter(x => !x.spot)], ['Reserve', going.filter(x => x.spot === 'reserve')]] : [['', going]];
   const kicker = [e.category && esc(e.category), e.max_busters && 'Limited to ' + e.max_busters, e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>'].filter(Boolean).join(' · ');
   const tl = timeLine(e);
@@ -709,17 +735,11 @@ function renderBrief(m, e) {
   const need = staffText(e);
   m.innerHTML = `<div class="brief">
     <button class="back" id="bk">${ICON.back} Back</button>
-    ${kicker ? `<div class="kick">${kicker}</div>` : ''}
-    <h1>${esc(e.title)}</h1>
-    <div class="when"><div class="cdate"><div class="cm">${fmtDay(e.event_date, { month: 'short' })}</div><div class="cd">${parseDay(e.event_date).getDate()}</div><div class="cw">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>
-      <div style="flex:1;min-width:0">
-        <div class="tl">${e.call_time ? `<b>Call ${esc(fmtTime(e.call_time))}</b>` : ''}${e.call_time && e.start_time ? ' · ' : ''}${e.start_time ? esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) + ' (' + esc(durText(e)) + ')' : '') : ''}${!e.call_time && !e.start_time ? '<span class="muted">Times coming</span>' : ''}</div>
-        ${e.end_date ? `<div class="small muted">Through ${fmtDay(e.end_date, { weekday: 'short', month: 'short', day: 'numeric' })}</div>` : ''}
-        <div class="small muted ell">${p1 ? esc(p1.place.name) : 'Address coming'}</div>
-      </div>
-      ${p1 ? `<a class="navic" href="${mapsUrl(p1.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate">${ICON.nav}</a>` : ''}
-    </div>
-    ${sameDay.length ? `<div class="small" style="margin-top:6px;color:var(--warn)">Also this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>`).join(', ')}</div>` : ''}
+    <div class="gc-title"><span class="gc-sq" style="background:${e.status === 'cancelled' ? 'var(--bad)' : 'var(--cyan)'}"></span><div style="flex:1;min-width:0"><h1>${esc(e.title)}</h1>
+      <div class="gc-when">${fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric' })}${e.end_date ? ' to ' + fmtDay(e.end_date, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}${e.start_time ? ' · ' + esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) : '') : ''}</div>
+      <div class="gc-sub">${[e.call_time && '<b>Call ' + esc(fmtTime(e.call_time)) + '</b>', durText(e) && esc(durText(e)), !e.call_time && !e.start_time && 'Times coming', e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>'].filter(Boolean).join(' · ')}</div></div></div>
+    ${pls.length ? pls.map(x => `<div class="gc-row">${GI.pin}<div class="gc-body">${pls.length > 1 ? `<div class="gc-lbl">${esc(x.label)}</div>` : ''}<b>${esc(x.place.name)}</b>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(x.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(x.place.name)}">${ICON.nav}</a></div>`).join('') : `<div class="gc-row">${GI.pin}<div class="gc-body muted">Address coming</div></div>`}
+    ${sameDay.length ? `<div class="gc-row">${GI.cal}<div class="gc-body small" style="color:var(--warn)">Also this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>`).join(', ')}</div></div>` : ''}
 
     ${open ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-a="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>
       ${(e.max_busters && r.spot) || (r.answer && r.answer !== 'no') ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">${e.max_busters && r.spot ? `<span class="pill ${r.spot === 'in' ? 'good' : 'warn'}">${r.spot === 'in' ? "You're in" : "You're on reserve"}</span>` : ''}${r.answer && r.answer !== 'no' ? `<details class="ridebox" style="flex:1"><summary class="small muted">${r.ride ? { own: 'Getting there myself', driving: 'Driving' + (r.seats ? ', ' + r.seats + ' seats' : ''), need: 'Need a ride' }[r.ride] : 'Add ride'}${r.note ? ' · ' + esc(r.note) : ' · add note'} ›</summary>
@@ -729,35 +749,36 @@ function renderBrief(m, e) {
         <label class="f"><span>Note for the team</span><input class="in" id="note" maxlength="300" value="${esc(r.note || '')}" placeholder="Arriving late, bringing the Ecto..."></label>
         <button class="btn sm" id="saveride" style="margin-top:8px">Save</button></details>` : ''}</div>` : ''}` : ''}
 
-    <div class="card" style="margin-top:12px;padding:12px"><div style="display:flex;align-items:baseline;gap:8px"><h3 style="font-size:20px">Busters</h3><span class="small" style="margin-left:auto;color:${barColor}">${need}</span></div>
-      ${(e.min_busters || e.goal_busters || e.max_busters) ? `<div class="staff" style="height:6px;margin:6px 0 2px"><i style="width:${pct(e.going)}%;background:${barColor}"></i></div>` : ''}
-      ${going.length ? groups.filter(g => g[1].length).map(([l, xs]) => `<div class="grp">${l ? `<div class="gl">${l} ${xs.length}</div>` : ''}<div class="people">${xs.map(who).join('')}</div></div>`).join('') : '<div class="muted small" style="margin-top:6px">Nobody yet. Be the first.</div>'}
-      ${maybe.length ? `<div class="small muted" style="margin-top:6px">Maybe: ${maybe.map(x => esc(short(x))).join(', ')}</div>` : ''}
-      ${e.max_busters && can('pick_attendees') && going.length ? '<button class="btn sm" id="pick" style="margin-top:10px">Pick who is In</button>' : ''}
-      ${e.sheet_attendees || e.sheet_reserve ? `<details style="margin-top:8px"><summary class="small muted" style="cursor:pointer">Also listed on the 2026 Sheet</summary><div class="small pre" style="margin-top:6px">${esc(e.sheet_attendees || '')}</div>${e.sheet_reserve ? `<div class="small muted" style="margin-top:6px">Reserve:</div><div class="small pre">${esc(e.sheet_reserve)}</div>` : ''}</details>` : ''}
-    </div>
+    <div class="gc-row">${GI.people}<div class="gc-body">
+      <div><b>${going.length} going</b>${maybe.length ? `, ${maybe.length} maybe` : ''}<span class="small" style="color:${barColor}">${e.min_busters || e.goal_busters || e.max_busters ? ' · ' + need : ''}</span></div>
+      ${(e.min_busters || e.goal_busters || e.max_busters) ? `<div class="staff" style="height:4px;margin:6px 0 4px"><i style="width:${pct(e.going)}%;background:${barColor}"></i></div>` : ''}
+      ${going.length ? groups.filter(g => g[1].length).map(([l, xs]) => `<div class="gc-names">${l ? `<span class="gc-lbl">${l}:</span> ` : ''}${xs.map(nm).join(', ')}</div>`).join('') : '<div class="small muted">Nobody yet. Be the first.</div>'}
+      ${maybe.length ? `<div class="gc-names"><span class="gc-lbl">Maybe:</span> ${maybe.map(nm).join(', ')}</div>` : ''}
+      ${e.max_busters && can('pick_attendees') && going.length ? '<button class="btn sm" id="pick" style="margin-top:8px">Pick who is In</button>' : ''}
+      ${e.sheet_attendees || e.sheet_reserve ? `<details style="margin-top:6px"><summary class="small muted" style="cursor:pointer">Also on the 2026 Sheet</summary><div class="small pre" style="margin-top:6px">${esc(e.sheet_attendees || '')}</div>${e.sheet_reserve ? `<div class="small muted" style="margin-top:6px">Reserve:</div><div class="small pre">${esc(e.sheet_reserve)}</div>` : ''}</details>` : ''}
+    </div></div>
+    ${e.notes ? `<div class="gc-row">${GI.text}<div class="gc-body pre small">${linkify(e.notes)}</div></div>` : ''}
+    ${e.schedule ? `<div class="gc-row">${GI.list}<div class="gc-body"><div class="gc-lbl">Schedule</div><div class="pre small">${linkify(e.schedule)}</div></div></div>` : ''}
+    ${e.parking ? `<div class="gc-row">${GI.car}<div class="gc-body"><div class="gc-lbl">Driving and parking</div><div class="pre small">${linkify(e.parking)}</div></div></div>` : ''}
+    ${e.conditions ? `<div class="gc-row">${GI.alert}<div class="gc-body"><div class="gc-lbl">Conditions</div><div class="small">${esc(e.conditions)}</div></div></div>` : ''}
+    <div class="gc-row">${GI.user}<div class="gc-body small">
+      <div><span class="gc-lbl">Point of contact:</span> ${poc ? `<a href="#" data-person="${poc.id}"><b>${esc(nameOf(poc))}</b></a>` : e.lagb_contact ? esc(e.lagb_contact) : '<span class="muted">Not set yet</span>'}</div>
+      <div><span class="gc-lbl">Event contact:</span> ${e.contact_name ? esc(e.contact_name) : '<span class="muted">Not set yet</span>'}${e.contact_phone ? ` · <a href="${tel(e.contact_phone)}">${esc(e.contact_phone)}</a>` : ''}${e.contact_email ? ` · <a href="mailto:${esc(e.contact_email)}">${esc(e.contact_email)}</a>` : ''}</div>
+    </div></div>
+    ${kicker ? `<div class="gc-row">${GI.tag}<div class="gc-body small muted">${kicker}</div></div>` : ''}
 
     ${fundCard(e, going)}
 
-    ${pls.length > 1 ? `<div class="sec"><h2>Where</h2>${pls.map(x => `<div class="place"><div class="grow" style="flex:1;min-width:0"><div class="lbl">${esc(x.label)}</div><div><b>${esc(x.place.name)}</b></div>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="btn sm primary" href="${mapsUrl(x.place)}" target="_blank" rel="noopener">${ICON.nav} Navigate</a></div>`).join('')}</div>` : ''}
 
-    ${e.schedule ? `<div class="sec"><h2>Schedule</h2><div class="card pre small">${linkify(e.schedule)}</div></div>` : ''}
-    ${e.parking ? `<div class="sec"><h2>Driving and parking</h2><div class="card pre small">${linkify(e.parking)}</div></div>` : ''}
 
-    <div class="sec"><h2>Contacts</h2><div class="card"><dl class="kv">
-      <dt>Point of contact</dt><dd>${poc ? `<b>${esc(nameOf(poc))}</b>` : '<span class="muted">Not set yet</span>'}</dd>
-      <dt>Event contact</dt><dd>${e.contact_name ? esc(e.contact_name) : '<span class="muted">Not set yet</span>'}${e.contact_phone ? `<br><a href="${tel(e.contact_phone)}">${esc(e.contact_phone)}</a>` : ''}${e.contact_email ? `<br><a href="mailto:${esc(e.contact_email)}">${esc(e.contact_email)}</a>` : ''}</dd>
-      ${e.lagb_contact && !poc ? `<dt>Sheet says</dt><dd>${esc(e.lagb_contact)}</dd>` : ''}
-    </dl></div></div>
 
-    ${e.conditions ? `<div class="sec"><h2>Conditions</h2><div class="card small">${esc(e.conditions)}</div></div>` : ''}
-    ${e.notes ? `<div class="sec"><h2>Details</h2><div class="card pre small">${linkify(e.notes)}</div></div>` : ''}
 
     ${canEdit && e.missing.length && e.status === 'scheduled' ? `<div class="card missing" style="margin-top:16px"><b>${8 - e.missing.length} of 8 done.</b> <span class="small">Still needs: ${esc(e.missing.join(', '))}</span></div>` : ''}
     ${canEdit ? `<div class="btns" style="margin:18px 0 30px"><button class="btn primary" id="edit">Edit event</button>${e.status === 'scheduled' ? '<button class="btn danger" id="cancel">Cancel event</button>' : e.status === 'cancelled' ? '<button class="btn" id="restore">Put back on</button>' : ''}</div>` : '<div style="height:30px"></div>'}
   </div>`;
   $('#bk').onclick = () => { S.view = null; history.replaceState(null, '', location.pathname); render(); };
   wireRows(m);
+  m.querySelectorAll('[data-person]').forEach(x => x.onclick = ev => { ev.preventDefault(); openPerson(x.dataset.person); });
   m.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
     await rpc('rsvp', { p_event: e.id, p_answer: b.dataset.a, p_ride: r.ride || null, p_seats: r.seats || null, p_note: r.note || null });
     await refresh(); openEvent(e.id);
