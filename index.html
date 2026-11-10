@@ -759,11 +759,11 @@ function renderBrief(m, e) {
   const pct = n => Math.min(100, Math.round(100 * n / Math.max(e.goal_busters || e.min_busters || e.max_busters || 1, 1)));
   const barColor = isShort(e) ? 'var(--bad)' : (e.goal_busters && e.going < e.goal_busters) ? 'var(--warn)' : 'var(--good)';
   const short = x => x.p ? first(x.p.full_name) + (x.p.full_name.split(' ')[1] ? ' ' + x.p.full_name.split(' ')[1][0] + '.' : '') : '?';
-  const who = x => `<span class="pill ${x.spot === 'in' ? 'good' : x.spot === 'reserve' ? 'warn' : ''}">${esc(short(x))}${x.ride === 'driving' ? ' 🚗' + (x.seats || '') : x.ride === 'need' ? ' (ride?)' : ''}${x.note ? ` <span class="nt">${esc(x.note)}</span>` : ''}</span>`;
+  const who = x => `<span class="pill ${x.spot === 'in' ? 'good' : x.spot === 'reserve' ? 'warn' : ''}">${esc(short(x))}${x.note ? ` <span class="nt">${esc(x.note)}</span>` : ''}</span>`;
   const parkPl = pls.find(x => /park/i.test(x.label || ''));
   const mainPl = pls.find(x => x !== parkPl) || null;
   const parkNav = parkPl ? mapsUrl(parkPl.place) : (e.parking && mainPl) ? mapsUrl({ name: 'parking near ' + (mainPl.place.address || mainPl.place.name) }) : null;
-  const nm = x => `<a href="#" class="gc-nm" data-person="${x.person_id}">${esc(short(x))}</a>${x.ride === 'driving' ? ' 🚗' + (x.seats || '') : x.ride === 'need' ? ' <span class="muted">(needs ride)</span>' : ''}${x.note ? ` <span class="muted">(${esc(x.note)})</span>` : ''}`;
+  const nm = x => `<a href="#" class="gc-nm" data-person="${x.person_id}">${esc(short(x))}</a>${x.note ? ` <span class="muted">(${esc(x.note)})</span>` : ''}`;
   const groups = e.max_busters ? [['In', going.filter(x => x.spot === 'in')], ['Want in', going.filter(x => !x.spot)], ['Reserve', going.filter(x => x.spot === 'reserve')]] : [['', going]];
   const kicker = [e.category && esc(e.category), e.max_busters && 'Limited to ' + e.max_busters, e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>'].filter(Boolean).join(' · ');
   const tl = timeLine(e);
@@ -781,12 +781,9 @@ function renderBrief(m, e) {
     ${sameDay.length ? `<div class="gc-row">${GI.cal}<div class="gc-body small" style="color:var(--warn)">Also this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>`).join(', ')}</div></div>` : ''}
 
     ${open && r.answer && !S.chg[e.id] ? ansSummary(e, r) : ''}${open && (!r.answer || S.chg[e.id]) ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-a="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>` : ''}${open ? `
-      ${(e.max_busters && r.spot) || (r.answer && r.answer !== 'no') ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">${e.max_busters && r.spot ? `<span class="pill ${r.spot === 'in' ? 'good' : 'warn'}">${r.spot === 'in' ? "You're in" : "You're on reserve"}</span>` : ''}${r.answer && r.answer !== 'no' ? `<details class="ridebox" style="flex:1"><summary class="small muted">${r.ride ? { own: 'Getting there myself', driving: 'Driving' + (r.seats ? ', ' + r.seats + ' seats' : ''), need: 'Need a ride' }[r.ride] : 'Add ride'}${r.note ? ' · ' + esc(r.note) : ' · add note'} ›</summary>
-        <div class="grid2" style="margin-top:8px">
-        <label class="f" style="margin:0"><span>Ride</span><select class="in" id="ride"><option value="">Not set</option><option value="own" ${r.ride === 'own' ? 'selected' : ''}>Getting there myself</option><option value="driving" ${r.ride === 'driving' ? 'selected' : ''}>Driving, have seats</option><option value="need" ${r.ride === 'need' ? 'selected' : ''}>Need a ride</option></select></label>
-        <label class="f" style="margin:0" ${r.ride === 'driving' ? '' : 'hidden'} id="seatsw"><span>Open seats</span><input class="in" id="seats" type="number" min="0" max="8" value="${r.seats ?? ''}"></label></div>
+      ${(e.max_busters && r.spot) || (r.answer && r.answer !== 'no') ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">${e.max_busters && r.spot ? `<span class="pill ${r.spot === 'in' ? 'good' : 'warn'}">${r.spot === 'in' ? "You're in" : "You're on reserve"}</span>` : ''}${r.answer && r.answer !== 'no' ? `<details class="ridebox" style="flex:1"><summary class="small muted">${r.note ? 'Your note: ' + esc(r.note) : 'Add a note for the team'} ›</summary>
         <label class="f"><span>Note for the team</span><input class="in" id="note" maxlength="300" value="${esc(r.note || '')}" placeholder="Arriving late, bringing the Ecto..."></label>
-        <button class="btn sm" id="saveride" style="margin-top:8px">Save</button></details>` : ''}</div>` : ''}` : ''}
+        <button class="btn sm" id="savenote" style="margin-top:8px">Save note</button></details>` : ''}</div>` : ''}` : ''}
 
     <div class="gc-row">${GI.people}<div class="gc-body">
       <div><b>${going.length} going</b>${maybe.length ? `, ${maybe.length} maybe` : ''}<span class="small" style="color:${barColor}">${e.min_busters || e.goal_busters || e.max_busters ? ' · ' + need : ''}</span></div>
@@ -836,9 +833,8 @@ function renderBrief(m, e) {
     S.chg[e.id] = false; await refresh(); openEvent(e.id);
     toast({ going: e.max_busters ? "You're on the list" : "You're going", maybe: 'Marked maybe', no: 'Marked not going' }[b.dataset.a]);
   });
-  const ride = $('#ride'); if (ride) ride.onchange = () => { $('#seatsw').hidden = ride.value !== 'driving'; };
-  const sr = $('#saveride'); if (sr) sr.onclick = async () => {
-    await rpc('rsvp', { p_event: e.id, p_answer: r.answer, p_ride: $('#ride').value || null, p_seats: parseInt($('#seats').value) || null, p_note: $('#note').value.trim() || null });
+  const sr = $('#savenote'); if (sr) sr.onclick = async () => {
+    await rpc('rsvp', { p_event: e.id, p_answer: r.answer, p_ride: r.ride || null, p_seats: r.seats || null, p_note: $('#note').value.trim() || null });
     await refresh(); openEvent(e.id); toast('Saved');
   };
   const ed = $('#edit'); if (ed) ed.onclick = () => editEvent(e);
