@@ -69,6 +69,23 @@ h2{font-size:26px}h3{font-size:20px}
 .row+.row{margin-top:8px}
 .row:hover{border-color:#33404f}
 .row .grow{flex:1;min-width:0}
+.xrow+.xrow{margin-top:8px}
+.xrow .row .grow{flex:1;min-width:0}
+.xrow .chev{flex:0 0 auto;color:var(--dim);transform:rotate(-90deg);transition:transform .15s;display:grid}
+.xrow.open .chev{transform:rotate(90deg)}
+.xrow.open .row{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-color:transparent}
+.xrow.waiting .row{border-color:rgba(248,113,113,.45)}
+.xb{background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 var(--r) var(--r);padding:0 12px 12px}
+.xrow.waiting .xb{border-color:rgba(248,113,113,.45)}
+.xl{display:flex;align-items:center;gap:10px;padding-top:4px}
+.xl .tl{font-size:14px}
+.xb .choices{margin-top:10px}
+.xb .xfull{margin-top:10px;width:100%}
+.wait{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 9px 2px 7px;font-size:12px;font-weight:700;color:#fff;background:rgba(248,113,113,.18);border:1px solid var(--bad);animation:waitglow 1.6s ease-in-out infinite}
+.wait i{width:7px;height:7px;border-radius:50%;background:var(--bad);box-shadow:0 0 6px var(--bad)}
+@keyframes waitglow{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.0)}50%{box-shadow:0 0 10px 2px rgba(248,113,113,.55)}}
+.tab .badge.pulse{background:var(--bad);animation:waitglow 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.wait,.tab .badge.pulse{animation:none}}
 .row .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .datebox{width:52px;flex:0 0 52px;text-align:center;border-radius:10px;background:var(--panel2);padding:6px 0;line-height:1}
 .datebox .m{font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:.08em}
@@ -402,8 +419,8 @@ function teamCount() {
 }
 function render() {
   const tabs = TABS.filter(([k]) => k !== 'team' || onTeam());
-  const tc = teamCount();
-  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab ${S.tab === k && !S.view ? 'on' : ''}" data-t="${k}">${ICON[k]}<span>${l}</span>${k === 'team' && tc ? `<b class="badge">${tc}</b>` : ''}</button>`).join('');
+  const tc = teamCount(); const wc = upcoming().filter(isWaiting).length;
+  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab ${S.tab === k && !S.view ? 'on' : ''}" data-t="${k}">${ICON[k]}<span>${l}</span>${k === 'team' && tc ? `<b class="badge">${tc}</b>` : ''}${k === 'events' && wc ? `<b class="badge pulse" title="${wc} waiting on your answer">${wc}</b>` : ''}</button>`).join('');
   $('#tabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { S.tab = b.dataset.t; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); });
   const m = $('#main');
   if (S.view) return S.view();
@@ -433,29 +450,56 @@ function staffPill(e) {
 }
 function answerPill(eid) { const r = myRsvp(eid); if (!r) return ''; return { going: '<span class="pill good">You: Going</span>', maybe: '<span class="pill warn">You: Maybe</span>', no: '<span class="pill">You: No</span>' }[r.answer]; }
 function timeLine(e) { const bits = []; if (e.call_time) bits.push('Call ' + fmtTime(e.call_time)); if (e.start_time) bits.push((e.wrap_time ? fmtTime(e.start_time) + ' to ' + fmtTime(e.wrap_time) : 'Starts ' + fmtTime(e.start_time))); return bits.join(' · '); }
+const isWaiting = e => e.status === 'scheduled' && (e.end_date || e.event_date) >= todayISO() && daysUntil(e.event_date) <= 30 && !myRsvp(e.id);
 function eventRow(e) {
-  const pls = placesFor(e.id); const where = pls[0] ? pls[0].place.name : '';
-  return `<a class="row" data-ev="${e.id}">
+  const pls = placesFor(e.id); const p1 = pls[0]; const where = p1 ? p1.place.name : '';
+  const open = S.xopen === e.id; const w = isWaiting(e); const r = myRsvp(e.id) || {};
+  const canAns = e.status === 'scheduled' && (e.end_date || e.event_date) >= todayISO();
+  const tl = timeLine(e);
+  return `<div class="xrow${open ? ' open' : ''}${w ? ' waiting' : ''}" data-xr="${e.id}">
+    <div class="row xh" role="button" aria-expanded="${open}">
     <div class="datebox"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${parseDay(e.event_date).getDate()}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>
     <div class="grow"><div class="t">${esc(e.title)}</div>
-      <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([timeLine(e), where].filter(Boolean).join(' · ')) || 'Details coming'}</div>
-      <div class="pills">${staffPill(e)}${answerPill(e.id)}${e.missing.length && e.status === 'scheduled' ? '<span class="pill cream">Details coming</span>' : ''}${e.max_busters ? '<span class="pill cyan">Limited</span>' : ''}</div>
-    </div></a>`;
+      <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([tl, where].filter(Boolean).join(' · ')) || 'Details coming'}</div>
+      <div class="pills">${w ? '<span class="wait"><i></i>Waiting</span>' : ''}${staffPill(e)}${answerPill(e.id)}${e.missing.length && e.status === 'scheduled' ? '<span class="pill cream">Details coming</span>' : ''}${e.max_busters ? '<span class="pill cyan">Limited</span>' : ''}</div>
+    </div><span class="chev">${ICON.back}</span></div>
+    ${open ? `<div class="xb">
+      <div class="xl"><div style="flex:1;min-width:0"><div class="tl">${tl ? esc(tl).replace(/^(Call [^·]+)/, '<b>$1</b>') : '<span class="muted">Times coming</span>'}</div><div class="small muted ell">${p1 ? esc(p1.place.name) + (p1.place.address ? ', ' + esc(p1.place.address) : '') : 'Address coming'}</div></div>
+        ${p1 ? `<a class="navic" href="${mapsUrl(p1.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate">${ICON.nav}</a>` : ''}</div>
+      ${canAns ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-qa="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>` : ''}
+      <button class="btn sm ghost xfull" data-ev="${e.id}">Full details ›</button>
+    </div>` : ''}
+  </div>`;
 }
-function wireRows(el) { el.querySelectorAll('[data-ev]').forEach(a => a.onclick = () => openEvent(a.dataset.ev)); }
+function rerow(id) {
+  document.querySelectorAll(`[data-xr="${id}"]`).forEach(x => {
+    const e = S.events.find(v => v.id === id); if (!e) return;
+    const t = document.createElement('div'); t.innerHTML = eventRow(e); wireRows(t); x.replaceWith(t.firstElementChild);
+  });
+}
+function wireRows(el) {
+  el.querySelectorAll('[data-ev]').forEach(a => a.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); openEvent(a.dataset.ev); });
+  el.querySelectorAll('[data-xr]').forEach(x => {
+    const id = x.dataset.xr;
+    x.querySelector('.xh').onclick = () => { const prev = S.xopen; S.xopen = prev === id ? null : id; if (prev && prev !== id) rerow(prev); rerow(id); };
+    x.querySelectorAll('[data-qa]').forEach(b => b.onclick = async ev => {
+      ev.stopPropagation(); const r = myRsvp(id) || {}; const e = S.events.find(v => v.id === id);
+      await rpc('rsvp', { p_event: id, p_answer: b.dataset.qa, p_ride: r.ride || null, p_seats: r.seats || null, p_note: r.note || null });
+      await refresh(); toast({ going: e && e.max_busters ? "You're on the list" : "You're going", maybe: 'Marked maybe', no: 'Marked not going' }[b.dataset.qa]);
+    });
+  });
+}
 
 /* ---------- Home ---------- */
 function renderHome(m) {
   const up = upcoming().filter(e => e.status === 'scheduled');
   const mine = up.filter(e => { const r = myRsvp(e.id); return r && r.answer === 'going'; });
   const next = mine[0] || null;
-  const waiting = up.filter(e => daysUntil(e.event_date) <= 30 && !myRsvp(e.id));
   const needsMe = up.filter(e => e.missing.length && (e.poc_id === S.me.id || e.created_by === S.me.id));
   m.innerHTML = `
     <div class="sec hello"><div class="script">Welcome back, ${esc(first(S.me.callsign || S.me.full_name))}</div><a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="Ghostbusters Give Back: LA raised $4,928, #5 of 35 (Nov 6). Tap to donate to Starlight."><span class="ic">&#9829;</span>GIVEBACK $4,928 · #5</a></div>
     <div class="sec"><h2>Your next event</h2>${next ? nextCard(next) : `<div class="empty">You're not marked Going on anything yet. <a href="#" id="toev">Browse events</a></div>`}</div>
     ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
-    <div class="sec"><h2>Waiting on you</h2>${waiting.length ? waiting.map(eventRow).join('') : '<div class="empty">Nothing waiting. You have answered every event in the next 30 days.</div>'}</div>
     <div class="sec"><h2>Announcements ${can('crew_admin') ? '<button class="btn sm act" id="post">Post</button>' : ''}</h2>
       ${S.announcements.length ? S.announcements.map(a => `<div class="card"><div class="pre">${linkify(a.body)}</div><div class="tiny dim" style="margin-top:6px">${esc(nameOf(personById(a.author_id)))} · ${new Date(a.created_at).toLocaleDateString()}${can('crew_admin') ? ` · <a href="#" data-del="${a.id}">Remove</a>` : ''}</div></div>`).join('') : '<div class="empty">No announcements.</div>'}</div>`;
   wireRows(m);
@@ -482,12 +526,13 @@ function postAnnouncement() {
 }
 
 /* ---------- Events ---------- */
-const FILTERS = [['upcoming', 'Upcoming'], ['mine', 'Mine'], ['need', 'Need Busters'], ['charity', 'Hospital & charity'], ['incomplete', 'Details coming'], ['past', 'Past']];
+const FILTERS = [['upcoming', 'Upcoming'], ['waiting', 'Waiting on you'], ['mine', 'Mine'], ['need', 'Need Busters'], ['charity', 'Hospital & charity'], ['incomplete', 'Details coming'], ['past', 'Past']];
 function filtered() {
   const q = S.evSearch.toLowerCase(); const t = todayISO();
   let list = S.events.filter(e => e.status !== 'proposed');
   switch (S.evFilter) {
     case 'past': list = list.filter(e => (e.end_date || e.event_date) < t).reverse(); break;
+    case 'waiting': list = list.filter(isWaiting); break;
     case 'mine': list = list.filter(e => (e.end_date || e.event_date) >= t && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer)); break;
     case 'need': list = list.filter(e => (e.end_date || e.event_date) >= t && e.status === 'scheduled' && (isShort(e) || (e.goal_busters && e.going < e.goal_busters))); break;
     case 'charity': list = list.filter(e => (e.end_date || e.event_date) >= t && ['Hospital', 'Charity'].includes(e.category)); break;
