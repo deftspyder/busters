@@ -436,7 +436,8 @@ function teamCount() {
   return (can('approve_members') ? S.people.filter(p => p.status === 'pending').length : 0)
     + (can('manage_proposals') ? S.events.filter(e => e.status === 'proposed').length : 0)
     + (ev ? up.filter(isShort).length + up.filter(e => e.missing.length).length : 0)
-    + (can('pick_attendees') ? up.filter(e => e.max_busters && e.going > 0 && e.spots_in < e.max_busters).length : 0);
+    + (can('pick_attendees') ? up.filter(e => e.max_busters && e.going > 0 && e.spots_in < e.max_busters).length : 0)
+    + (can('crew_admin') ? S.events.filter(e => e.status !== 'cancelled' && Number(e.raised) > 0 && !e.credit_published).length : 0);
 }
 function render() {
   const tabs = TABS.filter(([k]) => k !== 'team' || onTeam());
@@ -535,7 +536,7 @@ function openBoard() {
 }
 function fundCard(e, going) {
   const canEdit = can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id);
-  if (!canEdit) return e.raised ? `<div class="sec"><h2>Fundraising</h2><div class="card small"><b>${money0(e.raised)}</b> raised${e.hosted && e.host_id ? ` · hosted by ${esc(first((personById(e.host_id) || {}).full_name))} (${e.host_share}% credit)` : ' · split evenly'}</div></div>` : '';
+  if (!canEdit) return e.raised && e.credit_published ? `<div class="sec"><h2>Fundraising</h2><div class="card small"><b>${money0(e.raised)}</b> raised${e.hosted && e.host_id ? ` · hosted by ${esc(first((personById(e.host_id) || {}).full_name))} (${e.host_share}% credit)` : ' · split evenly'}</div></div>` : '';
   const cands = S.people.filter(p => ['active', 'rookie'].includes(p.status));
   const hostOpts = cands.map(p => `<option value="${p.id}" ${e.host_id === p.id ? 'selected' : ''}>${esc(nameOf(p))}</option>`).join('');
   const share = e.host_share ?? 90;
@@ -548,7 +549,8 @@ function fundCard(e, going) {
       <input type="range" id="fr-share" min="0" max="100" step="10" value="${share}" style="width:100%;accent-color:var(--cyan)">
     </div>
     <div class="tiny dim" style="margin-top:6px">${going.length ? `Split among ${going.length} going${e.max_busters ? ' (or picked In)' : ''}.` : 'Nobody is marked going yet.'}</div>
-    <button class="btn sm" id="fr-save" style="margin-top:10px">Save fundraising</button>
+    <div class="small" style="margin-top:10px">${e.credit_published ? '<span class="pill good">Published</span> <span class="muted">On the leaderboard.</span>' : e.raised ? '<span class="pill cream">Draft</span> <span class="muted">Hidden from the leaderboard until an admin publishes the split.</span>' : ''}</div>
+    <div class="btns" style="margin-top:10px">${can('crew_admin') ? `<button class="btn sm primary" id="fr-pub">Save and publish</button><button class="btn sm" id="fr-save">${e.credit_published ? 'Unpublish and save' : 'Save draft'}</button>` : `<button class="btn sm" id="fr-save">Save draft</button>`}</div>
   </div></div>`;
 }
 /* ---------- Home ---------- */
@@ -757,12 +759,14 @@ function renderBrief(m, e) {
   const frh = $('#fr-hosted'); if (frh) {
     frh.onchange = () => { $('#fr-hostbox').style.display = frh.checked ? '' : 'none'; };
     $('#fr-share').oninput = () => { $('#fr-sharev').textContent = $('#fr-share').value + '%'; };
-    $('#fr-save').onclick = async () => {
+    const frSave = async publish => {
       const v = $('#fr-raised').value.trim(); const hosted = frh.checked; const host = $('#fr-host').value || null;
       if (hosted && !host) return toast('Pick the host first.');
-      await rpc('set_event_fundraising', { p_event: e.id, p_raised: v === '' ? null : Number(v), p_hosted: hosted, p_host: host, p_host_share: Number($('#fr-share').value) });
-      await refresh(); toast('Fundraising saved');
+      await rpc('set_event_fundraising', { p_event: e.id, p_raised: v === '' ? null : Number(v), p_hosted: hosted, p_host: host, p_host_share: Number($('#fr-share').value), p_publish: publish });
+      await refresh(); toast(publish ? 'Split published' : 'Saved as draft');
     };
+    $('#fr-save').onclick = () => frSave(false);
+    const frp = $('#fr-pub'); if (frp) frp.onclick = () => frSave(true);
   }
 }
 function cancelEvent(e) {
@@ -973,10 +977,12 @@ function renderTeam(m) {
   const incomplete = ev ? upcoming().filter(e => e.status === 'scheduled' && e.missing.length) : [];
   const short = ev ? upcoming().filter(e => e.status === 'scheduled' && isShort(e)) : [];
   const limited = can('pick_attendees') ? upcoming().filter(e => e.status === 'scheduled' && e.max_busters && e.going > 0 && e.spots_in < e.max_busters) : [];
+  const unpublished = can('crew_admin') ? S.events.filter(e => e.status !== 'cancelled' && Number(e.raised) > 0 && !e.credit_published) : [];
   const proposals = can('manage_proposals') ? S.events.filter(e => e.status === 'proposed') : [];
   const item = (tag, title, sub, attrs, action) => `<div class="row" ${attrs}><div class="grow"><div class="small" style="color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;font-size:11px">${tag}</div><div class="t">${esc(title)}</div><div class="small muted">${sub}</div></div><span class="btn sm">${action}</span></div>`;
   const todo = [
     ...pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')),
+    ...unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')),
     ...proposals.map(e => item('Proposed event', e.title, fmtDay(e.event_date) + ' · suggested by ' + esc(nameOf(personById(e.proposed_by))), `data-prop="${e.id}"`, 'Review')),
     ...short.map(e => item('Short on Busters', e.title, `${fmtDay(e.event_date)} · ${e.going} of ${e.min_busters} minimum`, `data-ev="${e.id}"`, 'Open')),
     ...limited.map(e => item('Pick who is In', e.title, `${fmtDay(e.event_date)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')),
