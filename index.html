@@ -888,6 +888,21 @@ function openPerson(id) {
 }
 
 /* ---------- Team ---------- */
+function adoptionCard() {
+  const members = S.people.filter(p => ['active', 'rookie'].includes(p.status));
+  const signed = members.filter(p => p.user_id).length;
+  const wk = Date.now() - 7 * 86400000;
+  const app = S.rsvps.filter(r => r.source === 'app'), sheet = S.rsvps.filter(r => r.source === 'sheet');
+  const appWk = app.filter(r => r.updated_at && new Date(r.updated_at) > wk).length;
+  const sheetWk = sheet.filter(r => r.updated_at && new Date(r.updated_at) > wk).length;
+  const pct = members.length ? Math.round(100 * signed / members.length) : 0;
+  return `<div class="sec"><h2>Adoption</h2><div class="card">
+    <div style="display:flex;align-items:baseline;gap:8px"><b>${signed} of ${members.length}</b><span class="muted small">members have signed in</span><span class="small" style="margin-left:auto;color:var(--cyan)">${pct}%</span></div>
+    <div class="staff" style="height:6px;margin:8px 0"><i style="width:${pct}%;background:var(--cyan)"></i></div>
+    <div class="small"><span class="muted">Sign-ups this week:</span> <b>${appWk}</b> in the app · <b>${sheetWk}</b> from the sheet</div>
+    <div class="small"><span class="muted">All time:</span> ${app.length} in the app · ${sheet.length} from the sheet</div>
+  </div></div>`;
+}
 function renderTeam(m) {
   const pending = can('approve_members') ? S.people.filter(p => p.status === 'pending') : [];
   const ev = can('add_events') || can('edit_events');
@@ -906,7 +921,7 @@ function renderTeam(m) {
   m.innerHTML = `<div class="sec"><h2>Team ${ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
     <div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div></div>
     <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>
-    ${can('crew_admin') ? '<div class="sec small" id="bridge"></div>' : ''}`;
+    ${can('crew_admin') ? adoptionCard() + '<div class="sec small" id="bridge"></div>' : ''}`;
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
   if (can('crew_admin')) rpc('bridge_status', { p_crew: S.crew.id }).then(b => {
     if (!b || !$('#bridge')) return;
