@@ -114,9 +114,9 @@ input.in{min-width:0}
 .check input{width:20px;height:20px;accent-color:var(--cyan)}
 
 /* home */
-.gb{position:relative;overflow:hidden}
-.gb .meter{height:14px;border-radius:999px;background:#1b2029;overflow:hidden;margin:10px 0 6px;position:relative}
-.gb .meter i{position:absolute;inset:0 auto 0 0;background:var(--sunset);border-radius:999px}
+.hello{display:flex;align-items:center;gap:8px}
+.gbpill{margin-left:auto;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:12px;white-space:nowrap}
+.gbpill .ic{color:#f87171}
 .next{border:1px solid rgba(53,178,232,.35);background:linear-gradient(180deg,rgba(53,178,232,.10),rgba(53,178,232,0) 60%),var(--panel)}
 .pke{display:flex;gap:10px;margin:12px 0}
 .pke div{flex:1;background:#07080b;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
@@ -431,15 +431,8 @@ function renderHome(m) {
   const next = mine[0] || null;
   const waiting = up.filter(e => daysUntil(e.event_date) <= 30 && !myRsvp(e.id));
   const needsMe = up.filter(e => e.missing.length && (e.poc_id === S.me.id || e.created_by === S.me.id));
-  const goal = 65000;
   m.innerHTML = `
-    <div class="sec"><div class="script">Welcome back, ${esc(first(S.me.callsign || S.me.full_name))}</div></div>
-    <div class="card gb">
-      <div style="display:flex;align-items:baseline;gap:8px"><h3>Ghostbusters Give Back</h3><span class="muted small" style="margin-left:auto">LA goal $${goal.toLocaleString()}</span></div>
-      <div class="meter"><i style="width:7.6%"></i></div>
-      <div class="small muted">LA has raised <b style="color:var(--ink)">$4,928</b> so far (Nov 6 snapshot). Live totals arrive with the Give Back tracker.</div>
-      <div class="btns" style="margin-top:10px"><a class="btn sm primary" href="${DONATE_URL}" target="_blank" rel="noopener">Donate to Starlight</a></div>
-    </div>
+    <div class="sec hello"><div class="script">Welcome back, ${esc(first(S.me.callsign || S.me.full_name))}</div><a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="Ghostbusters Give Back: LA raised $4,928, #5 of 35 (Nov 6). Tap to donate to Starlight."><span class="ic">&#9829;</span>$4,928 · #5</a></div>
     <div class="sec"><h2>Your next event</h2>${next ? nextCard(next) : `<div class="empty">You're not marked Going on anything yet. <a href="#" id="toev">Browse events</a></div>`}</div>
     ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
     <div class="sec"><h2>Waiting on you</h2>${waiting.length ? waiting.map(eventRow).join('') : '<div class="empty">Nothing waiting. You have answered every event in the next 30 days.</div>'}</div>
