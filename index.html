@@ -455,7 +455,14 @@ function staffPill(e) {
   return `<span class="pill ${cls}" title="${e.max_busters ? e.going + ' want in, ' + e.max_busters + ' spots' : 'Busters going' + (e.min_busters != null ? ', minimum ' + e.min_busters : '') + (e.goal_busters ? ', goal ' + e.goal_busters : '')}">${staffText(e)}</span>`;
 }
 function answerPill(eid) { const r = myRsvp(eid); if (!r) return ''; return { going: '<span class="pill good">You: Going</span>', maybe: '<span class="pill warn">You: Maybe</span>', no: '<span class="pill">You: No</span>' }[r.answer]; }
-function timeLine(e) { const bits = []; if (e.call_time) bits.push('Call ' + fmtTime(e.call_time)); if (e.start_time) bits.push((e.wrap_time ? fmtTime(e.start_time) + ' to ' + fmtTime(e.wrap_time) : 'Starts ' + fmtTime(e.start_time))); return bits.join(' · '); }
+function durText(e) {
+  if (!e.start_time || !e.wrap_time) return '';
+  const m = t => { const [h, mi] = t.split(':').map(Number); return h * 60 + mi; };
+  let d = m(e.wrap_time) - m(e.start_time); if (d <= 0) d += 1440;
+  const h = Math.floor(d / 60), mi = d % 60;
+  return [h ? h + (h === 1 ? ' hour' : ' hours') : '', mi ? mi + (mi === 1 ? ' minute' : ' minutes') : ''].filter(Boolean).join(' ');
+}
+function timeLine(e) { const bits = []; if (e.call_time) bits.push('Call ' + fmtTime(e.call_time)); if (e.start_time) bits.push((e.wrap_time ? fmtTime(e.start_time) + ' to ' + fmtTime(e.wrap_time) + ' (' + durText(e) + ')' : 'Starts ' + fmtTime(e.start_time))); return bits.join(' · '); }
 const isWaiting = e => e.status === 'scheduled' && (e.end_date || e.event_date) >= todayISO() && daysUntil(e.event_date) <= 30 && !myRsvp(e.id);
 function eventRow(e) {
   const pls = placesFor(e.id); const p1 = pls[0]; const where = p1 ? p1.place.name : '';
@@ -622,7 +629,7 @@ function renderBrief(m, e) {
     <h1>${esc(e.title)}</h1>
     <div class="when"><div class="cdate"><div class="cm">${fmtDay(e.event_date, { month: 'short' })}</div><div class="cd">${parseDay(e.event_date).getDate()}</div><div class="cw">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>
       <div style="flex:1;min-width:0">
-        <div class="tl">${e.call_time ? `<b>Call ${esc(fmtTime(e.call_time))}</b>` : ''}${e.call_time && e.start_time ? ' · ' : ''}${e.start_time ? esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) : '') : ''}${!e.call_time && !e.start_time ? '<span class="muted">Times coming</span>' : ''}</div>
+        <div class="tl">${e.call_time ? `<b>Call ${esc(fmtTime(e.call_time))}</b>` : ''}${e.call_time && e.start_time ? ' · ' : ''}${e.start_time ? esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) + ' (' + esc(durText(e)) + ')' : '') : ''}${!e.call_time && !e.start_time ? '<span class="muted">Times coming</span>' : ''}</div>
         ${e.end_date ? `<div class="small muted">Through ${fmtDay(e.end_date, { weekday: 'short', month: 'short', day: 'numeric' })}</div>` : ''}
         <div class="small muted ell">${p1 ? esc(p1.place.name) : 'Address coming'}</div>
       </div>
