@@ -150,6 +150,7 @@ input.in{min-width:0}
 .gbpill{margin-left:auto;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:12px;white-space:nowrap}
 .gbpill .ic{color:#f87171}
 .mmap{height:300px;background:#0d0f14}
+.mtiles{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
 .mpin{width:30px;height:30px;border-radius:50%;background:var(--cyan);color:#001018;font:700 13px "DM Sans",sans-serif;display:grid;place-items:center;border:2px solid #001018;box-shadow:0 0 0 4px rgba(56,217,232,.25)}
 .mpin.me{background:var(--good);box-shadow:0 0 0 4px rgba(74,222,128,.3)}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
@@ -1028,7 +1029,7 @@ async function drawMemberMap() {
   const total = S.people.filter(p => ['active', 'rookie'].includes(p.status)).length;
   $('#mmcount').textContent = pts.length ? `${pts.length} of ${total} members on the map, by city` : 'Nobody on the map yet. Add your city to be the first.';
   const map = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: false }).setView([34.05, -118.25], 9);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 14, subdomains: 'abcd', attribution: '&copy; OpenStreetMap, &copy; CARTO' }).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 14, className: 'mtiles', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' }).addTo(map);
   const byCity = {};
   pts.forEach(x => { const k = x.lat + ',' + x.lng; (byCity[k] = byCity[k] || { lat: x.lat, lng: x.lng, city: x.city, ids: [] }).ids.push(x.person_id); });
   const groups = Object.values(byCity);
