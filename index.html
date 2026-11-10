@@ -83,6 +83,9 @@ h2{font-size:26px}h3{font-size:20px}
 .xb{background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 var(--r) var(--r);padding:0 12px 12px}
 .xrow.waiting .xb{border-color:rgba(248,113,113,.45)}
 .xl{display:flex;align-items:center;gap:10px;padding-top:4px}
+.xpl{padding-top:2px}
+.xp{display:flex;align-items:center;gap:10px;padding:8px 0}
+.xp+.xp{border-top:1px solid var(--line)}
 .xl .tl{font-size:14px}
 .xb .choices{margin-top:10px}
 .xb .xfull{margin-top:10px;width:100%}
@@ -531,12 +534,11 @@ function eventRow(e) {
     <div class="datebox"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${parseDay(e.event_date).getDate()}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>
     <div class="grow"><div class="t">${esc(e.title)}</div>
       <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([tl, where].filter(Boolean).join(' · ')) || 'Times and place coming'}</div>
-      ${canAns && !r.answer ? `<div class="qa${w ? ' hot' : ''}"><span class="qal">${e.max_busters ? 'Want in?' : 'Are you in?'}</span><button class="qb y" data-qa="going" aria-label="${e.max_busters ? 'Count me in' : 'Going'}" title="${e.max_busters ? 'Count me in' : 'Going'}">&#10003;</button><button class="qb m" data-qa="maybe" aria-label="Maybe" title="Maybe">?</button><button class="qb n" data-qa="no" aria-label="Not going" title="Not going">&#10005;</button><span class="qsp"></span>${staffPill(e)}</div>`
+      ${canAns && !r.answer && !open ? `<div class="qa${w ? ' hot' : ''}"><span class="qal">${e.max_busters ? 'Want in?' : 'Are you in?'}</span><button class="qb y" data-qa="going" aria-label="${e.max_busters ? 'Count me in' : 'Going'}" title="${e.max_busters ? 'Count me in' : 'Going'}">&#10003;</button><button class="qb m" data-qa="maybe" aria-label="Maybe" title="Maybe">?</button><button class="qb n" data-qa="no" aria-label="Not going" title="Not going">&#10005;</button><span class="qsp"></span>${staffPill(e)}</div>`
         : `<div class="pills">${myStatus(e, r)}${staffPill(e)}</div>`}
     </div>${can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id) ? `<button class="xedit" data-edit="${e.id}" title="Edit event" aria-label="Edit ${esc(e.title)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>` : ''}<span class="chev">${ICON.back}</span></div>
     ${open ? `<div class="xb">
-      <div class="xl"><div style="flex:1;min-width:0"><div class="tl">${tl ? esc(tl).replace(/^(Call [^·]+)/, '<b>$1</b>') : '<span class="muted">Times coming</span>'}</div><div class="small muted ell">${p1 ? esc(p1.place.name) + (p1.place.address ? ', ' + esc(p1.place.address) : '') : 'Address coming'}</div></div>
-        ${p1 ? `<a class="navic" href="${mapsUrl(p1.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate">${ICON.nav}</a>` : ''}</div>
+      ${pls.length ? `<div class="xpl">${pls.map(x => `<div class="xp"><div style="flex:1;min-width:0">${pls.length > 1 || (x.label && x.label !== 'Event') ? `<div class="gc-lbl">${esc(x.label || 'Event')}</div>` : ''}<b class="small">${esc(x.place.name)}</b>${x.place.address ? `<div class="small muted ell">${esc(x.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(x.place)}" target="_blank" rel="noopener" title="Navigate to ${esc(x.label || x.place.name)}" aria-label="Navigate to ${esc(x.label || x.place.name)}">${ICON.nav}</a></div>`).join('')}</div>` : '<div class="small muted" style="padding-top:6px">Address coming</div>'}
       ${canAns ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-qa="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>` : ''}
       <button class="btn sm ghost xfull" data-ev="${e.id}">Full details ›</button>
     </div>` : ''}
@@ -882,7 +884,7 @@ function editEvent(e, propose = false) {
         <div class="grid3"><label class="f"><span>Call</span><input class="in" type="time" name="call_time" value="${t('call_time')}"></label><label class="f"><span>Start</span><input class="in" type="time" name="start_time" value="${t('start_time')}"></label><label class="f"><span>Wrap</span><input class="in" type="time" name="wrap_time" value="${t('wrap_time')}"></label></div>
         <h3 style="margin-top:20px">Places</h3><p class="muted small" style="margin:2px 0 0">Each place gets its own Navigate button. Pick a saved place or type a new one; new ones are saved for next time.</p>
         <div id="pls"></div><button type="button" class="btn sm" id="addpl" style="margin-top:8px">+ Add a place</button>
-        <datalist id="saved">${S.places.filter(p => !p.retired_at).map(p => `<option value="${esc(p.name)}">`).join('')}</datalist>
+        <datalist id="saved">${S.places.filter(p => !p.retired_at).map(p => `<option value="${esc(p.name)}">`).join('')}</datalist><datalist id="savedaddr">${[...new Map(S.places.filter(p => !p.retired_at && p.address).map(p => [p.address, p])).values()].map(p => `<option value="${esc(p.address)}">${esc(p.name)}</option>`).join('')}</datalist>
         ${propose ? '' : `<h3 style="margin-top:20px">People</h3>
         <label class="f"><span>Point of contact</span><select class="in" name="poc_id"><option value="">Choose</option>${pocs.map(p => `<option value="${p.id}" ${e.poc_id === p.id ? 'selected' : ''}>${esc(nameOf(p))}</option>`).join('')}</select></label>
         <div class="grid3"><label class="f"><span>Minimum</span><input class="in" type="number" min="0" name="min_busters" value="${v('min_busters')}"></label><label class="f"><span>Goal</span><input class="in" type="number" min="0" name="goal_busters" value="${v('goal_busters')}"></label><label class="f"><span>Maximum</span><input class="in" type="number" min="0" name="max_busters" value="${v('max_busters')}" placeholder="Only if limited"></label></div>`}
@@ -900,7 +902,7 @@ function editEvent(e, propose = false) {
       $('#pls').innerHTML = pls.map((p, i) => `<div class="card" style="margin-top:8px"><div class="grid2">
         <label class="f" style="margin:0"><span>Label</span><input class="in" data-i="${i}" data-k="label" list="labels" value="${esc(p.label)}"></label>
         <label class="f" style="margin:0"><span>Place name</span><input class="in" data-i="${i}" data-k="name" list="saved" value="${esc(p.name)}"></label></div>
-        <label class="f"><span>Address</span><input class="in" data-i="${i}" data-k="address" value="${esc(p.address)}"></label>
+        <label class="f"><span>Address</span><input class="in" data-i="${i}" data-k="address" list="savedaddr" autocomplete="off" placeholder="Start typing; known addresses pop up" value="${esc(p.address)}"></label>
         <button type="button" class="btn sm ghost" data-rm="${i}" style="margin-top:8px">Remove</button></div>`).join('') + '<datalist id="labels"><option value="Event"><option value="Parking"><option value="Staging"><option value="Meeting point"><option value="Dinner spot"></datalist>';
       $('#pls').querySelectorAll('input').forEach(inp => inp.oninput = () => {
         const p = pls[inp.dataset.i]; p[inp.dataset.k] = inp.value;
@@ -908,7 +910,10 @@ function editEvent(e, propose = false) {
           const hit = S.places.find(x => !x.retired_at && x.name === inp.value);
           if (hit) { p.place_id = hit.id; p.address = hit.address || ''; if (!p.label || p.label === 'Event') p.label = hit.kind || p.label; drawPls(); } else delete p.place_id;
         }
-        if (inp.dataset.k === 'address') delete p.place_id;
+        if (inp.dataset.k === 'address') {
+          const hit = S.places.find(x => !x.retired_at && x.address && x.address === inp.value);
+          if (hit) { p.place_id = hit.id; if (!p.name) p.name = hit.name; drawPls(); } else delete p.place_id;
+        }
       });
       $('#pls').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { pls.splice(+b.dataset.rm, 1); drawPls(); });
     };
