@@ -1057,11 +1057,83 @@ function openProfile() {
   sheet(`<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:48px;height:48px;cursor:default">${esc(initials(S.me.full_name))}</div><div><b>${esc(S.me.full_name)}</b><div class="small muted">${esc((S.session.user || {}).email || '')}</div></div></div>
     <a class="menuitem" id="pm-me"><span class="grow">My Busters<div class="small muted">Your events, stats, dues and details</div></span><span class="muted">›</span></a>
     <div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>
-    <div class="menuitem"><span class="grow">Alert settings</span><span class="pill">Next build</span></div>
+    <a class="menuitem" id="pm-alerts"><span class="grow">Alerts<div class="small muted">Short-staffed events and last calls</div></span><span class="muted">›</span></a>
     <a class="menuitem" id="out"><span class="grow" style="color:var(--bad)">Sign out</span></a>`, s => {
     $('#pm-me', s).onclick = () => { closeSheet(); show(renderMine); };
+    $('#pm-alerts', s).onclick = () => { closeSheet(); openAlerts(); };
     s.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => { await rpc('set_maps_app', { p_app: b.dataset.m }); S.profile.maps_app = b.dataset.m; s.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); toast('Saved'); });
     $('#out', s).onclick = () => { closeSheet(); sb.auth.signOut(); };
+  });
+}
+/* ---------- alerts ---------- */
+const pushOK = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const b64url = s => { const b = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function pushSub() { if (!pushOK()) return null; const reg = await navigator.serviceWorker.getRegistration(); return reg ? reg.pushManager.getSubscription() : null; }
+async function alertsOn() {
+  const key = await rpc('push_public_key');
+  if (!key) { toast('Alerts are not set up yet. Try again in a few minutes.'); return false; }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { toast('Notifications are blocked. Allow them for Busters in your phone or browser settings.'); return false; }
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64url(key) });
+  const j = sub.toJSON();
+  const { error } = await sb.from('push_subs').upsert({ user_id: S.session.user.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' });
+  if (error) { toast(error.message); return false; }
+  return true;
+}
+async function alertsOff() {
+  const sub = await pushSub(); if (!sub) return;
+  await sb.from('push_subs').delete().eq('endpoint', sub.endpoint);
+  try { await sub.unsubscribe(); } catch (e) {}
+}
+async function openAlerts() {
+  const pr = S.profile || {};
+  const short = pr.alert_short !== false, last = pr.alert_lastcall !== false, days = pr.alert_days || 7;
+  let on = false; try { on = !!(await pushSub()) && Notification.permission === 'granted'; } catch (e) {}
+  const needsInstall = isIOS() && !isStandalone();
+  const device = !pushOK() || needsInstall
+    ? `<div class="card small" style="margin-top:10px">${needsInstall ? 'On iPhone, alerts only work from the installed app. Tap Share, then <b>Add to Home Screen</b>, open Busters from your home screen, and come back here.' : 'This browser can\'t show alerts. Try Chrome or Safari, or the installed app on your phone.'}</div>`
+    : `<div class="place" style="margin-top:10px"><div class="grow" style="flex:1"><b>This device</b><div class="small muted">${on ? 'Alerts are on' : 'Alerts are off'}</div></div><button class="btn sm ${on ? '' : 'primary'}" id="al-dev">${on ? 'Turn off' : 'Turn on'}</button></div>`;
+  sheet(`<h3>Alerts</h3>
+    <p class="muted small" style="margin:4px 0 0">Busters pings you when an event you haven't answered is short on Busters.</p>
+    ${device}
+    <label class="check" style="margin-top:12px"><input type="checkbox" id="al-short" ${short ? 'checked' : ''}><span><b>Short-staffed events</b><div class="small muted">When an event is below its minimum</div></span></label>
+    <div id="al-dayswrap" style="padding:0 0 6px 30px;${short ? '' : 'opacity:.4;pointer-events:none'}">
+      <div class="small" style="margin-bottom:6px">Warn me up to <b id="al-daysv">${days}</b> day${days === 1 ? '' : 's'} ahead</div>
+      <input type="range" id="al-days" min="1" max="14" step="1" value="${Math.min(days, 14)}" style="width:100%;accent-color:var(--cyan)">
+      <div class="tiny dim" style="display:flex;justify-content:space-between"><span>1 day</span><span>2 weeks</span></div>
+    </div>
+    <label class="check"><input type="checkbox" id="al-last" ${last ? 'checked' : ''}><span><b>48-hour last call</b><div class="small muted">Two days out, if it still needs Busters</div></span></label>
+    <p class="tiny dim">You only get these for events you haven't said Going or No to. Each event alerts you once per kind.</p>
+    <div class="btns" style="margin-top:12px">${on ? '<button class="btn sm" id="al-test">Send a test alert</button>' : ''}<button class="btn sm ghost" data-close>Done</button></div>`, s => {
+    const save = async () => {
+      const p = { p_short: $('#al-short', s).checked, p_days: parseInt($('#al-days', s).value), p_lastcall: $('#al-last', s).checked };
+      await rpc('set_alert_prefs', p);
+      S.profile = Object.assign(S.profile || {}, { alert_short: p.p_short, alert_days: p.p_days, alert_lastcall: p.p_lastcall });
+    };
+    $('#al-short', s).onchange = () => { const w = $('#al-dayswrap', s); w.style.opacity = $('#al-short', s).checked ? '' : '.4'; w.style.pointerEvents = $('#al-short', s).checked ? '' : 'none'; save().then(() => toast('Saved')); };
+    $('#al-last', s).onchange = () => save().then(() => toast('Saved'));
+    const r = $('#al-days', s);
+    r.oninput = () => { const v = parseInt(r.value); $('#al-daysv', s).textContent = v; $('#al-daysv', s).nextSibling.textContent = v === 1 ? ' day ahead' : ' days ahead'; };
+    r.onchange = () => save().then(() => toast('Saved'));
+    const dev = $('#al-dev', s); if (dev) dev.onclick = async () => {
+      dev.disabled = true;
+      try { if (on) { await alertsOff(); toast('Alerts off on this device'); } else if (await alertsOn()) toast('Alerts on'); } catch (e) { toast('Could not change alerts: ' + e.message); }
+      closeSheet(); openAlerts();
+    };
+    const t = $('#al-test', s); if (t) t.onclick = async () => {
+      t.disabled = true;
+      try {
+        const { data } = await sb.auth.getSession();
+        const res = await fetch(SB_URL + '/functions/v1/busters-alerts', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: 'Bearer ' + data.session.access_token }, body: '{"mode":"test"}' });
+        const j = await res.json();
+        toast(j.sent ? 'Test alert sent' : (j.note || j.error || 'No alert sent'));
+      } catch (e) { toast('Test failed: ' + e.message); }
+      t.disabled = false;
+    };
   });
 }
 function openMenu() {
@@ -1080,6 +1152,7 @@ function openMenu() {
       <p><b>Home</b> shows what needs you now: your next event, anything you haven't answered, and announcements.</p>
       <p><b>Events</b> has everything coming up. Tap one for its brief, then answer Going, Maybe or No, with your ride and a note.</p>
       <p><b>Navigate</b> buttons open your maps app. Pick Google Maps, Apple Maps or Waze from your profile picture.</p>
+      <p><b>Alerts</b>: turn them on from your profile picture to hear when an event is short on Busters.</p>
       <p><b>My Busters</b> is your own record and your contact details. Tap your initials at the top to open it.</p>
       <p><b>Add to your home screen</b> so Busters opens like an app: on iPhone tap Share then "Add to Home Screen"; on Android tap the ⋮ menu then "Install app".</p>
       <button class="btn" data-close>Got it</button>`);
