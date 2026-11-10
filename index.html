@@ -202,6 +202,10 @@ input.in{min-width:0}
 .when .tl{font-size:15px;margin-bottom:2px}
 .navic{width:46px;height:46px;flex:0 0 46px;border-radius:50%;background:var(--cyan);color:#001018;display:grid;place-items:center}.navic svg{width:20px;height:20px}
 .choices{display:flex;gap:8px;margin-top:12px}
+.ans-sum{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:12px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font:700 14px "DM Sans",sans-serif;cursor:pointer}
+.ans-sum.going{border-color:rgba(74,222,128,.5);color:var(--good)}.ans-sum.maybe{border-color:rgba(251,191,36,.5);color:var(--warn)}
+.ans-sum .ch-l{font-weight:400;font-size:13px;color:var(--muted)}
+.brief .ans-sum{margin:6px 0 12px}
 .choices .ch{flex:1 1 0;min-width:0;min-height:44px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:10px 6px;font:700 14px "DM Sans",sans-serif;cursor:pointer}
 .choices .ch.going{color:var(--good);border-color:rgba(74,222,128,.5)}
 .choices .ch.going.on{background:var(--good);color:#001a08;border-color:var(--good)}
@@ -509,6 +513,11 @@ function staffPill(e) {
   const cls = e.max_busters ? (e.going >= e.max_busters ? 'good' : 'cyan') : isShort(e) ? 'bad' : (e.goal_busters && e.going < e.goal_busters) ? 'warn' : 'good';
   return `<span class="pill ${cls}" title="${e.max_busters ? e.going + ' want in, ' + e.max_busters + ' spots' : 'Busters going' + (e.min_busters != null ? ', minimum ' + e.min_busters : '') + (e.goal_busters ? ', goal ' + e.goal_busters : '')}">${staffText(e)}</span>`;
 }
+function ansSummary(e, r) {
+  const t = r.answer === 'going' ? (e.max_busters ? (r.spot === 'in' ? "&#10003; You're in" : r.spot === 'reserve' ? "You're on reserve" : '&#10003; You want in') : "&#10003; You're going") : r.answer === 'maybe' ? '? Maybe' : '&#10005; Not going';
+  return `<button class="ans-sum ${r.answer}" data-chg="${e.id}"><span>${t}</span><span class="ch-l">Change</span></button>`;
+}
+S.chg = {};
 function myStatus(e, r) {
   if (!r || !r.answer) return '';
   if (r.answer === 'going') return e.max_busters ? (r.spot === 'in' ? '<span class="pill good">&#10003; You\'re in</span>' : r.spot === 'reserve' ? '<span class="pill warn">You\'re on reserve</span>' : '<span class="pill good">&#10003; You want in</span>') : '<span class="pill good">&#10003; You\'re going</span>';
@@ -539,7 +548,7 @@ function eventRow(e) {
     </div>${can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id) ? `<button class="xedit" data-edit="${e.id}" title="Edit event" aria-label="Edit ${esc(e.title)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>` : ''}<span class="chev">${ICON.back}</span></div>
     ${open ? `<div class="xb">
       ${pls.length ? `<div class="xpl">${pls.map(x => `<div class="xp"><div style="flex:1;min-width:0">${pls.length > 1 || (x.label && x.label !== 'Event') ? `<div class="gc-lbl">${esc(x.label || 'Event')}</div>` : ''}<b class="small">${esc(x.place.name)}</b>${x.place.address ? `<div class="small muted ell">${esc(x.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(x.place)}" target="_blank" rel="noopener" title="Navigate to ${esc(x.label || x.place.name)}" aria-label="Navigate to ${esc(x.label || x.place.name)}">${ICON.nav}</a></div>`).join('')}</div>` : '<div class="small muted" style="padding-top:6px">Address coming</div>'}
-      ${canAns ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-qa="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>` : ''}
+      ${canAns && r.answer && !S.chg[e.id] ? ansSummary(e, r) : ''}${canAns && (!r.answer || S.chg[e.id]) ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-qa="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>` : ''}
       <button class="btn sm ghost xfull" data-ev="${e.id}">Full details ›</button>
     </div>` : ''}
   </div>`;
@@ -556,8 +565,10 @@ function wireRows(el) {
     const id = x.dataset.xr;
     const ed = x.querySelector('[data-edit]'); if (ed) ed.onclick = ev => { ev.stopPropagation(); const e = S.events.find(v => v.id === id); if (e) editEvent(e); };
     x.querySelector('.xh').onclick = () => { const prev = S.xopen; S.xopen = prev === id ? null : id; if (prev && prev !== id) rerow(prev); rerow(id); };
+    x.querySelectorAll('[data-chg]').forEach(b => b.onclick = ev => { ev.stopPropagation(); S.chg[id] = true; rerow(id); });
     x.querySelectorAll('[data-qa]').forEach(b => b.onclick = async ev => {
       ev.stopPropagation(); const r = myRsvp(id) || {}; const e = S.events.find(v => v.id === id);
+      S.chg[id] = false;
       await rpc('rsvp', { p_event: id, p_answer: b.dataset.qa, p_ride: r.ride || null, p_seats: r.seats || null, p_note: r.note || null });
       await refresh(); toast({ going: e && e.max_busters ? "You're on the list" : "You're going", maybe: 'Marked maybe', no: 'Marked not going' }[b.dataset.qa]);
     });
@@ -769,7 +780,7 @@ function renderBrief(m, e) {
       ${rest.map(x => `<div class="gc-row">${GI.pin}<div class="gc-body"><div class="gc-lbl">${esc(x.label)}</div><b>${esc(x.place.name)}</b>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(x.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(x.place.name)}">${ICON.nav}</a></div>`).join('')}`; })()}
     ${sameDay.length ? `<div class="gc-row">${GI.cal}<div class="gc-body small" style="color:var(--warn)">Also this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>`).join(', ')}</div></div>` : ''}
 
-    ${open ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-a="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>
+    ${open && r.answer && !S.chg[e.id] ? ansSummary(e, r) : ''}${open && (!r.answer || S.chg[e.id]) ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-a="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>` : ''}${open ? `
       ${(e.max_busters && r.spot) || (r.answer && r.answer !== 'no') ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">${e.max_busters && r.spot ? `<span class="pill ${r.spot === 'in' ? 'good' : 'warn'}">${r.spot === 'in' ? "You're in" : "You're on reserve"}</span>` : ''}${r.answer && r.answer !== 'no' ? `<details class="ridebox" style="flex:1"><summary class="small muted">${r.ride ? { own: 'Getting there myself', driving: 'Driving' + (r.seats ? ', ' + r.seats + ' seats' : ''), need: 'Need a ride' }[r.ride] : 'Add ride'}${r.note ? ' · ' + esc(r.note) : ' · add note'} ›</summary>
         <div class="grid2" style="margin-top:8px">
         <label class="f" style="margin:0"><span>Ride</span><select class="in" id="ride"><option value="">Not set</option><option value="own" ${r.ride === 'own' ? 'selected' : ''}>Getting there myself</option><option value="driving" ${r.ride === 'driving' ? 'selected' : ''}>Driving, have seats</option><option value="need" ${r.ride === 'need' ? 'selected' : ''}>Need a ride</option></select></label>
@@ -819,9 +830,10 @@ function renderBrief(m, e) {
     if (nm2) { const b = document.createElement('button'); b.className = 'ct-name'; b.style.marginLeft = '6px'; b.setAttribute('aria-label', 'Show number'); b.innerHTML = '<span class="dim">&#9662;</span>'; b.onclick = () => { n.hidden = !n.hidden; }; nm2.after(b); }
     n.querySelector('[data-copy]').onclick = async ev => { ev.preventDefault(); try { await navigator.clipboard.writeText(ph); toast('Copied'); } catch (err) { toast(ph); } };
   }).catch(() => {});
+  m.querySelectorAll('[data-chg]').forEach(x => x.onclick = () => { S.chg[x.dataset.chg] = true; openEvent(e.id); });
   m.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
     await rpc('rsvp', { p_event: e.id, p_answer: b.dataset.a, p_ride: r.ride || null, p_seats: r.seats || null, p_note: r.note || null });
-    await refresh(); openEvent(e.id);
+    S.chg[e.id] = false; await refresh(); openEvent(e.id);
     toast({ going: e.max_busters ? "You're on the list" : "You're going", maybe: 'Marked maybe', no: 'Marked not going' }[b.dataset.a]);
   });
   const ride = $('#ride'); if (ride) ride.onchange = () => { $('#seatsw').hidden = ride.value !== 'driving'; };
