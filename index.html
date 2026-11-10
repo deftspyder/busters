@@ -518,7 +518,7 @@ function gbPill() {
   const g = S.gb; const money = n => '$' + Math.round(n).toLocaleString();
   if (!g || g.amount == null) return `<a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="Ghostbusters Give Back. Tap to donate to Starlight."><span class="ic">&#9829;</span>GIVEBACK</a>`;
   const when = new Date(g.taken_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  const tip = `Ghostbusters Give Back: ${S.crew.short || 'we'} raised ${money(g.amount)}, #${g.rank} of ${g.groups} crews. Campaign total ${money(g.total)}. Official numbers lag while Sony approves donations. Checked ${when}. Tap to donate to Starlight.`;
+  const tip = `Ghostbusters Give Back: ${S.crew.short || 'we'} raised ${money(g.amount)}, #${g.rank} of ${g.groups} crews. Campaign total ${money(g.total)}.${g.goal ? ' ' + Math.round(100 * g.amount / g.goal) + '% of our ' + money(g.goal) + ' goal.' : ''} Official numbers lag while Sony approves donations. Checked ${when}. Tap to donate to Starlight.`;
   return `<a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="${esc(tip)}"><span class="ic">&#9829;</span>GIVEBACK ${money(g.amount)} · #${g.rank}</a>`;
 }
 
@@ -903,6 +903,19 @@ function adoptionCard() {
     <div class="small"><span class="muted">All time:</span> ${app.length} in the app · ${sheet.length} from the sheet</div>
   </div></div>`;
 }
+function goalCard() {
+  const g = S.gb || {}; const money = n => '$' + Math.round(n).toLocaleString();
+  const pct = g.goal && g.amount != null ? Math.min(100, Math.round(100 * g.amount / g.goal)) : null;
+  return `<div class="sec"><h2>Give Back goal</h2><div class="card">
+    ${pct != null ? `<div style="display:flex;align-items:baseline;gap:8px"><b>${money(g.amount)}</b><span class="muted small">of ${money(g.goal)} this drive</span><span class="small" style="margin-left:auto;color:var(--good)">${pct}%</span></div><div class="staff" style="height:6px;margin:8px 0 12px"><i style="width:${pct}%;background:var(--good)"></i></div>` : ''}
+    <div class="grid2">
+      <label class="f" style="margin:0"><span>This drive's goal ($)</span><input class="in" id="gb-goal" type="number" min="0" step="100" inputmode="numeric" value="${g.goal ?? ''}" placeholder="${g.last_total ?? ''}"></label>
+      <label class="f" style="margin:0"><span>Last drive's total ($)</span><input class="in" id="gb-last" type="number" min="0" step="1" inputmode="numeric" value="${g.last_total ?? ''}"></label>
+    </div>
+    <div class="tiny dim" style="margin-top:6px">Leave the goal blank to use last drive's total.</div>
+    <button class="btn sm" id="gb-save" style="margin-top:10px">Save goal</button>
+  </div></div>`;
+}
 function renderTeam(m) {
   const pending = can('approve_members') ? S.people.filter(p => p.status === 'pending') : [];
   const ev = can('add_events') || can('edit_events');
@@ -921,8 +934,15 @@ function renderTeam(m) {
   m.innerHTML = `<div class="sec"><h2>Team ${ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
     <div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div></div>
     <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>
-    ${can('crew_admin') ? adoptionCard() + '<div class="sec small" id="bridge"></div>' : ''}`;
+    ${can('crew_admin') ? adoptionCard() + goalCard() + '<div class="sec small" id="bridge"></div>' : ''}`;
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
+  const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
+    const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
+    const goal = num('#gb-goal'), last = num('#gb-last');
+    if (goal == null && last == null) return toast('Enter a goal or last drive\'s total.');
+    await rpc('set_giveback_goal', { p_crew: S.crew.id, p_goal: goal, p_last_total: last });
+    await refresh(); toast('Goal saved');
+  };
   if (can('crew_admin')) rpc('bridge_status', { p_crew: S.crew.id }).then(b => {
     if (!b || !$('#bridge')) return;
     const ago = x => x ? Math.round((Date.now() - new Date(x.at)) / 60000) : null;
