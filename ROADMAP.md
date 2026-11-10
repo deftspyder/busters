@@ -14,7 +14,8 @@ What's planned for Busters, roughly in order. Done items move to the bottom.
 - Member map.
 - Logo and app icon (paused; Round 3 "gear" directions are on the logo canvas).
 - Other franchises as their own crews.
-- Retire the Master Events List: once LAGB runs sign-ups in Busters, stop the sheet sync. The bridge stays read-only on the sheet until then (no edit access, since LAGB owns it).
+- Sheet write-back, someday: let the bridge add and remove app sign-ups on the Master Events List. Not now: the bridge stays read-only and nothing on the sheet changes until the sheet's owner OKs edit access.
+- Or retire the Master Events List: once LAGB runs sign-ups in Busters, stop the sheet sync.
 
 ## Done
 
