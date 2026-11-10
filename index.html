@@ -136,6 +136,9 @@ input.in{min-width:0}
 .hello{display:flex;align-items:center;gap:8px}
 .gbpill{margin-left:auto;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:12px;white-space:nowrap}
 .gbpill .ic{color:#f87171}
+.lbrow{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.lbrow .rk{width:22px;text-align:center;color:var(--muted);font-weight:700}
+.lbrow.me{background:rgba(56,217,232,.08);border-radius:10px}
 .mystripe{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;justify-content:flex-end}
 .mypill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
 .mypill b{font-weight:700}
@@ -396,7 +399,7 @@ function renderBlocked(st) {
 async function loadAll() {
   const c = S.crew.id;
   const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
-  const [sess, ev, pl, pe, rs, ep, an, gb] = await Promise.all([
+  const [sess, ev, pl, pe, rs, ep, an, gb, fb] = await Promise.all([
     rpc('my_session', { p_crew: c }),
     sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
     sb.from('places').select('*').eq('crew_id', c).order('name'),
@@ -404,11 +407,12 @@ async function loadAll() {
     sb.from('rsvps').select('*').eq('crew_id', c),
     sb.from('event_places').select('*').eq('crew_id', c).order('sort'),
     sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10),
-    sb.rpc('giveback_for_crew', { p_crew: c })
+    sb.rpc('giveback_for_crew', { p_crew: c }),
+    sb.rpc('fundraising_board', { p_crew: c, p_year: Number(todayISO().slice(0, 4)) })
   ]);
   S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
   if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
-  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null;
+  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || [];
 }
 async function refresh() { await loadAll(); render(); }
 
@@ -518,6 +522,35 @@ function wireRows(el) {
   });
 }
 
+/* ---------- fundraising ---------- */
+const money0 = n => '$' + Math.round(n || 0).toLocaleString();
+const myRaised = () => { const r = S.me && S.board.find(b => b.person_id === S.me.id); return r ? Number(r.amount) : 0; };
+function openBoard() {
+  const yr = todayISO().slice(0, 4); const total = S.board.reduce((a, b) => a + Number(b.amount), 0);
+  const rows = S.board.map((b, i) => `<div class="lbrow${S.me && b.person_id === S.me.id ? ' me' : ''}"><span class="rk">${i + 1}</span><span class="grow" style="flex:1;min-width:0"><b>${esc(b.name)}</b><div class="tiny dim">${b.events} event${b.events === 1 ? '' : 's'}</div></span><b>${money0(b.amount)}</b></div>`).join('');
+  sheet(`<h3>Fundraising ${yr}</h3>
+    <p class="muted small" style="margin:4px 0 10px">${money0(total)} credited from events so far. Each event's money is split among the Busters who worked it, or mostly to the host for hosted events.</p>
+    ${rows || '<div class="empty">No money recorded on events yet. Editors add it on an event after it happens.</div>'}
+    <div class="btns" style="margin-top:12px"><button class="btn sm ghost" data-close>Done</button></div>`);
+}
+function fundCard(e, going) {
+  const canEdit = can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id);
+  if (!canEdit) return e.raised ? `<div class="sec"><h2>Fundraising</h2><div class="card small"><b>${money0(e.raised)}</b> raised${e.hosted && e.host_id ? ` · hosted by ${esc(first((personById(e.host_id) || {}).full_name))} (${e.host_share}% credit)` : ' · split evenly'}</div></div>` : '';
+  const cands = S.people.filter(p => ['active', 'rookie'].includes(p.status));
+  const hostOpts = cands.map(p => `<option value="${p.id}" ${e.host_id === p.id ? 'selected' : ''}>${esc(nameOf(p))}</option>`).join('');
+  const share = e.host_share ?? 90;
+  return `<div class="sec"><h2>Fundraising</h2><div class="card">
+    <label class="f" style="margin:0"><span>Money raised at this event ($)</span><input class="in" id="fr-raised" type="number" min="0" step="1" inputmode="decimal" value="${e.raised ?? ''}" placeholder="0"></label>
+    <label class="check" style="margin-top:10px"><input type="checkbox" id="fr-hosted" ${e.hosted ? 'checked' : ''}><span><b>Hosted event</b><div class="small muted">Most of the credit goes to the host</div></span></label>
+    <div id="fr-hostbox" style="${e.hosted ? '' : 'display:none'}">
+      <label class="f"><span>Host</span><select class="in" id="fr-host"><option value="">Pick the host</option>${hostOpts}</select></label>
+      <div class="small" style="margin-top:8px">Host gets <b id="fr-sharev">${share}%</b>, the rest is split among the others who worked it</div>
+      <input type="range" id="fr-share" min="0" max="100" step="10" value="${share}" style="width:100%;accent-color:var(--cyan)">
+    </div>
+    <div class="tiny dim" style="margin-top:6px">${going.length ? `Split among ${going.length} going${e.max_busters ? ' (or picked In)' : ''}.` : 'Nobody is marked going yet.'}</div>
+    <button class="btn sm" id="fr-save" style="margin-top:10px">Save fundraising</button>
+  </div></div>`;
+}
 /* ---------- Home ---------- */
 function gbPill() {
   const g = S.gb; const money = n => '$' + Math.round(n).toLocaleString();
@@ -540,7 +573,7 @@ function renderHome(m) {
     <div class="sec hello"><div class="script">Welcome back, ${esc(first(S.me.callsign || S.me.full_name))}</div>${gbPill()}</div>
     <div class="mystripe">
       <a href="#" class="mypill${done >= MIN ? ' met' : ''}" id="myev" title="${done} event${done === 1 ? '' : 's'} done in ${yr}${soon ? ', ' + soon + ' signed up' : ''}. Members do at least ${MIN} a year."><span class="pips">${pips}</span><b>${done}</b> event${done === 1 ? '' : 's'} in ${yr}${soon ? `<span class="muted"> +${soon}</span>` : ''}</a>
-      <span class="mypill" title="Donations credited to you. Tracking starts with the fundraising leaderboard."><span style="color:#f87171">&#9829;</span><b class="muted">$&#8212;</b> raised</span>
+      <a href="#" class="mypill" id="myraised" title="Fundraising credited to you in ${yr}. Tap for the leaderboard."><span style="color:#f87171">&#9829;</span>${myRaised() ? `<b>${money0(myRaised())}</b>` : '<b class="muted">$0</b>'} raised</a>
     </div>
     <div class="sec"><h2>Your next event</h2>${next ? nextCard(next) : `<div class="empty">You're not marked Going on anything yet. <a href="#" id="toev">Browse events</a></div>`}</div>
     ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
@@ -548,6 +581,7 @@ function renderHome(m) {
       ${S.announcements.length ? S.announcements.map(a => `<div class="card"><div class="pre">${linkify(a.body)}</div><div class="tiny dim" style="margin-top:6px">${esc(nameOf(personById(a.author_id)))} · ${new Date(a.created_at).toLocaleDateString()}${can('crew_admin') ? ` · <a href="#" data-del="${a.id}">Remove</a>` : ''}</div></div>`).join('') : '<div class="empty">No announcements.</div>'}</div>`;
   wireRows(m);
   $('#myev').onclick = ev => { ev.preventDefault(); show(renderMine); };
+  $('#myraised').onclick = ev => { ev.preventDefault(); openBoard(); };
   const toev = $('#toev'); if (toev) toev.onclick = e => { e.preventDefault(); S.tab = 'events'; render(); };
   const post = $('#post'); if (post) post.onclick = postAnnouncement;
   m.querySelectorAll('[data-del]').forEach(a => a.onclick = async e => { e.preventDefault(); if (!confirmBox('Remove this announcement?')) return; await rpc('delete_announcement', { p_id: a.dataset.del }); refresh(); });
@@ -685,6 +719,8 @@ function renderBrief(m, e) {
       ${e.sheet_attendees || e.sheet_reserve ? `<details style="margin-top:8px"><summary class="small muted" style="cursor:pointer">Also listed on the 2026 Sheet</summary><div class="small pre" style="margin-top:6px">${esc(e.sheet_attendees || '')}</div>${e.sheet_reserve ? `<div class="small muted" style="margin-top:6px">Reserve:</div><div class="small pre">${esc(e.sheet_reserve)}</div>` : ''}</details>` : ''}
     </div>
 
+    ${fundCard(e, going)}
+
     ${pls.length > 1 ? `<div class="sec"><h2>Where</h2>${pls.map(x => `<div class="place"><div class="grow" style="flex:1;min-width:0"><div class="lbl">${esc(x.label)}</div><div><b>${esc(x.place.name)}</b></div>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="btn sm primary" href="${mapsUrl(x.place)}" target="_blank" rel="noopener">${ICON.nav} Navigate</a></div>`).join('')}</div>` : ''}
 
     ${e.schedule ? `<div class="sec"><h2>Schedule</h2><div class="card pre small">${linkify(e.schedule)}</div></div>` : ''}
@@ -718,6 +754,16 @@ function renderBrief(m, e) {
   const ca = $('#cancel'); if (ca) ca.onclick = () => cancelEvent(e);
   const rs = $('#restore'); if (rs) rs.onclick = async () => { await rpc('set_event_status', { p_event: e.id, p_status: 'scheduled', p_reason: null }); await refresh(); openEvent(e.id); };
   const pk = $('#pick'); if (pk) pk.onclick = () => pickSpots(e, going);
+  const frh = $('#fr-hosted'); if (frh) {
+    frh.onchange = () => { $('#fr-hostbox').style.display = frh.checked ? '' : 'none'; };
+    $('#fr-share').oninput = () => { $('#fr-sharev').textContent = $('#fr-share').value + '%'; };
+    $('#fr-save').onclick = async () => {
+      const v = $('#fr-raised').value.trim(); const hosted = frh.checked; const host = $('#fr-host').value || null;
+      if (hosted && !host) return toast('Pick the host first.');
+      await rpc('set_event_fundraising', { p_event: e.id, p_raised: v === '' ? null : Number(v), p_hosted: hosted, p_host: host, p_host_share: Number($('#fr-share').value) });
+      await refresh(); toast('Fundraising saved');
+    };
+  }
 }
 function cancelEvent(e) {
   const going = S.rsvps.filter(x => x.event_id === e.id && x.answer !== 'no').length;
