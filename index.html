@@ -72,6 +72,8 @@ h2{font-size:26px}h3{font-size:20px}
 .xrow+.xrow{margin-top:8px}
 .xrow .row .grow{flex:1;min-width:0}
 .xrow .chev{flex:0 0 auto;color:var(--dim);transform:rotate(-90deg);transition:transform .15s;display:grid}
+.xedit{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.xedit:hover{color:var(--cyan);border-color:var(--cyan)}
 .xrow.open .chev{transform:rotate(90deg)}
 .xrow.open .row{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-color:transparent}
 .xrow.waiting .row{border-color:rgba(248,113,113,.45)}
@@ -487,7 +489,7 @@ function eventRow(e) {
     <div class="grow"><div class="t">${esc(e.title)}</div>
       <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([tl, where].filter(Boolean).join(' · ')) || 'Details coming'}</div>
       <div class="pills">${w ? '<span class="wait"><i></i>Waiting</span>' : ''}${staffPill(e)}${answerPill(e.id)}${e.missing.length && e.status === 'scheduled' ? '<span class="pill cream">Details coming</span>' : ''}${e.max_busters ? '<span class="pill cyan">Limited</span>' : ''}</div>
-    </div><span class="chev">${ICON.back}</span></div>
+    </div>${can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id) ? `<button class="xedit" data-edit="${e.id}" title="Edit event" aria-label="Edit ${esc(e.title)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>` : ''}<span class="chev">${ICON.back}</span></div>
     ${open ? `<div class="xb">
       <div class="xl"><div style="flex:1;min-width:0"><div class="tl">${tl ? esc(tl).replace(/^(Call [^·]+)/, '<b>$1</b>') : '<span class="muted">Times coming</span>'}</div><div class="small muted ell">${p1 ? esc(p1.place.name) + (p1.place.address ? ', ' + esc(p1.place.address) : '') : 'Address coming'}</div></div>
         ${p1 ? `<a class="navic" href="${mapsUrl(p1.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate">${ICON.nav}</a>` : ''}</div>
@@ -506,6 +508,7 @@ function wireRows(el) {
   el.querySelectorAll('[data-ev]').forEach(a => a.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); openEvent(a.dataset.ev); });
   el.querySelectorAll('[data-xr]').forEach(x => {
     const id = x.dataset.xr;
+    const ed = x.querySelector('[data-edit]'); if (ed) ed.onclick = ev => { ev.stopPropagation(); const e = S.events.find(v => v.id === id); if (e) editEvent(e); };
     x.querySelector('.xh').onclick = () => { const prev = S.xopen; S.xopen = prev === id ? null : id; if (prev && prev !== id) rerow(prev); rerow(id); };
     x.querySelectorAll('[data-qa]').forEach(b => b.onclick = async ev => {
       ev.stopPropagation(); const r = myRsvp(id) || {}; const e = S.events.find(v => v.id === id);
