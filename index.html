@@ -125,7 +125,18 @@ input.in{min-width:0}
 .script{font-family:Yellowtail,cursive;color:var(--cream);font-size:22px}
 
 /* brief */
-.brief h1{font-size:34px;line-height:1.05}
+.brief h1{font-size:28px;line-height:1.05}
+.brief .back{margin:8px 0 4px}
+.kick{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px}
+.facts{margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.fact{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:14px;min-height:42px;flex-wrap:wrap}
+.fact+.fact{border-top:1px solid var(--line)}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg.rsvp button{padding:8px 6px}
+.ridebox summary{cursor:pointer;list-style:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ridebox summary::-webkit-details-marker{display:none}
+.grp{margin-top:8px}.grp .gl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+.people .pill .nt{color:var(--muted);font-weight:400}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
 .tile .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
@@ -541,36 +552,40 @@ function renderBrief(m, e) {
   const open = e.status === 'scheduled' && (e.end_date || e.event_date) >= todayISO();
   const pct = n => Math.min(100, Math.round(100 * n / Math.max(e.goal_busters || e.min_busters || e.max_busters || 1, 1)));
   const barColor = isShort(e) ? 'var(--bad)' : (e.goal_busters && e.going < e.goal_busters) ? 'var(--warn)' : 'var(--good)';
+  const short = x => x.p ? first(x.p.full_name) + (x.p.full_name.split(' ')[1] ? ' ' + x.p.full_name.split(' ')[1][0] + '.' : '') : '?';
+  const who = x => `<span class="pill ${x.spot === 'in' ? 'good' : x.spot === 'reserve' ? 'warn' : ''}">${esc(short(x))}${x.ride === 'driving' ? ' 🚗' + (x.seats || '') : x.ride === 'need' ? ' (ride?)' : ''}${x.note ? ` <span class="nt">${esc(x.note)}</span>` : ''}</span>`;
+  const groups = e.max_busters ? [['In', going.filter(x => x.spot === 'in')], ['Want in', going.filter(x => !x.spot)], ['Reserve', going.filter(x => x.spot === 'reserve')]] : [['', going]];
+  const kicker = [e.category && esc(e.category), e.max_busters && 'Limited to ' + e.max_busters, e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>', e.missing.length && e.status === 'scheduled' && '<span style="color:var(--cream)">Details coming</span>'].filter(Boolean).join(' · ');
+  const tl = timeLine(e);
+  const p1 = pls[0];
+  const need = e.max_busters ? `${e.going} want in · ${e.max_busters} spots` : e.min_busters != null && e.going < e.min_busters ? `${e.going} going · need ${e.min_busters}` : e.goal_busters ? `${e.going} going · goal ${e.goal_busters}` : `${e.going} going`;
   m.innerHTML = `<div class="brief">
     <button class="back" id="bk">${ICON.back} Back</button>
-    <div class="pills" style="margin-bottom:8px">${e.category ? `<span class="pill">${esc(e.category)}</span>` : ''}${e.status === 'cancelled' ? '<span class="pill bad">Cancelled</span>' : ''}${e.max_busters ? `<span class="pill cyan">Limited to ${e.max_busters}</span>` : ''}${e.missing.length && e.status === 'scheduled' ? '<span class="pill cream">Details coming</span>' : ''}</div>
+    ${kicker ? `<div class="kick">${kicker}</div>` : ''}
     <h1>${esc(e.title)}</h1>
-    <div class="muted">${fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}${e.end_date ? ' to ' + fmtDay(e.end_date, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}</div>
-    ${sameDay.length ? `<div class="small" style="margin-top:8px;color:var(--warn)">Also on this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>${x.start_time ? ', ' + esc(timeLine(x)) : ''}`).join('; ')}</div>` : ''}
+    <div class="facts">
+      <div class="fact"><b>${fmtDay(e.event_date, { weekday: 'short', month: 'short', day: 'numeric' })}${e.end_date ? ' to ' + fmtDay(e.end_date, { weekday: 'short', month: 'short', day: 'numeric' }) : ''}</b>${tl ? `<span class="muted"> · ${esc(tl)}</span>` : '<span class="muted"> · Times coming</span>'}</div>
+      <div class="fact">${p1 ? `<div style="flex:1;min-width:0"><b>${esc(p1.place.name)}</b>${p1.place.address ? `<div class="small muted ell">${esc(p1.place.address)}</div>` : ''}</div><a class="btn sm primary" href="${mapsUrl(p1.place)}" target="_blank" rel="noopener">${ICON.nav} Go</a>` : '<span class="muted">Address coming</span>'}</div>
+    </div>
+    ${sameDay.length ? `<div class="small" style="margin-top:6px;color:var(--warn)">Also this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>`).join(', ')}</div>` : ''}
 
-    ${open ? `<div class="card" style="margin-top:16px">
-      <div class="small muted" style="margin-bottom:8px">${e.max_busters ? 'Put in for a spot' : 'Are you going?'}</div>
-      <div class="seg rsvp">${['going', 'maybe', 'no'].map(a => `<button class="${r.answer === a ? 'on ' + a : ''}" data-a="${a}">${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>
-      ${r.answer && r.answer !== 'no' ? `<div class="grid2" style="margin-top:10px">
+    ${open ? `<div class="seg rsvp" style="margin-top:10px">${['going', 'maybe', 'no'].map(a => `<button class="${r.answer === a ? 'on ' + a : ''}" data-a="${a}">${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>
+      ${(e.max_busters && r.spot) || (r.answer && r.answer !== 'no') ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px">${e.max_busters && r.spot ? `<span class="pill ${r.spot === 'in' ? 'good' : 'warn'}">${r.spot === 'in' ? "You're in" : "You're on reserve"}</span>` : ''}${r.answer && r.answer !== 'no' ? `<details class="ridebox" style="flex:1"><summary class="small muted">${r.ride ? { own: 'Getting there myself', driving: 'Driving' + (r.seats ? ', ' + r.seats + ' seats' : ''), need: 'Need a ride' }[r.ride] : 'Add ride'}${r.note ? ' · ' + esc(r.note) : ' · add note'} ›</summary>
+        <div class="grid2" style="margin-top:8px">
         <label class="f" style="margin:0"><span>Ride</span><select class="in" id="ride"><option value="">Not set</option><option value="own" ${r.ride === 'own' ? 'selected' : ''}>Getting there myself</option><option value="driving" ${r.ride === 'driving' ? 'selected' : ''}>Driving, have seats</option><option value="need" ${r.ride === 'need' ? 'selected' : ''}>Need a ride</option></select></label>
         <label class="f" style="margin:0" ${r.ride === 'driving' ? '' : 'hidden'} id="seatsw"><span>Open seats</span><input class="in" id="seats" type="number" min="0" max="8" value="${r.seats ?? ''}"></label></div>
         <label class="f"><span>Note for the team</span><input class="in" id="note" maxlength="300" value="${esc(r.note || '')}" placeholder="Arriving late, bringing the Ecto..."></label>
-        <button class="btn sm" id="saveride" style="margin-top:10px">Save</button>` : ''}
-      ${e.max_busters && r.spot ? `<div style="margin-top:10px"><span class="pill ${r.spot === 'in' ? 'good' : 'warn'}">${r.spot === 'in' ? "You're in" : 'You are on Reserve'}</span></div>` : ''}
-    </div>` : ''}
+        <button class="btn sm" id="saveride" style="margin-top:8px">Save</button></details>` : ''}</div>` : ''}` : ''}
 
-    <div class="tiles"><div class="tile"><div class="k">Call</div><div class="v">${esc(fmtTime(e.call_time) || 'TBD')}</div></div><div class="tile"><div class="k">Start</div><div class="v">${esc(fmtTime(e.start_time) || 'TBD')}</div></div><div class="tile"><div class="k">Wrap</div><div class="v">${esc(fmtTime(e.wrap_time) || 'TBD')}</div></div></div>
-
-    <div class="card"><div style="display:flex;align-items:center;gap:8px"><b>Busters</b>${staffPill(e)}<span class="muted small" style="margin-left:auto">${e.min_busters != null ? 'Min ' + e.min_busters : ''}${e.goal_busters != null ? ' · Goal ' + e.goal_busters : ''}${e.max_busters ? ' · Max ' + e.max_busters : ''}</span></div>
-      ${(e.min_busters || e.goal_busters || e.max_busters) ? `<div class="staff"><i style="width:${pct(e.going)}%;background:${barColor}"></i></div>` : ''}
-      <div class="people" style="margin-top:8px">${going.map(x => `<span class="pill ${x.spot === 'in' ? 'good' : x.spot === 'reserve' ? 'warn' : ''}">${esc(x.p ? first(x.p.full_name) + (x.p.full_name.split(' ')[1] ? ' ' + x.p.full_name.split(' ')[1][0] + '.' : '') : '?')}${x.ride === 'driving' ? ' 🚗' + (x.seats ? x.seats : '') : x.ride === 'need' ? ' (needs ride)' : ''}${x.spot ? ' · ' + (x.spot === 'in' ? 'In' : 'Reserve') : ''}</span>`).join('') || '<span class="muted small">Nobody in Busters yet.</span>'}</div>
-      ${maybe.length ? `<div class="small muted" style="margin-top:8px">Maybe: ${maybe.map(x => esc(x.p ? x.p.full_name : '?')).join(', ')}</div>` : ''}
-      ${going.some(x => x.note) ? `<div class="small" style="margin-top:8px">${going.filter(x => x.note).map(x => `<div><span class="muted">${esc(first(x.p && x.p.full_name))}:</span> ${esc(x.note)}</div>`).join('')}</div>` : ''}
+    <div class="card" style="margin-top:12px;padding:12px"><div style="display:flex;align-items:baseline;gap:8px"><h3 style="font-size:20px">Busters</h3><span class="small" style="margin-left:auto;color:${barColor}">${need}</span></div>
+      ${(e.min_busters || e.goal_busters || e.max_busters) ? `<div class="staff" style="height:6px;margin:6px 0 2px"><i style="width:${pct(e.going)}%;background:${barColor}"></i></div>` : ''}
+      ${going.length ? groups.filter(g => g[1].length).map(([l, xs]) => `<div class="grp">${l ? `<div class="gl">${l} ${xs.length}</div>` : ''}<div class="people">${xs.map(who).join('')}</div></div>`).join('') : '<div class="muted small" style="margin-top:6px">Nobody yet. Be the first.</div>'}
+      ${maybe.length ? `<div class="small muted" style="margin-top:6px">Maybe: ${maybe.map(x => esc(short(x))).join(', ')}</div>` : ''}
       ${e.max_busters && can('pick_attendees') && going.length ? '<button class="btn sm" id="pick" style="margin-top:10px">Pick who is In</button>' : ''}
-      ${e.sheet_attendees || e.sheet_reserve ? `<details style="margin-top:10px"><summary class="small muted" style="cursor:pointer">Also listed on the 2026 Sheet</summary><div class="small pre" style="margin-top:6px">${esc(e.sheet_attendees || '')}</div>${e.sheet_reserve ? `<div class="small muted" style="margin-top:6px">Reserve:</div><div class="small pre">${esc(e.sheet_reserve)}</div>` : ''}</details>` : ''}
+      ${e.sheet_attendees || e.sheet_reserve ? `<details style="margin-top:8px"><summary class="small muted" style="cursor:pointer">Also listed on the 2026 Sheet</summary><div class="small pre" style="margin-top:6px">${esc(e.sheet_attendees || '')}</div>${e.sheet_reserve ? `<div class="small muted" style="margin-top:6px">Reserve:</div><div class="small pre">${esc(e.sheet_reserve)}</div>` : ''}</details>` : ''}
     </div>
 
-    <div class="sec"><h2>Where</h2>${pls.length ? pls.map(x => `<div class="place"><div class="grow" style="flex:1;min-width:0"><div class="lbl">${esc(x.label)}</div><div><b>${esc(x.place.name)}</b></div>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="btn sm primary" href="${mapsUrl(x.place)}" target="_blank" rel="noopener">${ICON.nav} Navigate</a></div>`).join('') : '<div class="empty">Address coming.</div>'}</div>
+    ${pls.length > 1 ? `<div class="sec"><h2>Where</h2>${pls.map(x => `<div class="place"><div class="grow" style="flex:1;min-width:0"><div class="lbl">${esc(x.label)}</div><div><b>${esc(x.place.name)}</b></div>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="btn sm primary" href="${mapsUrl(x.place)}" target="_blank" rel="noopener">${ICON.nav} Navigate</a></div>`).join('')}</div>` : ''}
 
     ${e.schedule ? `<div class="sec"><h2>Schedule</h2><div class="card pre small">${linkify(e.schedule)}</div></div>` : ''}
     ${e.parking ? `<div class="sec"><h2>Driving and parking</h2><div class="card pre small">${linkify(e.parking)}</div></div>` : ''}
