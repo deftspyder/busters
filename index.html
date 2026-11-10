@@ -150,6 +150,11 @@ input.in{min-width:0}
 .gbpill{margin-left:auto;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:12px;white-space:nowrap}
 .gbpill .ic{color:#f87171}
 .mmap{height:300px;background:#0d0f14}
+.crewgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.crewgrid .row{margin:0;min-width:0}
+.crewgrid .row .grow{min-width:0}
+.crewgrid .row .t,.crewgrid .row .small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:360px){.crewgrid{grid-template-columns:1fr}}
 .mtiles{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
 .mpin{width:30px;height:30px;border-radius:50%;background:var(--cyan);color:#001018;font:700 13px "DM Sans",sans-serif;display:grid;place-items:center;border:2px solid #001018;box-shadow:0 0 0 4px rgba(56,217,232,.25)}
 .mpin.me{background:var(--good);box-shadow:0 0 0 4px rgba(74,222,128,.3)}
@@ -1049,7 +1054,7 @@ function renderCrew(m) {
     <input class="in" id="cq" placeholder="Search names, callsigns, roles" value="${esc(crewQ)}"></div>
     <div class="card" style="padding:0;overflow:hidden"><div id="mmap" class="mmap"></div>
       <div class="small" style="padding:10px 12px;display:flex;gap:8px;align-items:center"><span class="muted" id="mmcount">Loading the member map...</span><a href="#" id="mmme" style="margin-left:auto;color:var(--cyan)">${S.me && S.me.show_on_map && S.me.city ? 'Your map settings' : 'Add yourself'}</a></div></div>
-    <div class="sec" id="cl"></div>`;
+    <div class="sec crewgrid" id="cl"></div>`;
   const draw = () => {
     const q = crewQ.toLowerCase();
     const rows = list.filter(p => !q || (p.full_name + ' ' + (p.callsign || '') + ' ' + (p.title || '')).toLowerCase().includes(q));
