@@ -38,8 +38,15 @@ Deno.serve(async (req) => {
   if (i.type !== 3) return reply("Busters doesn't know that one yet.");
 
   const [kind, eventId, answer] = String(i.data?.custom_id || "").split(":");
-  if (kind !== "rsvp") return reply("Busters doesn't know that button.");
   const u = i.member?.user || i.user || {};
+  if (kind === "test") {                                              // test card: checks who you are, saves no answer
+    const { data: m } = await sb.rpc("discord_match", { p_app: i.application_id, p_user: u.id, p_username: u.username || null, p_display: u.global_name || null, p_nick: i.member?.nick || null });
+    const a = { going: "Going", maybe: "Maybe", no: "Can't" }[eventId] || eventId;
+    if (m?.status === "ok") return reply(`✅ Test worked. Busters knows you as **${m.name}**, and would have marked you **${a}**. Nothing was saved.`);
+    if (m?.status === "unlinked") return reply(`The tap reached Busters, but it couldn't match your Discord account to a member yet. You'll show up on the Team tab under "Who is this?" for linking. Nothing was saved.`);
+    return reply("The tap reached Busters, but something's off with the setup.");
+  }
+  if (kind !== "rsvp") return reply("Busters doesn't know that button.");
   const { data: r, error } = await sb.rpc("discord_answer", {
     p_app: i.application_id, p_user: u.id, p_username: u.username || null, p_display: u.global_name || null,
     p_nick: i.member?.nick || null, p_event: eventId, p_answer: answer,
