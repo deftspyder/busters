@@ -12,7 +12,6 @@ Adoption plan: meet people where they already are (Discord) and remove work befo
 - **Check-in attendance.** Mark who actually showed up, so event counts, the yearly minimum and fundraising credit go to who worked it, not just who said Going.
 - **Saved spots you can retire.** Reusable venues and parking spots that editors can archive when they're no longer used. Also clean up saved place names that have an event name baked in.
 - **Chat**, with Discord as a switch inside it.
-
 - **Pack QR stickers: print them.** Each member's pack can carry a QR that opens the public "pack integrity simulation" (https://busters.app/sim?n=First+Last); turning the pack off ends on a donate pitch (Starlight, via Bill's fundraiser page, and Zelle). Bill's sticker is ready: print/pack-sim-sticker-bill-palmatary.png in the repo (4x5 in at 300 dpi, high error correction). To do: pick a printer (matte vinyl scans better than glossy under event lights), print Bill's at least 2 in wide, decide whether other members want their own (same design, their name in the link), and ask Matt whether Sony is fine with a fan-made pack toy promoting Give Back before pushing it widely.
 
 ## Small ideas
