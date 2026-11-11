@@ -1,5 +1,5 @@
 // Busters Discord interactions: Discord calls this when someone taps a button on a Busters card
-// (Going / Maybe / Can't, or Details).
+// (Going / Maybe / Can't, or Details), or uses the /giveback command.
 // Set as the app's Interactions Endpoint URL in the Discord Developer Portal. Every request is checked against
 // the app's public key. The answer is saved in Busters, the tapper gets a private confirmation, and the card's
 // Busters count is refreshed.
@@ -36,6 +36,22 @@ Deno.serve(async (req) => {
   if (!pk || !(await verify(pk, sig, ts, body))) return new Response("invalid request signature", { status: 401 });
 
   if (i.type === 1) return json({ type: 1 });                       // Discord's check that this URL works
+  if (i.type === 2 && i.data?.name === "giveback") {                // /giveback: public once an hour, private after that
+    const { data: g } = await sb.rpc("discord_giveback", { p_app: i.application_id });
+    if (!g?.embed) return reply("Give Back numbers aren't in yet. Try again in a bit.");
+    if (!g.public) {
+      const when = g.mins != null ? (g.mins < 1 ? "just now" : `${g.mins} min ago`) : "a little while ago";
+      return json({ type: 4, data: { content: g.last_url ? `Posted for everyone ${when}: ${g.last_url}` : `Posted for everyone ${when}, just up the channel.`, embeds: [g.embed], components: g.components, flags: 64 } });
+    }
+    // remember where the public post landed, so repeats within the hour can link to it
+    // @ts-ignore EdgeRuntime is provided by Supabase
+    EdgeRuntime.waitUntil((async () => {
+      await new Promise((r) => setTimeout(r, 1500));
+      const m = await fetch(`${API}/webhooks/${i.application_id}/${i.token}/messages/@original`, { headers: { "User-Agent": UA } }).then((r) => r.ok ? r.json() : null).catch(() => null);
+      if (m?.id) await sb.rpc("discord_giveback_saved", { p_app: i.application_id, p_url: `https://discord.com/channels/${i.guild_id}/${m.channel_id || i.channel_id}/${m.id}` });
+    })().catch(() => {}));
+    return json({ type: 4, data: { embeds: [g.embed], components: g.components, allowed_mentions: { parse: [] } } });
+  }
   if (i.type !== 3) return reply("Busters doesn't know that one yet.");
 
   const [kind, eventId, answer] = String(i.data?.custom_id || "").split(":");
