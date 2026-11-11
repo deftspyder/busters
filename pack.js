@@ -27,6 +27,11 @@
     syn: { i: 3.62, m: [0, 1, 1.3, 1.85], w: .06, d: 2 },
     rib: { i: 9.8, m: [0, 1, 1.05, .8], w: .25, d: 1 }
   };
+  // Systems that can drift out of spec: reading key, diagram marker, map node, name, which way it drifts.
+  const EX = [['cell', 'power_cell', 'PWR', 'POWER CELL', -1], ['boost', 'booster', 'BST', 'BOOSTER', 1], ['ion', 'ion_arm', 'ION', 'ION ARM', 1],
+    ['inj', 'injectors', 'INJ', 'INJECTORS', 1], ['flow', 'hga', 'HGA', 'HGA FLOW', 1], ['crank', 'crank', 'CRK', 'CRANK GEN', -1],
+    ['rpm', 'cyclotron', '', 'CYCLOTRON', 1], ['stab', 'cyclotron', '', 'FIELD STABILITY', -1], ['heat', 'heatsink', 'HS', 'HEAT SINK', 1],
+    ['syn', 'sync_gen', 'SYN', 'SYNC GEN', 1], ['rib', 'ribbon', 'RIB', 'RIBBON CABLE', -1], ['ppd', 'ppd', 'PPD', 'POWER DISTRIBUTOR', 0], ['nf', 'n_filter', 'NF', 'N-FILTER', 0]];
   const MODES = ['OFF', 'IDLE', 'STREAM ACTIVE', 'OVERLOAD WARNING'];
   const PH = ['#2f7d58', '#4dff9a', '#5fe3ff', '#ff5a3c']; // phosphor colour per mode
   const BOOT = ['KERNEL LINK ESTABLISHED', 'LOS ANGELES DIVISION AUTHENTICATED', 'CARBON CELL ONLINE', 'CYCLOTRON ROTATION NOMINAL',
@@ -91,6 +96,16 @@
 .pk .rw span{opacity:.75;overflow:hidden;text-overflow:ellipsis}
 .pk .rw b{font-weight:400;color:#fff;text-shadow:0 0 5px var(--ph)}
 .pk .rw b.bad{color:#ffb199;text-shadow:0 0 6px #ff5a3c;animation:pkb .7s infinite}
+.pk .rw.oos span,.pk .rw.oos b{color:#ffc24a;text-shadow:0 0 6px #ff9a00;opacity:1}
+.pk .rw.oos b{animation:pkb .8s infinite}
+.pk .mk.oos{color:#ffd27a}.pk .mk.oos b{border-color:#ffb000;background:#ffb000;box-shadow:0 0 10px #ffb000,0 0 18px #ff9a00;animation:pkb .6s infinite}
+.pk .map .nd.oos rect{stroke:#ffb000;fill:#241600;filter:drop-shadow(0 0 6px #ffb000)}.pk .map .nd.oos text.s{fill:#ffc24a}
+.pk .vt{position:absolute;right:6px;top:6px;z-index:3;display:flex;border:1px solid color-mix(in srgb,var(--ph) 55%,transparent);border-radius:6px;overflow:hidden}
+.pk .vt button{font:inherit;font-size:.66em;letter-spacing:.1em;padding:4px 8px;min-height:26px;background:#000c;color:var(--ph);border:0;cursor:pointer}
+.pk .vt button.on{background:color-mix(in srgb,var(--ph) 25%,#000);color:#fff}
+.pk.m3 .vt{top:34px}
+.pk .art.dg .mk span{display:none}.pk .art.dg .mk.oos span{display:inline;background:#000c;padding:0 3px;border-radius:3px}
+.pk.edit .art.dg .mk span{display:inline}
 .pk #pk1{grid-area:p1}.pk #pk2{grid-area:p2}.pk #pk3{grid-area:p3}.pk #pk4{grid-area:p4}
 .pk .lg{display:none;grid-area:lg;padding:6px 8px;overflow:hidden;font-size:.8em;line-height:1.45}
 .pk .tick{grid-column:1/-1;padding:3px 10px;font-size:.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
@@ -163,6 +178,20 @@
     im.src = src;
   }
 
+  function lineArt(src, cb) {
+    if (traceCache[src]) return cb(traceCache[src]);
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 1000 / Math.max(im.width, im.height)), w = Math.round(im.width * k), h = Math.round(im.height * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(im, 0, 0, w, h);
+      const d = x.getImageData(0, 0, w, h), p = d.data;
+      for (let i = 0; i < p.length; i += 4) { const l = .3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2]; p[i] = p[i + 1] = p[i + 2] = 255; p[i + 3] = Math.max(0, Math.min(255, (255 - l) * 1.5 - 20)); }
+      x.putImageData(d, 0, 0); traceCache[src] = { url: c.toDataURL(), w, h }; cb(traceCache[src]);
+    };
+    im.onerror = () => cb(null);
+    im.src = src;
+  }
+
   window.openPackMonitor = function () {
     if (!document.getElementById('pk-css')) { const st = document.createElement('style'); st.id = 'pk-css'; st.textContent = CSS; document.head.appendChild(st); }
     if (!document.getElementById('pk-font')) { const l = document.createElement('link'); l.id = 'pk-font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'; document.head.appendChild(l); }
@@ -171,22 +200,25 @@
     const todays = () => { const t = todayISO(); const e = upcoming().find(x => x.event_date <= t && (x.end_date || x.event_date) >= t && x.status === 'scheduled'); return e ? S.rsvps.filter(r => r.event_id === e.id && r.answer === 'going').map(r => r.person_id) : []; };
     let saved = null; try { saved = localStorage.getItem('pk-who'); } catch (e) { /* no storage */ }
     let who = saved && (saved === 'cycle' || crew.some(p => p.id === saved)) ? saved : (S.me ? S.me.id : (crew[0] || {}).id);
+    let view = 'pack'; try { view = localStorage.getItem('pk-view') || 'pack'; } catch (e) { /* ignore */ }
+    const oos = {};
     let cur = who, cycleIdx = -1, edit = null, timers = [], lock = null, mode = 0, firing = false, audio = null, logLines = [];
     const V = {}; Object.keys(R).forEach(k => { V[k] = 0; });
 
     const el = document.createElement('div'); el.className = 'pk m0'; document.body.appendChild(el);
     const person = () => crew.find(p => p.id === cur) || S.me || crew[0];
-    const unit = p => 'PK-' + String(hash(p ? p.id : 'x') % 9000 + 1000);
+    // First initial and last name, like "B. Pernod".
+    const shortName = p => { if (!p) return 'UNASSIGNED'; const w = String(p.full_name || '').trim().split(/\s+/); return w.length > 1 ? w[0][0].toUpperCase() + '. ' + w[w.length - 1] : (w[0] || 'UNASSIGNED'); };
 
     function frame() {
       const p = person();
       el.innerHTML = `<div class="hd box"><img class="emb" id="pkemb" alt="">
-        <div style="min-width:0"><div class="ttl gl">LAGB // PROTON PACK</div><div class="sub">LOS ANGELES DIVISION // UNIT ${unit(p)}</div></div>
+        <div style="min-width:0"><div class="ttl gl">LAGB // PROTON PACK</div><div class="sub">LOS ANGELES DIVISION</div></div>
         <div class="md gl"><i></i><div><div id="pkmode">${MODES[mode]}</div><div id="pkclk" style="opacity:.7">${clock()}</div></div></div>
-        <div class="who"><span class="l">PACK ASSIGNED TO</span><span class="nm">${esc(p ? (p.callsign || p.full_name) : 'UNASSIGNED')}</span></div></div>
+        <div class="who"><span class="nm">${esc(shortName(p))}</span></div></div>
       <button class="x" id="pkx2" aria-label="Exit">&#10005;</button>
       <div class="bd">
-        <div class="sc box" id="pksc"><div class="grid"></div><div class="warn">WARNING // CONTAINMENT FIELD UNSTABLE</div><div id="pkart"></div></div>
+        <div class="sc box" id="pksc"><div class="grid"></div><div class="vt" id="pkvt"></div><div class="warn">WARNING // CONTAINMENT FIELD UNSTABLE</div><div id="pkart"></div></div>
         <div class="os box"><div class="t" id="pkost">CYCL: STOP // FIELD: OFFLINE</div><canvas id="pkos"></canvas></div>
         <div class="pn box" id="pk1"><h4>POWER CORE</h4>${rw('Power Cell', 'cell', '%')}${rw('Booster', 'boost', 'kV')}${rw('Ion Arm', 'ion', '\u00b5A')}${rw('PPD', 'ppd')}</div>
         <div class="pn box" id="pk2"><h4>H\u2082 SYSTEM</h4>${rw('Injectors', 'inj', 'PSI')}${rw('Flow', 'flow', 'L/s')}${rw('HGA', 'hga')}${rw('Crank Gen', 'crank', 'Hz')}</div>
@@ -217,22 +249,24 @@
         ${lights.map(([dx, dy], i) => `<circle class="lt" id="pkL${i}" cx="${C[0] + dx}" cy="${C[1] + dy}" r="11"/>`).join('')}
         <circle class="core" cx="${C[0]}" cy="${C[1]}" r="14"/>
         <text class="cap" x="${C[0] + 74}" y="${C[1] - 58}">CYCLOTRON</text>
-        ${Object.entries(N).map(([k, [x, y, sub]]) => `<g class="nd"><rect x="${x - 34}" y="${y - 15}" width="68" height="30" rx="4"/><text x="${x}" y="${y + 1}">${k === 'NF' ? 'N-F' : k}</text><text class="s" x="${x}" y="${y + 10}">${sub}</text></g>`).join('')}
+        ${Object.entries(N).map(([k, [x, y, sub]]) => `<g class="nd" data-nd="${k}"><rect x="${x - 34}" y="${y - 15}" width="68" height="30" rx="4"/><text x="${x}" y="${y + 1}">${k === 'NF' ? 'N-F' : k}</text><text class="s" x="${x}" y="${y + 10}">${sub}</text></g>`).join('')}
         <text class="cap" x="150" y="366">SYSTEMS MAP // LOS ANGELES DIVISION</text>
       </svg>`;
     }
-    const rw = (label, k, u) => `<div class="rw"><span>${label}</span><b id="v-${k}" data-u="${u ? ' ' + u : ''}">--${u ? ' ' + u : ''}</b></div>`;
+    const rw = (label, k, u) => `<div class="rw" id="r-${k}"><span>${label}</span><b id="v-${k}" data-u="${u ? ' ' + u : ''}">--${u ? ' ' + u : ''}</b></div>`;
 
     function drawArt() {
       const box = $('#pkart', el), sc = $('#pksc', el); if (!box) return;
-      const pk = pack();
-      if (!pk.img) { box.className = 'map'; box.style.width = box.style.height = ''; el._fit = null; box.innerHTML = systemsMap(); return; }
-      trace(pk.img, t => {
+      const pk = pack(), src = pk.img || pk.diagram;
+      const tg = $('#pkvt', el); if (tg) tg.innerHTML = src && !edit ? `<button data-v="pack" class="${view === 'pack' ? 'on' : ''}">PACK</button><button data-v="map" class="${view === 'map' ? 'on' : ''}">SYSTEMS</button>` : '';
+      if (tg) tg.querySelectorAll('button').forEach(b => b.onclick = () => { view = b.dataset.v; try { localStorage.setItem('pk-view', view); } catch (e) { /* ignore */ } drawArt(); });
+      if (!src || (view === 'map' && !edit)) { box.className = 'map'; box.style.width = box.style.height = ''; el._fit = null; box.innerHTML = systemsMap(); return; }
+      (pk.img ? trace : lineArt)(src, t => {
         if (!t) return;
         const fit = () => { const r = sc.getBoundingClientRect(), k = Math.min((r.width - 12) / t.w, (r.height - 12) / t.h); box.style.width = Math.max(10, t.w * k) + 'px'; box.style.height = Math.max(10, t.h * k) + 'px'; };
-        box.className = 'art';
+        box.className = 'art' + (pk.img ? '' : ' dg');
         const marks = edit ? edit.marks : (pk.marks || {});
-        box.innerHTML = `<div class="tr" style="-webkit-mask-image:url(${t.url});mask-image:url(${t.url})"></div>${MARKS.map(([k, , s]) => marks[k] ? `<div class="mk" style="left:${marks[k][0]}%;top:${marks[k][1]}%"><b></b>${s}</div>` : '').join('')}<div class="cl" id="pkcl"></div>`;
+        box.innerHTML = `<div class="tr" style="-webkit-mask-image:url(${t.url});mask-image:url(${t.url})"></div>${MARKS.map(([k, , s]) => marks[k] ? `<div class="mk" data-mk="${k}" style="left:${marks[k][0]}%;top:${marks[k][1]}%"><b></b><span>${s}</span></div>` : '').join('')}<div class="cl" id="pkcl"></div>`;
         fit(); el._fit = fit;
         if (edit) box.onclick = ev => { const r = box.getBoundingClientRect(); edit.marks[MARKS[edit.i][0]] = [+(100 * (ev.clientX - r.left) / r.width).toFixed(1), +(100 * (ev.clientY - r.top) / r.height).toFixed(1)]; advance(); };
       });
@@ -291,7 +325,7 @@
     async function advance() {
       edit.i++;
       if (edit.i < MARKS.length) return frame();
-      const pk = { img: pack().img, marks: edit.marks }; edit = null;
+      const pk = { ...pack(), marks: edit.marks }; edit = null;
       try { await rpc('set_pack_monitor', { p_crew: S.crew.id, p_pack: pk }); S.settings.pack_monitor = pk; toast('Pack saved'); } catch (e) { /* rpc shows the error */ }
       frame();
     }
@@ -305,20 +339,34 @@
       Object.entries(R).forEach(([k, r], i) => {
         const mi = Math.min(3, Math.floor(lvl)), mf = r.m[mi] + (r.m[Math.min(3, mi + 1)] - r.m[mi]) * (lvl - mi);
         const target = r.i * mf + (mode ? r.w * (Math.sin(t / (1.7 + i * .3) + seed + i) * .7 + Math.sin(t * 3.1 + i) * .3) * (mode === 3 ? 2.5 : 1) : 0);
-        V[k] += (target - V[k]) * (mode ? .12 : .06);
+        const o = oos[k], tgt = o ? target * (1 + o.dir * o.amt) : target;
+        V[k] += (tgt - V[k]) * (mode ? .12 : .06);
         const b = $('#v-' + k, el); if (b) b.textContent = fmt(Math.max(0, V[k]), r.d) + b.dataset.u;
       });
       const word = (id, txt, bad) => { const b = $('#v-' + id, el); if (b) { b.textContent = txt; b.classList.toggle('bad', !!bad); } };
-      word('ppd', ['OFFLINE', 'STABLE', 'STABLE', 'UNSTABLE'][mode], mode === 3);
+      // systems drift out of spec now and then, then recover
+      const now = performance.now();
+      Object.keys(oos).forEach(k => { if (now > oos[k].until || !mode) { const e = EX.find(x => x[0] === k); delete oos[k]; if (mode) log('OK: ' + e[3] + ' BACK IN SPEC'); } });
+      if (mode && Math.random() < [0, .012, .02, .045][mode] && Object.keys(oos).length < (mode === 3 ? 3 : 2)) {
+        const free = EX.filter(e => !oos[e[0]]), e = free[Math.floor(Math.random() * free.length)];
+        if (e) { oos[e[0]] = { until: now + 3500 + Math.random() * 5000, dir: e[4], amt: .18 + Math.random() * .2 }; log('WARN: ' + e[3] + ' OUT OF SPEC'); buzz(15); }
+      }
+      EX.forEach(([k, mk, nd]) => { const on = !!oos[k] || (mk === 'cyclotron' && EX.some(x => x[1] === 'cyclotron' && oos[x[0]]));
+        const r = $('#r-' + k, el); if (r) r.classList.toggle('oos', !!oos[k]);
+        const m2 = el.querySelector(`[data-mk="${mk}"]`); if (m2) m2.classList.toggle('oos', on);
+        if (nd) { const n = el.querySelector(`[data-nd="${nd}"]`); if (n) n.classList.toggle('oos', !!oos[k]); } });
+      word('ppd', oos.ppd ? 'FLUCTUATING' : ['OFFLINE', 'STABLE', 'STABLE', 'UNSTABLE'][mode], mode === 3);
       word('hga', mode ? (firing ? 'VENTING' : 'READY') : 'SEALED');
-      word('nf', mode === 3 ? 'VENT NOW' : V.heat > 62 ? 'VENT SOON' : mode ? 'ONLINE' : 'STANDBY', mode === 3);
+      word('nf', oos.nf ? 'CLOGGED' : mode === 3 ? 'VENT NOW' : V.heat > 62 ? 'VENT SOON' : mode ? 'ONLINE' : 'STANDBY', mode === 3);
       word('cont', mode === 3 ? 'BREACH RISK' : mode ? 'STABLE' : 'IDLE', mode === 3);
       const ost = $('#pkost', el); if (ost) ost.textContent = mode ? `CYCL: RUN // FIELD: ${mode === 3 ? 'WARNING' : 'NOMINAL'}${firing ? ' // STREAM: LIVE' : ''}` : 'CYCL: STOP // FIELD: OFFLINE';
       const ck = $('#pkclk', el); if (ck) ck.textContent = clock();
       // cyclotron light steps around the cyclotron marker
       const cl = $('#pkcl', el), m = (pack().marks || {}).cyclotron;
-      if (!pack().img) { el.style.setProperty('--fs', [1.6, 1.6, .9, .45][mode] / (firing ? 2 : 1) + 's'); if (mode) step += mode === 3 ? 1 : (firing ? .7 : mode === 2 ? .5 : .25); const q = Math.floor(step) % 4; for (let i = 0; i < 4; i++) { const L = $('#pkL' + i, el); if (L) L.classList.toggle('hot', !!mode && i === q); } }
-      if (cl && m && mode) { step += mode === 3 ? 1 : (firing ? .7 : mode === 2 ? .5 : .25); const q = Math.floor(step) % 4, a = [-90, 0, 90, 180][q] * Math.PI / 180; cl.style.left = (m[0] + 7 * Math.cos(a)) + '%'; cl.style.top = (m[1] + 5 * Math.sin(a)) + '%'; }
+      if (view === 'map' || !(pack().img || pack().diagram)) { el.style.setProperty('--fs', [1.6, 1.6, .9, .45][mode] / (firing ? 2 : 1) + 's'); if (mode) step += mode === 3 ? 1 : (firing ? .7 : mode === 2 ? .5 : .25); const q = Math.floor(step) % 4; for (let i = 0; i < 4; i++) { const L = $('#pkL' + i, el); if (L) L.classList.toggle('hot', !!mode && i === q); } }
+      const lts = pack().lights;
+      if (cl && (m || lts) && mode) { step += mode === 3 ? 1 : (firing ? .7 : mode === 2 ? .5 : .25); const q = Math.floor(step) % 4;
+        if (lts && lts[q]) { cl.style.left = lts[q][0] + '%'; cl.style.top = lts[q][1] + '%'; } else { const a = [-90, 0, 90, 180][q] * Math.PI / 180; cl.style.left = (m[0] + 7 * Math.cos(a)) + '%'; cl.style.top = (m[1] + 5 * Math.sin(a)) + '%'; } }
       if (audio) tone();
     }
 
