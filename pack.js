@@ -35,7 +35,9 @@
     ['inj', 'injectors', 'INJ', 'INJECTORS', 1], ['flow', 'hga', 'HGA', 'HGA FLOW', 1], ['crank', 'crank', 'CRK', 'CRANK GEN', -1],
     ['rpm', 'cyclotron', '', 'CYCLOTRON', 1], ['stab', 'cyclotron', '', 'FIELD STABILITY', -1], ['heat', 'heatsink', 'HS', 'HEAT SINK', 1],
     ['syn', 'sync_gen', 'SYN', 'SYNC GEN', 1], ['rib', 'ribbon', 'RIB', 'RIBBON CABLE', -1], ['ppd', 'ppd', 'PPD', 'POWER DISTRIBUTOR', 0], ['nf', 'n_filter', 'NF', 'N-FILTER', 0]];
-  const MODES = ['OFF', 'IDLE', 'STREAM ACTIVE', 'OVERLOAD WARNING'];
+  const MODES = ['OFF', 'IDLE', 'STREAM ACTIVE', 'TOTAL FAILURE'];
+  // Order systems fail in once the stream has been held past 8 seconds (cyclotron last, at 18 seconds).
+  const FAIL_ORDER = ['heat', 'rib', 'nf', 'inj', 'flow', 'boost', 'ion', 'syn', 'ppd', 'crank', 'cell', 'stab', 'rpm'];
   const PH = ['#2f7d58', '#4dff9a', '#5fe3ff', '#ff5a3c']; // phosphor colour per mode
   const BOOT = ['KERNEL LINK ESTABLISHED', 'LOS ANGELES DIVISION AUTHENTICATED', 'CARBON CELL ONLINE', 'CYCLOTRON ROTATION NOMINAL',
     'N-FILTER PURGE COMPLETE', 'SYNCHRONOUS GENERATOR IN PHASE', 'ION ARM ALIGNMENT VERIFIED', 'PARTICLE THROWER SAFETY: ON', 'PACK READY'];
@@ -103,6 +105,20 @@
 .pk .rw span{opacity:.75;overflow:hidden;text-overflow:ellipsis}
 .pk .rw b{font-weight:400;color:color-mix(in srgb,var(--md) 55%,#fff);text-shadow:0 0 6px var(--md)}
 .pk .rw b.bad{color:#ffb199;text-shadow:0 0 6px #ff5a3c;animation:pkb .7s infinite}
+.pk .rw.fail span,.pk .rw.fail b{color:#ff4d3a!important;text-shadow:0 0 8px #ff2a1a!important;opacity:1;animation:pkb .35s infinite}
+.pk .mk.fail b{border-color:#ff3b2f;background:#ff3b2f;box-shadow:0 0 10px #ff3b2f,0 0 20px #ff2a1a;animation:pkb .35s infinite}
+.pk .art.dg .mk.fail span{border-color:#ff3b2f;color:#ff8a7a}
+.pk .map .nd.fail rect{stroke:#ff3b2f;fill:#2a0603;filter:drop-shadow(0 0 6px #ff3b2f)}.pk .map .nd.fail text.s{fill:#ff8a7a}
+.pk .boom{position:absolute;inset:0;z-index:9;display:none;place-items:center;background:radial-gradient(ellipse at center,#3a0000cc,#000c 75%);pointer-events:none}
+.pk.crit .boom,.pk.vent .boom{display:grid}
+.pk .boom .bx{border:3px solid #ff3b2f;border-radius:10px;background:#120000e6;padding:3vh 6vw;text-align:center;box-shadow:0 0 30px #ff2a1a,inset 0 0 30px #ff2a1a55;max-width:92vw}
+.pk.crit .boom .bx{animation:pkb .5s infinite}
+.pk .boom .b1{color:#ffb199;font-size:clamp(14px,2.4vh,26px);letter-spacing:.14em}
+.pk .boom .b2{color:#fff;font-weight:700;font-size:clamp(34px,7vh,90px);line-height:1.05;letter-spacing:.06em;margin:1.2vh 0;text-shadow:0 0 12px #ff3b2f,0 0 30px #ff2a1a}
+.pk .boom .b4{color:#fff;font-weight:700;font-size:clamp(16px,3vh,36px);letter-spacing:.12em;margin:-.4vh 0 1.4vh;text-shadow:0 0 10px #ff3b2f}
+.pk .boom .b3{color:#ffcf66;font-size:clamp(12px,1.8vh,20px);letter-spacing:.16em}
+.pk.vent .boom .b1{color:#ffcf66}.pk.vent .boom .bx{border-color:#ffb000;box-shadow:0 0 24px #ff9a00}
+.pk.crit .cb,.pk.vent .cb{position:relative;z-index:10}
 .pk .rw.oos span,.pk .rw.oos b{color:#ffc24a;text-shadow:0 0 6px #ff9a00;opacity:1}
 .pk .rw.oos b{animation:pkb .8s infinite}
 .pk .mk.oos{color:#ffd27a}.pk .mk.oos b{border-color:#ffb000;background:#ffb000;box-shadow:0 0 10px #ffb000,0 0 18px #ff9a00;animation:pkb .6s infinite}
@@ -237,6 +253,7 @@
         <div class="lg box" id="pklg"></div><div class="lg2 box" id="pklg2"></div>
       </div>
       <div class="tick" id="pktick"></div>
+      <div class="boom"><div class="bx"><div class="b1">&#9888; IMMINENT PACK FAILURE &#9888;</div><div class="b2">STAND BACK<br>3 MILES</div><div class="b4">UPWIND FROM PACK</div><div class="b3" id="pkb3">RELEASE TRIGGER TO VENT</div></div></div>
       <div class="cb">
         <button id="b0">${mode ? 'PACK ON' : 'PACK OFF'}</button><button id="b1">IDLE</button><button id="b2">STREAM</button>
         <button id="bf" class="fire">FIRE</button><button id="ba">${audio ? 'SOUND ON' : 'SOUND'}</button><button id="bm">MORE</button></div>
@@ -283,11 +300,12 @@
     }
 
     function paintButtons() {
-      el.className = 'pk m' + mode + (mode ? ' on' : '') + (firing ? ' fire' : '') + (edit ? ' edit' : '');
+      el.className = 'pk m' + mode + (mode ? ' on' : '') + (firing ? ' fire' : '') + (edit ? ' edit' : '') + (mode === 3 ? (ventTimer ? ' vent' : ' crit') : '');
       el.style.setProperty('--ph', PH[1]); el.style.setProperty('--md', PH[mode]); // frame stays green; numbers and diagram take the mode colour
       ['b1', 'b2'].forEach((b, i) => { const x = $('#' + b, el); if (x) x.classList.toggle('on', mode === i + 1); });
       const b0 = $('#b0', el); if (b0) { b0.classList.toggle('on', mode > 0); b0.textContent = mode ? 'PACK ON' : 'PACK OFF'; }
-      const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'VENTING' : 'OVERLOAD WARNING') : firing ? 'FIRING' : MODES[mode];
+      const b3 = $('#pkb3', el); if (b3) b3.textContent = ventTimer ? 'EMERGENCY VENT IN PROGRESS // DO NOT APPROACH' : 'RELEASE TRIGGER TO VENT';
+      const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'EMERGENCY VENT' : 'TOTAL FAILURE') : firing ? (failed.length ? 'CASCADE FAILURE' : 'FIRING') : failed.length ? 'RECOVERING' : MODES[mode];
     }
 
     function log(t) { logLines.unshift(clock() + '  ' + t); logLines = logLines.slice(0, 14); renderLog(); }
@@ -295,30 +313,42 @@
 
     let booting = null;
     // Firing for more than 8 seconds overheats the pack (overload). Letting go vents it, then it settles back.
-    let fireStart = 0, prevMode = 1, ventTimer = null, warned = false;
+    // Firing: heat warning at 5 s, systems fail one after another from 8 s, total failure at 18 s.
+    // Letting go stops the cascade; failed systems come back one by one (after a vent if it reached total failure).
+    let fireStart = 0, prevMode = 1, ventTimer = null, warned = false, failed = [], lastRestore = 0;
+    const exName = k => (EX.find(x => x[0] === k) || [, , , k.toUpperCase()])[3];
     function startFire() {
       if (!mode || firing) return;
       if (ventTimer) return log('STREAM: LOCKED OUT // VENTING');
+      if (mode === 3) return;
       firing = true; fireStart = performance.now(); warned = false; log('STREAM: FIRING'); buzz(30); tone(); paintButtons();
     }
     function stopFire() {
       if (!firing) return;
       firing = false;
       if (mode === 3) {
-        log('N-FILTER: VENTING // STREAM LOCKED'); buzz([40, 40, 40]);
-        ventTimer = setTimeout(() => { ventTimer = null; if (mode === 3) { mode = prevMode; log('VENT COMPLETE // CONTAINMENT STABLE'); tone(); paintButtons(); } }, 6000);
-      } else log('STREAM: CEASE FIRE');
-      tone(); paintButtons();
+        log('EMERGENCY VENT // STREAM LOCKED'); buzz([40, 40, 40]);
+        ventTimer = setTimeout(() => { ventTimer = null; if (mode === 3) { mode = prevMode; log('VENT COMPLETE // CONTAINMENT STABLE'); tone(); paintButtons(); } }, 9000);
+      } else log(failed.length ? 'STREAM: CEASE FIRE // CASCADE HALTED' : 'STREAM: CEASE FIRE');
+      lastRestore = performance.now(); tone(); paintButtons();
     }
     function heatCheck() {
-      if (!firing || mode === 3) return;
-      const held = performance.now() - fireStart;
-      if (held > 5000 && !warned) { warned = true; log('HEAT SINK: TEMPERATURE CRITICAL'); buzz(20); }
-      if (held > 8000) { prevMode = mode; mode = 3; log('WARNING: OVERLOAD // CONTAINMENT FIELD UNSTABLE'); buzz([60, 60, 60]); tone(); paintButtons(); }
+      const now = performance.now();
+      if (firing && mode !== 3) {
+        const held = now - fireStart;
+        if (held > 5000 && !warned) { warned = true; log('HEAT SINK: TEMPERATURE CRITICAL'); buzz(20); }
+        if (held > 8000) {
+          const want = Math.min(FAIL_ORDER.length, 1 + Math.floor((held - 8000) / (10000 / FAIL_ORDER.length)));
+          while (failed.length < want) { const k = FAIL_ORDER[failed.length]; failed.push(k); log('FAILURE: ' + exName(k)); buzz(25); if (failed.length === 1) log('WARNING: CASCADE FAILURE IN PROGRESS'); paintButtons(); }
+        }
+        if (held > 18000) { prevMode = mode; mode = 3; log('CRITICAL: TOTAL PACK FAILURE IMMINENT'); log('EMERGENCY PROCEDURE: STAND BACK 3 MILES UPWIND FROM PACK'); buzz([200, 80, 200, 80, 200]); tone(); paintButtons(); }
+      }
+      // recovery once the trigger is released (waits for the vent after a total failure)
+      if (!firing && !ventTimer && failed.length && now - lastRestore > 600) { const k = failed.pop(); lastRestore = now; log('RESTORED: ' + exName(k)); paintButtons(); }
     }
     function setMode(m) {
       if (m === mode) return;
-      const was = mode; mode = m; firing = false; if (ventTimer) { clearTimeout(ventTimer); ventTimer = null; }
+      const was = mode; mode = m; firing = false; failed = []; if (ventTimer) { clearTimeout(ventTimer); ventTimer = null; }
       if (was === 0 && m > 0) { // power-up boot sequence
         clearInterval(booting); let i = 0; booting = setInterval(() => { if (i < BOOT.length) log('BOOT: ' + BOOT[i++]); else clearInterval(booting); }, 260);
         buzz([20, 40, 20]);
@@ -371,7 +401,7 @@
       Object.entries(R).forEach(([k, r], i) => {
         const mi = Math.min(3, Math.floor(lvl)), mf = r.m[mi] + (r.m[Math.min(3, mi + 1)] - r.m[mi]) * (lvl - mi);
         const target = r.i * mf + (mode ? r.w * (Math.sin(t / (1.7 + i * .3) + seed + i) * .7 + Math.sin(t * 3.1 + i) * .3) * (mode === 3 ? 2.5 : 1) : 0);
-        const o = oos[k], tgt = o ? target * (1 + o.dir * o.amt) : target;
+        const o = oos[k], f = failed.includes(k), tgt = f ? target * (1.35 + Math.random() * .9) * (Math.random() < .15 ? .2 : 1) : o ? target * (1 + o.dir * o.amt) : target;
         V[k] += (tgt - V[k]) * (mode ? .12 : .06);
         const b = $('#v-' + k, el); if (b) b.textContent = fmt(Math.max(0, V[k]), r.d) + b.dataset.u;
       });
@@ -384,13 +414,17 @@
         if (e) { oos[e[0]] = { until: now + 3500 + Math.random() * 5000, dir: e[4], amt: .18 + Math.random() * .2 }; log('WARN: ' + e[3] + ' OUT OF SPEC'); buzz(15); }
       }
       EX.forEach(([k, mk, nd]) => { const on = !!oos[k] || (mk === 'cyclotron' && EX.some(x => x[1] === 'cyclotron' && oos[x[0]]));
+        const fl = failed.includes(k) || (mk === 'cyclotron' && (failed.includes('stab') || failed.includes('rpm')));
+        const r0 = $('#r-' + k, el); if (r0) r0.classList.toggle('fail', failed.includes(k));
+        const m0 = el.querySelector(`[data-mk="${mk}"]`); if (m0) m0.classList.toggle('fail', fl);
+        if (nd) { const n0 = el.querySelector(`[data-nd="${nd}"]`); if (n0) n0.classList.toggle('fail', failed.includes(k)); }
         const r = $('#r-' + k, el); if (r) r.classList.toggle('oos', !!oos[k]);
         const m2 = el.querySelector(`[data-mk="${mk}"]`); if (m2) m2.classList.toggle('oos', on);
         if (nd) { const n = el.querySelector(`[data-nd="${nd}"]`); if (n) n.classList.toggle('oos', !!oos[k]); } });
-      word('ppd', oos.ppd ? 'FLUCTUATING' : ['OFFLINE', 'STABLE', 'STABLE', 'UNSTABLE'][mode], mode === 3);
-      word('hga', mode ? (firing ? 'VENTING' : 'READY') : 'SEALED');
-      word('nf', oos.nf ? 'CLOGGED' : mode === 3 ? 'VENT NOW' : V.heat > 62 ? 'VENT SOON' : mode ? 'ONLINE' : 'STANDBY', mode === 3);
-      word('cont', mode === 3 ? 'BREACH RISK' : mode ? 'STABLE' : 'IDLE', mode === 3);
+      word('ppd', failed.includes('ppd') ? 'FAILED' : oos.ppd ? 'FLUCTUATING' : ['OFFLINE', 'STABLE', 'STABLE', 'FAILED'][mode], mode === 3 || failed.includes('ppd'));
+      word('hga', failed.includes('flow') ? 'FAILED' : ventTimer ? 'VENTING' : mode ? (firing ? 'OPEN' : 'READY') : 'SEALED', failed.includes('flow'));
+      word('nf', failed.includes('nf') ? 'FAILED' : oos.nf ? 'CLOGGED' : mode === 3 ? 'VENT NOW' : V.heat > 62 ? 'VENT SOON' : mode ? 'ONLINE' : 'STANDBY', mode === 3);
+      word('cont', mode === 3 ? 'BREACH' : failed.length > 6 ? 'BREACH RISK' : failed.length ? 'DEGRADING' : mode ? 'STABLE' : 'IDLE', mode === 3 || failed.length > 6);
       const ost = $('#pkost', el); if (ost) ost.textContent = mode ? `CYCL: RUN // FIELD: ${mode === 3 ? 'WARNING' : 'NOMINAL'}${firing ? ' // STREAM: LIVE' : ''}` : 'CYCL: STOP // FIELD: OFFLINE';
       const ck = $('#pkclk', el); if (ck) ck.textContent = clock();
       // cyclotron light steps around the cyclotron marker
