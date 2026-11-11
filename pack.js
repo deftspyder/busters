@@ -144,7 +144,8 @@
 .pk .boom .b2{font-size:clamp(17px,2.9vh,36px);line-height:1.1;letter-spacing:.06em;white-space:nowrap;margin:1.8vh 0 .4vh;text-shadow:0 0 8px var(--al)}
 .pk .boom .b4{font-size:clamp(14px,2.3vh,26px);letter-spacing:.16em;margin-bottom:1.6vh;text-shadow:0 0 8px var(--al)}
 .pk .boom .b5{display:none;font-size:clamp(12px,1.7vh,18px);letter-spacing:.2em;margin:.4vh 0 1.4vh}
-.pk.vent .boom .b5{display:block}
+.pk.vent .boom .b5{display:block;margin-top:1.4vh}
+.pk.vent .boom .b2,.pk.vent .boom .b4{display:none}
 .pk.vent .boom .b1{font-size:clamp(16px,2.6vh,30px);letter-spacing:.16em}
 .pk .boom .b5 b{display:block;font-weight:400;color:#fff;font-size:clamp(40px,8vh,96px);letter-spacing:.1em;line-height:1.1;text-shadow:0 0 10px var(--al),0 0 26px var(--al)}
 .pk .boom .b5 i{display:block;height:10px;border:1px solid color-mix(in srgb,var(--al) 70%,transparent);border-radius:2px;margin:1vh auto 0;max-width:80%;padding:1px}
