@@ -41,12 +41,14 @@ h2{font-size:26px}h3{font-size:20px}
 .top .logo{height:26px;flex:0 0 auto}
 .top .sp{flex:1}
 .hz{height:10px;background:repeating-linear-gradient(-45deg,var(--hazard) 0 10px,#111 10px 20px)}
-.iconbtn.cyc circle[class^="cl"]{fill:#4a1212;stroke:#000;stroke-width:.8;animation:4s step-end infinite}
+.iconbtn.cyc{overflow:hidden;padding:0}.iconbtn.cyc svg{width:100%;height:100%;display:block}
+.iconbtn.cyc .cbody{fill:#7b8089;stroke:#555a62;stroke-width:.6}
+.iconbtn.cyc circle[class^="cl"]{fill:#3a3d42;stroke:#26282c;stroke-width:.7;animation:4s step-end infinite}
 .iconbtn.cyc circle.cl1[class]{animation-name:cyA}.iconbtn.cyc circle.cl2[class]{animation-name:cyB}.iconbtn.cyc circle.cl3[class]{animation-name:cyC}.iconbtn.cyc circle.cl4[class]{animation-name:cyD}
-@keyframes cyA{0%{fill:#ff4a3a;stroke:#ffb3a8}25%{fill:#4a1212;stroke:#000}}
-@keyframes cyB{0%{fill:#4a1212;stroke:#000}25%{fill:#ff4a3a;stroke:#ffb3a8}50%{fill:#4a1212;stroke:#000}}
-@keyframes cyC{0%{fill:#4a1212;stroke:#000}50%{fill:#ff4a3a;stroke:#ffb3a8}75%{fill:#4a1212;stroke:#000}}
-@keyframes cyD{0%{fill:#4a1212;stroke:#000}75%{fill:#ff4a3a;stroke:#ffb3a8}}
+@keyframes cyA{0%{fill:#ff4a3a;stroke:#ffb3a8}25%{fill:#3a3d42;stroke:#26282c}}
+@keyframes cyB{0%{fill:#3a3d42;stroke:#26282c}25%{fill:#ff4a3a;stroke:#ffb3a8}50%{fill:#3a3d42;stroke:#26282c}}
+@keyframes cyC{0%{fill:#3a3d42;stroke:#26282c}50%{fill:#ff4a3a;stroke:#ffb3a8}75%{fill:#3a3d42;stroke:#26282c}}
+@keyframes cyD{0%{fill:#3a3d42;stroke:#26282c}75%{fill:#ff4a3a;stroke:#ffb3a8}}
 @media (prefers-reduced-motion:reduce){.iconbtn.cyc circle[class^="cl"]{animation:none;fill:#ff3b2f}}
 .iconbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;padding:0}
 .avatar{width:36px;height:36px;border-radius:50%;background:var(--sunset);color:#000;font-weight:700;display:grid;place-items:center;font-size:14px;border:0;cursor:pointer}
@@ -358,7 +360,7 @@ const ICON = {
   team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L6.8 5M3.5 12l1.2 1.2 2.1-2.2M3.5 18l1.2 1.2 2.1-2.2"/></svg>',
   list: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
   cal: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
-  pack: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="10.5"/><circle class="cl1" cx="12" cy="6" r="3"/><circle class="cl2" cx="18" cy="12" r="3"/><circle class="cl3" cx="12" cy="18" r="3"/><circle class="cl4" cx="6" cy="12" r="3"/></svg>',
+  pack: '<svg viewBox="0 0 24 24" fill="none"><circle class="cbody" cx="12" cy="12" r="11.4"/><circle class="cl1" cx="12" cy="5.6" r="3.4"/><circle class="cl2" cx="18.4" cy="12" r="3.4"/><circle class="cl3" cx="12" cy="18.4" r="3.4"/><circle class="cl4" cx="5.6" cy="12" r="3.4"/></svg>',
   qr: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>',
   menu: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   nav: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
