@@ -1188,8 +1188,8 @@ function goalCard() {
   </div></div>`;
 }
 // Discord bot permissions: View Channels, Send Messages, Embed Links, Attach Files, Read Message History,
-// Add Reactions, Create Public Threads, Send Messages in Threads.
-const DC_PERMS = '309237763136';
+// Add Reactions, Create Public Threads, Send Messages in Threads, Create Events (Events list sync), Pin Messages (photo calls).
+const DC_PERMS = '2269701237492800';
 const dcInvite = id => `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(id)}&scope=bot%20applications.commands&permissions=${DC_PERMS}`;
 // Events team: when the Busters bot posts each event's card. Every post is a bump (fresh card at the bottom,
 // older one removed), so each event only has one card in the channel.
