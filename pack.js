@@ -53,16 +53,16 @@
 .pk .gl{text-shadow:0 0 6px var(--ph)}
 .pk .box{border:1px solid color-mix(in srgb,var(--ph) 55%,transparent);border-radius:6px;background:color-mix(in srgb,var(--ph) 5%,#010806);box-shadow:inset 0 0 18px color-mix(in srgb,var(--ph) 12%,transparent)}
 /* header */
-.pk .hd{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;margin:6px 6px 0}
+.pk .hd{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 8px;margin:6px 6px 0}
 .pk .emb{width:clamp(34px,6vh,64px);aspect-ratio:1;image-rendering:pixelated;filter:drop-shadow(0 0 4px var(--ph))}
-.pk .ttl{font-size:1.25em;letter-spacing:.12em;line-height:1.15;color:#eafff4}
+.pk .ttl{font-size:1.05em;letter-spacing:.1em;line-height:1.2;color:#eafff4}
 .pk .sub{opacity:.7;font-size:.8em;letter-spacing:.1em}
-.pk .md{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-size:.85em;letter-spacing:.08em;text-align:right}
+.pk .md{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-size:.75em;letter-spacing:.08em;text-align:right;white-space:nowrap}
 .pk .md i{width:8px;height:8px;border-radius:50%;background:var(--ph);box-shadow:0 0 8px var(--ph);animation:pkb 1.4s infinite;flex:0 0 auto}
 @keyframes pkb{50%{opacity:.2}}
-.pk .who{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;border-top:1px dashed color-mix(in srgb,var(--ph) 35%,transparent);padding-top:6px;min-width:0;justify-content:flex-end;text-align:right}
+.pk .who{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0;text-align:right}
 .pk .who .l{font-size:.75em;letter-spacing:.2em;opacity:.75;white-space:nowrap}
-.pk .who .nm{font-size:1.6em;letter-spacing:.08em;font-weight:700;text-transform:uppercase;color:#fff;text-shadow:0 0 8px var(--ph),0 0 18px var(--ph);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pk .who .nm{font-size:1.5em;line-height:1.1;letter-spacing:.08em;font-weight:700;text-transform:uppercase;color:#fff;text-shadow:0 0 8px var(--ph),0 0 18px var(--ph);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .pk .x{position:absolute;top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));z-index:6;background:#000a;border:1px solid var(--ph);color:var(--ph);border-radius:50%;width:30px;height:30px;font:inherit;cursor:pointer;display:none}
 /* body: phone first */
 .pk .bd{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto auto auto;grid-template-areas:"sc sc" "os os" "p1 p2" "p3 p4";gap:6px;padding:6px;min-height:0;overflow:hidden}
@@ -147,8 +147,7 @@
 /* wide screens: three columns */
 @media (min-aspect-ratio:1/1) and (min-width:700px){
   .pk{font-size:clamp(11px,1.7vh,20px)}
-  .pk .hd{grid-template-columns:auto 1fr auto auto;padding-right:46px}
-  .pk .who{grid-column:auto;border-top:0;padding-top:0;flex-direction:column;align-items:flex-end;gap:0;text-align:right}
+  .pk .hd{padding-right:46px}
   .pk .bd{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"p1 sc p3" "p2 sc p4" "lg sc lg2" "lg os lg2"}
   .pk .lg{display:block}.pk .lg2{grid-area:lg2;display:grid;place-items:center}
   .pk .tick{display:none}
@@ -240,8 +239,7 @@
       const p = person();
       el.innerHTML = `<div class="hd box"><img class="emb" id="pkemb" alt="">
         <div style="min-width:0"><div class="ttl gl">LAGB // PROTON PACK</div><div class="sub">LOS ANGELES DIVISION</div></div>
-        <div class="md gl"><i></i><div><div id="pkmode">${MODES[mode]}</div><div id="pkclk" style="opacity:.7">${clock()}</div></div></div>
-        <div class="who"><span class="nm">${esc(shortName(p))}</span></div></div>
+        <div class="who"><div class="nm">${esc(shortName(p))}</div><div class="md gl"><i></i><span id="pkmode">${MODES[mode]}</span><span id="pkclk" style="opacity:.7">${clock()}</span></div></div></div>
       <button class="x" id="pkx2" aria-label="Exit">&#10005;</button>
       <div class="bd">
         <div class="sc box" id="pksc"><div class="grid"></div><div class="vt" id="pkvt"></div><div id="pkart"></div></div>

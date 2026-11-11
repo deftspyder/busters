@@ -1485,7 +1485,7 @@ async function readQrPicture(file) {
 
 /* ---------- proton pack monitor (pack.js) ---------- */
 async function openPack() {
-  try { await loadScript('pack.js?v=16'); } catch (e) { return toast('Could not load the pack monitor. Check your connection.'); }
+  try { await loadScript('pack.js?v=17'); } catch (e) { return toast('Could not load the pack monitor. Check your connection.'); }
   try { window.openPackMonitor({ S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO }); } catch (e) { console.error(e); toast('The pack monitor hit an error: ' + e.message); }
 }
 
