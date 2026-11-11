@@ -384,12 +384,23 @@
       if (c.width !== Math.round(r.width * dpr)) { c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
       const x = c.getContext('2d'), w = c.width, h = c.height, t = performance.now() / 1000;
       x.clearRect(0, 0, w, h);
-      const amp = [0.02, .25, .36, .44][mode] + (firing ? .1 : 0), fr = [0, 1.2, 2.4, 4][mode] + (firing ? 3 : 0), col = PH[mode];
-      [['#3fb6ff', 0], ['#ff9a3c', 1.7]].forEach(([cc, ph], j) => {
-        x.beginPath(); x.lineWidth = 2 * dpr; x.strokeStyle = cc; x.shadowColor = cc; x.shadowBlur = 8 * dpr;
-        for (let i = 0; i <= w; i += 3) { const u = i / w; let y = Math.sin(u * Math.PI * (2 + j) + t * fr + ph) * amp; if (mode === 3 || firing) y += (Math.random() - .5) * .08; x.lineTo(i, h / 2 + y * h); }
+      const amp = [0.02, .25, .36, .44][mode], fr = [0, 1.2, 2.4, 4][mode];
+      const wave = (cc, cycles, speed, a, ph, jit, lw, blur) => {
+        x.beginPath(); x.lineWidth = lw * dpr; x.strokeStyle = cc; x.shadowColor = cc; x.shadowBlur = blur * dpr;
+        for (let i = 0; i <= w; i += 2) { const u = i / w; let y = Math.sin(u * Math.PI * cycles + t * speed + ph) * a; if (jit) y += (Math.random() - .5) * jit; x.lineTo(i, h / 2 + y * h); }
         x.stroke();
-      });
+      };
+      if (firing) {
+        // live stream: tight, fast blue waves wrapped by a slower orange one
+        wave('#ff9a3c', 3.2, -7, .34, 1.7, .05, 2.2, 10);
+        wave('#3fb6ff', 14, 26, .3, 0, .07, 2.4, 14);
+        wave('#9fe0ff', 22, 34, .18, 2.1, .05, 1.4, 8);
+        wave('#3fb6ff', 9, -21, .22, 4.2, .06, 1.6, 10);
+      } else {
+        const jit = mode === 3 ? .08 : 0;
+        wave('#3fb6ff', 2, fr, amp, 0, jit, 2, 8);
+        wave('#ff9a3c', 3, fr, amp, 1.7, jit, 2, 8);
+      }
     }
     let raf = 0; const loop = () => { scope(); raf = requestAnimationFrame(loop); };
 
