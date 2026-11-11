@@ -2,8 +2,8 @@
    An in-world diagnostics screen built for phones first: the crew's own pack photo traced into
    glowing line art, live readings in four instrument panels, modes (off, idle, stream, overload,
    fire), a boot log, an oscilloscope, an 8-bit LAGB emblem, and the Buster the pack is assigned to.
-   Loaded on demand from index.html and uses its globals: S, $, esc, toast, rpc, can, nameOf,
-   upcoming, todayISO. */
+   Loaded on demand from index.html, which passes in what it needs: S, $, esc, toast, rpc, can,
+   nameOf, upcoming, todayISO. */
 (function () {
   // Systems that can be marked on the pack photo (keys match saved markers).
   const MARKS = [
@@ -192,7 +192,8 @@
     im.src = src;
   }
 
-  window.openPackMonitor = function () {
+  window.openPackMonitor = function (ctx) {
+    const { S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO } = ctx;
     if (!document.getElementById('pk-css')) { const st = document.createElement('style'); st.id = 'pk-css'; st.textContent = CSS; document.head.appendChild(st); }
     if (!document.getElementById('pk-font')) { const l = document.createElement('link'); l.id = 'pk-font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'; document.head.appendChild(l); }
     const pack = () => (S.settings && S.settings.pack_monitor) || {};
