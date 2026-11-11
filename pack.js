@@ -369,7 +369,7 @@
       if (mode === 3) {
         log('EMERGENCY VENT // STREAM LOCKED'); buzz([40, 40, 40]);
         ventEnd = performance.now() + 9000;
-        ventTimer = setTimeout(() => { ventTimer = null; if (mode === 3) { mode = prevMode; log('VENT COMPLETE // CONTAINMENT STABLE'); tone(); paintButtons(); } }, 9000);
+        ventTimer = setTimeout(() => { ventTimer = null; if (mode === 3) { mode = prevMode; log('VENT COMPLETE // CONTAINMENT STABLE'); log('OK: SAFE TO RETURN TO PACK'); tone(); paintButtons(); } }, 9000);
       } else log(failed.length ? 'STREAM: CEASE FIRE // CASCADE HALTED' : 'STREAM: CEASE FIRE');
       lastRestore = performance.now(); tone(); paintButtons();
     }
@@ -438,7 +438,7 @@
       heatCheck();
       const vc = $('#pkvc', el);
       if (vc && ventTimer) { const left = Math.max(0, ventEnd - performance.now()), sec = Math.ceil(left / 1000);
-        vc.innerHTML = `VENT COMPLETE IN<b>00:${String(sec).padStart(2, '0')}</b><i><u style="width:${(100 * (1 - left / 9000)).toFixed(1)}%"></u></i>`; }
+        vc.innerHTML = `OK TO RETURN TO PACK IN<b>00:${String(sec).padStart(2, '0')}</b><i><u style="width:${(100 * (1 - left / 9000)).toFixed(1)}%"></u></i>`; }
       const t = (performance.now() - t0) / 1000, seed = hash((person() || {}).id || 'x') % 97;
       const lvl = mode === 3 && ventTimer ? 2.3 : mode + (firing ? .6 : 0); // readings ease down while venting
       Object.entries(R).forEach(([k, r], i) => {
