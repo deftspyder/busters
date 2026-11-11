@@ -13,6 +13,8 @@ Adoption plan: meet people where they already are (Discord) and remove work befo
 - **Saved spots you can retire.** Reusable venues and parking spots that editors can archive when they're no longer used. Also clean up saved place names that have an event name baked in.
 - **Chat**, with Discord as a switch inside it.
 
+- **Pack QR stickers: print them.** Each member's pack can carry a QR that opens the public "pack integrity simulation" (https://busters.app/sim?n=First+Last); turning the pack off ends on a donate pitch (Starlight, via Bill's fundraiser page, and Zelle). Bill's sticker is ready: print/pack-sim-sticker-bill-palmatary.png in the repo (4x5 in at 300 dpi, high error correction). To do: pick a printer (matte vinyl scans better than glossy under event lights), print Bill's at least 2 in wide, decide whether other members want their own (same design, their name in the link), and ask Matt whether Sony is fine with a fan-made pack toy promoting Give Back before pushing it widely.
+
 ## Small ideas
 
 - Fixed dues statuses for Personnel (Paid, Paid early, Exempt, Extension, Unpaid).
@@ -29,6 +31,7 @@ Adoption plan: meet people where they already are (Discord) and remove work befo
 
 ## Done
 
+- Nov 11: pack integrity simulation (busters.app/sim?n=Name, public, ends on a donate pitch); cleaned pack diagram (leftover pointer lines removed); venting card drops the stand-back lines; cascade warning waits for the 5th failure; Stream stays green with red cyclotron lights and a blue power cell. Starlight donate links everywhere now go to Bill's fundraiser page (7718546). Discord: a Give Back update card whenever Sony's totals change (one card at a time, waits out quiet hours), with switches for milestones and updates under Admin, then Events.
 - Google bridge: LAGB Calendar Ops every 5 minutes, Master Events List every hour.
 - Live Ghostbusters Give Back tracker (hourly), goal, last drive's total and end date (June 1, 2027).
 - Alerts: short-staffed events (each person picks days ahead) and the 48-hour last call.
