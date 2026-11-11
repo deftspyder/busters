@@ -223,6 +223,7 @@
   window.openPackMonitor = function (ctx) {
     const { S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO } = ctx;
     let sharedAc = ctx.audioCtx || null; // made during the tap that opened the monitor, so phones allow sound
+    if (window.__pkClose) window.__pkClose(); // never leave an older monitor (and its hum) running underneath
     if (!document.getElementById('pk-css')) { const st = document.createElement('style'); st.id = 'pk-css'; st.textContent = CSS; document.head.appendChild(st); }
     if (!document.getElementById('pk-font')) { const l = document.createElement('link'); l.id = 'pk-font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'; document.head.appendChild(l); }
     const pack = () => (S.settings && S.settings.pack_monitor) || {};
@@ -480,7 +481,7 @@
         audio = { ac, g, f, o1, o2 }; tone();
       } catch (e) { /* no sound on this device */ }
     }
-    function stopAudio() { if (!audio) return; try { audio.ac.close(); } catch (e) { /* ignore */ } audio = null; }
+    function stopAudio() { if (!audio) return; try { audio.g.gain.value = 0; audio.o1.stop(); audio.o2.stop(); } catch (e) { /* ignore */ } try { audio.ac.close(); } catch (e) { /* ignore */ } audio = null; }
     function tone() {
       if (!audio) return; const now = audio.ac.currentTime, base = [0, 55, 70, 92][mode] + (firing ? 40 : 0);
       audio.o1.frequency.setTargetAtTime(base || 40, now, .3); audio.o2.frequency.setTargetAtTime((base || 40) * 2.01 + (mode === 3 ? Math.sin(now * 9) * 20 : 0), now, .3);
@@ -488,7 +489,10 @@
     }
     const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* ignore */ } };
 
-    function close() { timers.forEach(clearInterval); clearTimeout(ventTimer); clearInterval(booting); cancelAnimationFrame(raf); stopAudio(); if (lock) lock.release().catch(() => {}); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); removeEventListener('resize', onResize); }
+    const onVis = () => { if (!audio) return; if (document.hidden) audio.ac.suspend().catch(() => {}); else if (el.isConnected) audio.ac.resume().catch(() => {}); };
+    const onHide = () => close();
+    document.addEventListener('visibilitychange', onVis); addEventListener('pagehide', onHide);
+    function close() { if (window.__pkClose === close) window.__pkClose = null; document.removeEventListener('visibilitychange', onVis); removeEventListener('pagehide', onHide); timers.forEach(clearInterval); clearTimeout(ventTimer); clearInterval(booting); cancelAnimationFrame(raf); stopAudio(); if (lock) lock.release().catch(() => {}); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); removeEventListener('resize', onResize); }
     const key = e => {
       if (e.repeat) return;
       const k = e.key.toLowerCase();
@@ -501,6 +505,7 @@
     document.addEventListener('keydown', key); document.addEventListener('keyup', keyUp); addEventListener('resize', onResize);
     if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { lock = l; }).catch(() => {});
 
+    window.__pkClose = close;
     if (who === 'cycle') cur = nextCycle();
     log('LINK: LOS ANGELES DIVISION');
     frame(); loop();
@@ -512,7 +517,6 @@
       startAudio();
       const wake = () => { if (audio && audio.ac.state === 'suspended') audio.ac.resume().catch(() => {}); };
       ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach(t => el.addEventListener(t, wake, { capture: true }));
-      document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
       if (audio) { const b = $('#ba', el); if (b) b.textContent = 'SOUND ON'; }
     }
     setTimeout(() => setMode(1), 400); // pack starts powered on, with its boot sequence
