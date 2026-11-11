@@ -424,8 +424,9 @@
     if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { lock = l; }).catch(() => {});
 
     if (who === 'cycle') cur = nextCycle();
-    log('LINK: LOS ANGELES DIVISION'); log('MODE: SHUTDOWN // PRESS PACK TO POWER UP');
+    log('LINK: LOS ANGELES DIVISION');
     frame(); loop();
+    setTimeout(() => setMode(1), 400); // pack starts powered on, with its boot sequence
     timers.push(setInterval(tick, 120));
     timers.push(setInterval(() => { if (who === 'cycle' && !edit) { cur = nextCycle(); frame(); } }, 20000));
     timers.push(setInterval(() => { if (mode) log(['PING: TELEMETRY REFRESHED', 'SYS: FIELD LENS RECALIBRATED', 'N-FILTER: PARTICULATE ' + Math.round(10 + mode * 6) + ' PPM', 'ION ARM: ALIGNMENT HOLDING', 'DO NOT CROSS THE STREAMS'][Math.floor(Math.random() * 5)]); }, 5000));
