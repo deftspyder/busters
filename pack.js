@@ -41,12 +41,12 @@
     'N-FILTER PURGE COMPLETE', 'SYNCHRONOUS GENERATOR IN PHASE', 'ION ARM ALIGNMENT VERIFIED', 'PARTICLE THROWER SAFETY: ON', 'PACK READY'];
 
   const CSS = `
-.pk{--ph:#4dff9a;position:fixed;inset:0;z-index:100;background:#010806;color:var(--ph);font-family:"Share Tech Mono",ui-monospace,Menlo,monospace;
+.pk{--ph:#4dff9a;--md:#4dff9a;position:fixed;inset:0;z-index:100;background:#010806;color:var(--ph);font-family:"Share Tech Mono",ui-monospace,Menlo,monospace;
   display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;transition:color .4s;-webkit-user-select:none;user-select:none;
   font-size:clamp(11px,1.55vh,16px);padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
 .pk *{box-sizing:border-box}
 .pk::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;background:repeating-linear-gradient(0deg,#0000 0 2px,#0006 2px 3px),radial-gradient(ellipse at center,#0000 70%,#0005)}
-.pk.fire::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:4;background:var(--ph);opacity:.07;animation:pkfl .09s steps(2) infinite}
+.pk.fire::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:4;background:var(--md);opacity:.07;animation:pkfl .09s steps(2) infinite}
 @keyframes pkfl{50%{opacity:.16}}
 .pk .gl{text-shadow:0 0 6px var(--ph)}
 .pk .box{border:1px solid color-mix(in srgb,var(--ph) 55%,transparent);border-radius:6px;background:color-mix(in srgb,var(--ph) 5%,#010806);box-shadow:inset 0 0 18px color-mix(in srgb,var(--ph) 12%,transparent)}
@@ -69,31 +69,30 @@
 .pk .os .warn{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.85em;letter-spacing:.12em;padding:2px 8px;border:1px solid var(--ph);background:#000c;display:none;animation:pkb .6s infinite;z-index:2}
 .pk.m3 .os .warn{display:block;color:#ff6a50;border-color:#ff5a3c;text-shadow:0 0 6px #ff3b2f}
 .pk.m3 .md{color:#ff6a50;text-shadow:0 0 6px #ff3b2f}.pk.m3 .md i{background:#ff3b2f;box-shadow:0 0 10px #ff3b2f;animation-duration:.5s}
-.pk.m3 .rw b{color:#ffb199;text-shadow:0 0 6px #ff3b2f}
 .pk.m3 .mk:not(.oos) b{border-color:#ff5a3c;box-shadow:0 0 8px #ff3b2f;animation:pkb .7s infinite}
 .pk.m3 .map .lt.hot{fill:#ff3b2f;filter:drop-shadow(0 0 6px #ff3b2f)}.pk.m3 .map .core{fill:#ff3b2f}
 .pk.m3 .cb #b3{color:#fff;border-color:#ff5a3c;background:#3a0d06;box-shadow:0 0 10px #ff3b2f88}
 .pk .art{position:relative}
-.pk .art .tr{position:absolute;inset:0;background:var(--ph);-webkit-mask-size:100% 100%;mask-size:100% 100%;filter:drop-shadow(0 0 3px var(--ph));transition:opacity .5s}
+.pk .art .tr{position:absolute;inset:0;background:var(--md);-webkit-mask-size:100% 100%;mask-size:100% 100%;filter:drop-shadow(0 0 3px var(--md));transition:opacity .5s}
 .pk.m0 .art .tr{opacity:.55}
 .pk .mk{position:absolute;transform:translate(-50%,-50%);font-size:.7em;letter-spacing:.05em;color:#fff;display:flex;align-items:center;gap:3px;pointer-events:none;text-shadow:0 0 4px #000,0 0 4px #000}
-.pk .mk b{width:8px;height:8px;border:1px solid var(--ph);border-radius:50%;box-shadow:0 0 6px var(--ph);flex:0 0 auto}
+.pk .mk b{width:8px;height:8px;border:1px solid var(--md);border-radius:50%;box-shadow:0 0 6px var(--md);flex:0 0 auto}
 .pk .cl{position:absolute;width:7.5%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(#fff 0,#ff6a50 35%,#ff2a1a 60%,transparent 72%);box-shadow:0 0 12px #ff3b2f,0 0 26px #ff3b2f88;display:none}
 .pk.on .cl{display:block}
 .pk .nopk{position:relative;text-align:center;padding:12px;line-height:1.6}
 .pk .sc .map{position:absolute;inset:0;padding:8px 6px 6px}
 .pk .map svg{width:100%;height:100%;display:block;overflow:visible}
-.pk .map .ed{fill:none;stroke:var(--ph);stroke-width:1.4;opacity:.55;stroke-dasharray:4 5}
+.pk .map .ed{fill:none;stroke:var(--md);stroke-width:1.4;opacity:.55;stroke-dasharray:4 5}
 .pk.on .map .ed{animation:pkflow var(--fs,1.6s) linear infinite;opacity:.9}
 @keyframes pkflow{to{stroke-dashoffset:-18}}
-.pk .map .nd rect{fill:#010806;stroke:var(--ph);stroke-width:1.2;filter:drop-shadow(0 0 3px var(--ph))}
+.pk .map .nd rect{fill:#010806;stroke:var(--md);stroke-width:1.2;filter:drop-shadow(0 0 3px var(--md))}
 .pk .map .nd text{fill:#fff;font:9px "Share Tech Mono",monospace;letter-spacing:.06em;text-anchor:middle}
-.pk .map .nd text.s{fill:var(--ph);font-size:6px;opacity:.85}
-.pk .map .ring{fill:none;stroke:var(--ph);filter:drop-shadow(0 0 4px var(--ph))}
-.pk .map .lt{fill:#0b1a14;stroke:var(--ph);stroke-width:1}
-.pk .map .lt.hot{fill:var(--ph);filter:drop-shadow(0 0 6px var(--ph)) drop-shadow(0 0 12px var(--ph))}
-.pk .map .core{fill:var(--ph);opacity:.25}.pk.on .map .core{opacity:.8;filter:drop-shadow(0 0 8px var(--ph))}
-.pk .map .cap{fill:var(--ph);font:7px "Share Tech Mono",monospace;letter-spacing:.2em;text-anchor:middle;opacity:.8}
+.pk .map .nd text.s{fill:var(--md);font-size:6px;opacity:.85}
+.pk .map .ring{fill:none;stroke:var(--md);filter:drop-shadow(0 0 4px var(--md))}
+.pk .map .lt{fill:#0b1a14;stroke:var(--md);stroke-width:1}
+.pk .map .lt.hot{fill:var(--md);filter:drop-shadow(0 0 6px var(--md)) drop-shadow(0 0 12px var(--md))}
+.pk .map .core{fill:var(--md);opacity:.25}.pk.on .map .core{opacity:.8;filter:drop-shadow(0 0 8px var(--md))}
+.pk .map .cap{fill:var(--md);font:7px "Share Tech Mono",monospace;letter-spacing:.2em;text-anchor:middle;opacity:.8}
 .pk .nopk img{width:min(40vw,22vh);image-rendering:pixelated;filter:drop-shadow(0 0 8px var(--ph));display:block;margin:0 auto 10px}
 .pk .os{grid-area:os;height:clamp(38px,7vh,90px);position:relative;overflow:hidden}
 .pk .os canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -102,7 +101,7 @@
 .pk .pn h4{margin:0 0 3px;font-weight:400;font-size:.95em;letter-spacing:.16em;border-bottom:1px solid color-mix(in srgb,var(--ph) 30%,transparent);padding-bottom:2px;white-space:nowrap;overflow:hidden}
 .pk .rw{display:flex;justify-content:space-between;gap:6px;line-height:1.5;white-space:nowrap}
 .pk .rw span{opacity:.75;overflow:hidden;text-overflow:ellipsis}
-.pk .rw b{font-weight:400;color:#fff;text-shadow:0 0 5px var(--ph)}
+.pk .rw b{font-weight:400;color:color-mix(in srgb,var(--md) 55%,#fff);text-shadow:0 0 6px var(--md)}
 .pk .rw b.bad{color:#ffb199;text-shadow:0 0 6px #ff5a3c;animation:pkb .7s infinite}
 .pk .rw.oos span,.pk .rw.oos b{color:#ffc24a;text-shadow:0 0 6px #ff9a00;opacity:1}
 .pk .rw.oos b{animation:pkb .8s infinite}
@@ -285,7 +284,7 @@
 
     function paintButtons() {
       el.className = 'pk m' + mode + (mode ? ' on' : '') + (firing ? ' fire' : '') + (edit ? ' edit' : '');
-      el.style.setProperty('--ph', PH[mode === 3 ? 1 : mode]); // overload keeps the frame; only indicators go red
+      el.style.setProperty('--ph', PH[1]); el.style.setProperty('--md', PH[mode]); // frame stays green; numbers and diagram take the mode colour
       ['b1', 'b2', 'b3'].forEach((b, i) => { const x = $('#' + b, el); if (x) x.classList.toggle('on', mode === i + 1); });
       const b0 = $('#b0', el); if (b0) { b0.classList.toggle('on', mode > 0); b0.textContent = mode ? 'PACK ON' : 'PACK OFF'; }
       const m = $('#pkmode', el); if (m) m.textContent = firing ? 'FIRING' : MODES[mode];
