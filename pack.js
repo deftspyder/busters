@@ -79,6 +79,8 @@
 .pk .md{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-size:.75em;letter-spacing:.08em;text-align:right;white-space:nowrap}
 .pk .md i{width:8px;height:8px;border-radius:50%;background:var(--ph);box-shadow:0 0 8px var(--ph);animation:pkb 1.4s infinite;flex:0 0 auto}
 @keyframes pkb{50%{opacity:.2}}
+@keyframes pkglow{50%{text-shadow:0 0 12px currentColor,0 0 22px currentColor;filter:brightness(1.25)}}
+@keyframes pkring{50%{box-shadow:0 0 50px #ff2a1a,inset 0 0 40px #ff2a1a88;border-color:#ff8a7a}}
 .pk .who{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0;text-align:right}
 .pk .who .l{font-size:.75em;letter-spacing:.2em;opacity:.75;white-space:nowrap}
 .pk .who .nm{font-size:1.5em;line-height:1.1;letter-spacing:.08em;font-weight:700;text-transform:uppercase;color:#fff;text-shadow:0 0 8px var(--ph),0 0 18px var(--ph);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -87,7 +89,7 @@
 .pk .bd{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto auto auto auto;grid-template-areas:"sc sc" "tk tk" "os os" "p1 p2" "p3 p4";gap:6px;padding:6px;min-height:0;overflow:hidden}
 .pk .sc{grid-area:sc;position:relative;min-height:0;overflow:hidden;display:grid;place-items:center}
 .pk .sc .grid{position:absolute;inset:0;background-image:linear-gradient(color-mix(in srgb,var(--ph) 10%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--ph) 10%,transparent) 1px,transparent 1px);background-size:18px 18px}
-.pk .os .warn{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.85em;letter-spacing:.12em;padding:2px 8px;border:1px solid var(--ph);background:#000c;display:none;animation:pkb .6s infinite;z-index:2}
+.pk .os .warn{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.85em;letter-spacing:.12em;padding:2px 8px;border:1px solid var(--ph);background:#000c;display:none;animation:pkglow .8s infinite;z-index:2}
 .pk.m3 .os .warn{display:block;color:#ff6a50;border-color:#ff5a3c;text-shadow:0 0 6px #ff3b2f}
 .pk.m3 .md{color:#ff6a50;text-shadow:0 0 6px #ff3b2f}.pk.m3 .md i{background:#ff3b2f;box-shadow:0 0 10px #ff3b2f;animation-duration:.5s}
 .pk.m3 .mk:not(.oos) b{border-color:#ff5a3c;box-shadow:0 0 8px #ff3b2f;animation:pkb .7s infinite}
@@ -123,15 +125,15 @@
 .pk .rw{display:flex;justify-content:space-between;gap:6px;line-height:1.5;white-space:nowrap}
 .pk .rw span{opacity:.75;overflow:hidden;text-overflow:ellipsis}
 .pk .rw b{font-weight:400;color:color-mix(in srgb,var(--md) 55%,#fff);text-shadow:0 0 6px var(--md)}
-.pk .rw b.bad{color:#ffb199;text-shadow:0 0 6px #ff5a3c;animation:pkb .7s infinite}
-.pk .rw.fail span,.pk .rw.fail b{color:#ff4d3a!important;text-shadow:0 0 8px #ff2a1a!important;opacity:1;animation:pkb .35s infinite}
+.pk .rw b.bad{color:#ffb199;text-shadow:0 0 6px #ff5a3c;animation:pkglow 1s infinite}
+.pk .rw.fail span,.pk .rw.fail b{color:#ff4d3a!important;text-shadow:0 0 8px #ff2a1a!important;opacity:1;animation:pkglow .7s infinite}
 .pk .mk.fail b{border-color:#ff3b2f;background:#ff3b2f;box-shadow:0 0 10px #ff3b2f,0 0 20px #ff2a1a;animation:pkb .35s infinite}
 .pk .art.dg .mk.fail span{border-color:#ff3b2f;color:#ff8a7a}
 .pk .map .nd.fail rect{stroke:#ff3b2f;fill:#2a0603;filter:drop-shadow(0 0 6px #ff3b2f)}.pk .map .nd.fail text.s{fill:#ff8a7a}
 .pk .boom{position:absolute;inset:0;z-index:9;display:none;place-items:center;background:radial-gradient(ellipse at center,#3a0000cc,#000c 75%);pointer-events:none}
 .pk.crit .boom,.pk.vent .boom{display:grid}
 .pk .boom .bx{border:3px solid #ff3b2f;border-radius:10px;background:#120000e6;padding:3vh 6vw;text-align:center;box-shadow:0 0 30px #ff2a1a,inset 0 0 30px #ff2a1a55;max-width:92vw}
-.pk.crit .boom .bx{animation:pkb .5s infinite}
+.pk.crit .boom .bx{animation:pkring .7s infinite}
 .pk .boom .b1{color:#ffb199;font-size:clamp(14px,2.4vh,26px);letter-spacing:.14em}
 .pk .boom .b2{color:#fff;font-weight:700;font-size:clamp(34px,7vh,90px);line-height:1.05;letter-spacing:.06em;margin:1.2vh 0;text-shadow:0 0 12px #ff3b2f,0 0 30px #ff2a1a}
 .pk .boom .b4{color:#fff;font-weight:700;font-size:clamp(16px,3vh,36px);letter-spacing:.12em;margin:-.4vh 0 1.4vh;text-shadow:0 0 10px #ff3b2f}
@@ -144,7 +146,7 @@
 .pk.vent .boom .b1{color:#ffcf66}.pk.vent .boom .bx{border-color:#ffb000;box-shadow:0 0 24px #ff9a00}
 .pk.crit .cb,.pk.vent .cb{position:relative;z-index:10}
 .pk .rw.oos span,.pk .rw.oos b{color:#ffc24a;text-shadow:0 0 6px #ff9a00;opacity:1}
-.pk .rw.oos b{animation:pkb .8s infinite}
+.pk .rw.oos b{animation:pkglow 1s infinite}
 .pk .mk.oos{color:#ffd27a}.pk .mk.oos b{border-color:#ffb000;background:#ffb000;box-shadow:0 0 10px #ffb000,0 0 18px #ff9a00;animation:pkb .6s infinite}
 .pk .map .nd.oos rect{stroke:#ffb000;fill:#241600;filter:drop-shadow(0 0 6px #ffb000)}.pk .map .nd.oos text.s{fill:#ffc24a}
 .pk .vt{position:absolute;right:6px;top:6px;z-index:3;display:flex;border:1px solid color-mix(in srgb,var(--ph) 55%,transparent);border-radius:6px;overflow:hidden}
