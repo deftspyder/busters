@@ -6,6 +6,9 @@
    nameOf, upcoming, todayISO. */
 (function () {
   // Systems that can be marked on the pack photo (keys match saved markers).
+  const DIAG = { cyclotron: 'CYCLOTRON', power_cell: 'POWER CELL', sync_gen: 'SYNC GEN', booster: 'BOOSTER', ion_arm: 'ION ARM', ppd: 'PPD',
+    injectors: 'INJECTORS', hga: 'HGA', crank: 'CRANK GEN', n_filter: 'N-FILTER', heatsink: 'GUNBOX', ribbon: 'RIBBON' };
+  const LEFT = { ion_arm: 1, power_cell: 1, injectors: 1, ribbon: 1, hga: 1, heatsink: 1, sync_gen: 1, crank: 1 };
   const MARKS = [
     ['cyclotron', 'Cyclotron', 'CYC'], ['power_cell', 'Power Cell', 'PWR'], ['sync_gen', 'Synchronous Generator', 'SYN'],
     ['booster', 'Booster', 'BST'], ['ion_arm', 'Ion Arm', 'ION'], ['ppd', 'Primary Power Distributor', 'PPD'],
@@ -67,7 +70,7 @@
 .pk.m3 .sc .warn{display:block}
 .pk .art{position:relative}
 .pk .art .tr{position:absolute;inset:0;background:var(--ph);-webkit-mask-size:100% 100%;mask-size:100% 100%;filter:drop-shadow(0 0 3px var(--ph));transition:opacity .5s}
-.pk.m0 .art .tr{opacity:.25}
+.pk.m0 .art .tr{opacity:.55}
 .pk .mk{position:absolute;transform:translate(-50%,-50%);font-size:.7em;letter-spacing:.05em;color:#fff;display:flex;align-items:center;gap:3px;pointer-events:none;text-shadow:0 0 4px #000,0 0 4px #000}
 .pk .mk b{width:8px;height:8px;border:1px solid var(--ph);border-radius:50%;box-shadow:0 0 6px var(--ph);flex:0 0 auto}
 .pk .cl{position:absolute;width:6%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(#fff,var(--ph) 45%,transparent 70%);box-shadow:0 0 14px var(--ph),0 0 30px var(--ph);transition:left .15s,top .15s;display:none}
@@ -104,8 +107,11 @@
 .pk .vt button{font:inherit;font-size:.66em;letter-spacing:.1em;padding:4px 8px;min-height:26px;background:#000c;color:var(--ph);border:0;cursor:pointer}
 .pk .vt button.on{background:color-mix(in srgb,var(--ph) 25%,#000);color:#fff}
 .pk.m3 .vt{top:34px}
-.pk .art.dg .mk span{display:none}.pk .art.dg .mk.oos span{display:inline;background:#000c;padding:0 3px;border-radius:3px}
-.pk.edit .art.dg .mk span{display:inline}
+.pk .art.dg .mk{transform:translate(-5px,-50%);font-size:clamp(10px,1.45vh,15px);letter-spacing:.04em}
+.pk .art.dg .mk.l{flex-direction:row-reverse;transform:translate(calc(-100% + 5px),-50%)}
+.pk .art.dg .mk b{width:10px;height:10px;background:#010806}
+.pk .art.dg .mk span{background:#000d;border:1px solid color-mix(in srgb,var(--ph) 45%,transparent);padding:1px 4px;border-radius:3px;color:#fff;white-space:nowrap}
+.pk .art.dg .mk.oos span{border-color:#ffb000;color:#ffd27a}
 .pk #pk1{grid-area:p1}.pk #pk2{grid-area:p2}.pk #pk3{grid-area:p3}.pk #pk4{grid-area:p4}
 .pk .lg{display:none;grid-area:lg;padding:6px 8px;overflow:hidden;font-size:.8em;line-height:1.45}
 .pk .tick{grid-column:1/-1;padding:3px 10px;font-size:.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
@@ -185,7 +191,7 @@
       const k = Math.min(1, 1000 / Math.max(im.width, im.height)), w = Math.round(im.width * k), h = Math.round(im.height * k);
       const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(im, 0, 0, w, h);
       const d = x.getImageData(0, 0, w, h), p = d.data;
-      for (let i = 0; i < p.length; i += 4) { const l = .3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2]; p[i] = p[i + 1] = p[i + 2] = 255; p[i + 3] = Math.max(0, Math.min(255, (255 - l) * 1.5 - 20)); }
+      for (let i = 0; i < p.length; i += 4) { const l = .3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2]; p[i] = p[i + 1] = p[i + 2] = 255; p[i + 3] = Math.max(0, Math.min(255, (255 - l) * 2.8 - 60)); }
       x.putImageData(d, 0, 0); traceCache[src] = { url: c.toDataURL(), w, h }; cb(traceCache[src]);
     };
     im.onerror = () => cb(null);
@@ -267,7 +273,7 @@
         const fit = () => { const r = sc.getBoundingClientRect(), k = Math.min((r.width - 12) / t.w, (r.height - 12) / t.h); box.style.width = Math.max(10, t.w * k) + 'px'; box.style.height = Math.max(10, t.h * k) + 'px'; };
         box.className = 'art' + (pk.img ? '' : ' dg');
         const marks = edit ? edit.marks : (pk.marks || {});
-        box.innerHTML = `<div class="tr" style="-webkit-mask-image:url(${t.url});mask-image:url(${t.url})"></div>${MARKS.map(([k, , s]) => marks[k] ? `<div class="mk" data-mk="${k}" style="left:${marks[k][0]}%;top:${marks[k][1]}%"><b></b><span>${s}</span></div>` : '').join('')}<div class="cl" id="pkcl"></div>`;
+        box.innerHTML = `<div class="tr" style="-webkit-mask-image:url(${t.url});mask-image:url(${t.url})"></div>${MARKS.map(([k, , s]) => marks[k] ? `<div class="mk${!pk.img && LEFT[k] ? ' l' : ''}" data-mk="${k}" style="left:${marks[k][0]}%;top:${marks[k][1]}%"><b></b><span>${pk.img ? s : DIAG[k]}</span></div>` : '').join('')}<div class="cl" id="pkcl"></div>`;
         fit(); el._fit = fit;
         if (edit) box.onclick = ev => { const r = box.getBoundingClientRect(); edit.marks[MARKS[edit.i][0]] = [+(100 * (ev.clientX - r.left) / r.width).toFixed(1), +(100 * (ev.clientY - r.top) / r.height).toFixed(1)]; advance(); };
       });
