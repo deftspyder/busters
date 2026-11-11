@@ -8,21 +8,46 @@
 <meta name="description" content="Los Angeles Ghostbusters proton pack diagnostics, a demo of the Busters pack monitor.">
 <link rel="icon" href="icons/favicon-64.png?v=4">
 <style>
-  html,body{margin:0;height:100%;background:#010806;color:#4dff9a;font-family:"Share Tech Mono",ui-monospace,Menlo,monospace}
+  html,body{margin:0;min-height:100%;background:#010806;color:#4dff9a;font-family:"Share Tech Mono",ui-monospace,Menlo,monospace}
   .again{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding:24px}
   .again button{font:inherit;font-size:16px;letter-spacing:.12em;color:#4dff9a;background:#000;border:1px solid #4dff9a;border-radius:10px;padding:14px 22px;cursor:pointer;box-shadow:0 0 14px #4dff9a55}
   .again p{opacity:.7;font-size:13px;letter-spacing:.08em;margin-top:14px}
+  /* end of the public simulation: the donate pitch */
+  .pitch{display:none;min-height:100vh;box-sizing:border-box;padding:28px 16px 40px;justify-content:center}
+  .pitch.on{display:flex;align-items:flex-start}
+  .pitch .card{width:min(460px,100%);border:1px solid #4dff9a88;border-radius:8px;overflow:hidden;box-shadow:0 0 22px #4dff9a33,inset 0 0 26px #4dff9a14;background:#020d08}
+  .pitch .bz{height:8px;background:repeating-linear-gradient(-45deg,#ffb000 0 8px,transparent 8px 16px);opacity:.8}
+  .pitch .in{padding:20px 18px 22px}
+  .pitch .tag{font-size:12px;letter-spacing:.2em;opacity:.75}
+  .pitch h1{font-size:26px;line-height:1.15;letter-spacing:.06em;color:#fff;text-shadow:0 0 8px #4dff9a,0 0 20px #4dff9a;margin:10px 0 14px;font-weight:700}
+  .pitch p{font-family:system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;color:#d8ffe9;margin:0 0 14px}
+  .pitch a.btn,.pitch button.btn{display:block;width:100%;box-sizing:border-box;text-decoration:none;text-align:left;font:inherit;color:#010806;background:#4dff9a;border:0;border-radius:8px;padding:14px 16px;margin-top:12px;cursor:pointer;box-shadow:0 0 14px #4dff9a55}
+  .pitch .btn b{display:block;font-size:16px;letter-spacing:.06em}
+  .pitch .btn span{display:block;font-family:system-ui,-apple-system,sans-serif;font-size:13px;opacity:.8;margin-top:2px}
+  .pitch .btn.alt{background:transparent;color:#4dff9a;border:1px solid #4dff9a88;box-shadow:none}
+  .pitch .btn.alt span{color:#b9f5d2}
+  .pitch .ghost{background:none;border:0;color:#4dff9a;font:inherit;letter-spacing:.12em;opacity:.8;margin:18px auto 0;display:block;cursor:pointer;padding:8px}
 </style>
 </head>
 <body>
-<div class="again"><div><button id="go">POWER UP PACK</button><p id="sub">LOS ANGELES GHOSTBUSTERS // TAP TO START, SOUND ON</p></div></div>
-<script src="pack.js?v=35"></script>
+<div class="again" id="start"><div><button id="go">POWER UP PACK</button><p id="sub">LOS ANGELES GHOSTBUSTERS // TAP TO START, SOUND ON</p></div></div>
+<div class="pitch" id="pitch"><div class="card"><div class="bz"></div><div class="in">
+  <div class="tag" id="ptag">SIMULATION COMPLETE // PACK POWERED DOWN</div>
+  <h1>Thanks for testing the pack!</h1>
+  <p>The Los Angeles Ghostbusters are volunteers who suit up for kids in hospitals, parades and charity events all over LA.</p>
+  <p>We raise money for Starlight Children's Foundation through Ghostbusters Give Back, bringing comfort and fun to kids in hospitals and their families. If you enjoyed the simulation, a donation of any size helps.</p>
+  <a class="btn" href="https://donate.starlight.org/fundraiser/3526698" target="_blank" rel="noopener"><b>DONATE TO STARLIGHT FOR LAGB</b><span>Ghostbusters Give Back, Starlight Children's Foundation</span></a>
+  <a class="btn alt" href="https://enroll.zellepay.com/qr-codes/?data=eyJuYW1lIjoiMzEwIFlPVU5HIFBST0ZFU1NJT05BTFMiLCJ0b2tlbiI6ImxhZ2hvc3RidXN0ZXJzIiwiYWN0aW9uIjoicGF5bWVudCJ9" target="_blank" rel="noopener"><b>DONATE TO LAGB WITH ZELLE</b><span>Our nonprofit, 310 Young Professionals</span></a>
+  <button class="ghost" id="again">RUN THE SIMULATION AGAIN</button>
+</div><div class="bz"></div></div></div>
+<script src="pack.js?v=36"></script>
 <script>
 // Public demo of the Busters pack monitor: no sign-in and no member data. The name comes from the link,
-// e.g. pack.html?name=Bill%20Palmatary
+// e.g. pack.html?name=Bill%20Palmatary. With sim (busters.app/sim?n=Bill+Palmatary, the QR code on a member's pack)
+// it runs as a "pack integrity simulation" and ends on a donate pitch when the pack is turned off or closed.
 (() => {
   const q = new URLSearchParams(location.search);
-  const sim = q.has('sim') || /\/sim(\.html)?$/.test(location.pathname);
+  const sim = q.has('sim');
   const name = (q.get('name') || q.get('n') || 'Demo Buster').slice(0, 60);
   const me = { id: 'demo-' + name, full_name: name, status: 'active' };
   const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -36,13 +61,23 @@
       lights: [[39.7, 69.7], [66.8, 69.7], [62.3, 83.5, 40], [43, 83.5, 40]]
     } }
   };
-  const ctx = { sim, S, $, esc, toast, rpc: async () => {}, can: () => false, nameOf: p => p.full_name, upcoming: () => [], todayISO: () => new Date().toISOString().slice(0, 10) };
+  const start = $('#start'), pitch = $('#pitch');
+  const showPitch = () => { start.style.display = 'none'; pitch.classList.add('on'); window.scrollTo(0, 0); };
+  const ctx = { sim, onClose: sim ? showPitch : null, S, $, esc, toast, rpc: async () => {}, can: () => false, nameOf: p => p.full_name, upcoming: () => [], todayISO: () => new Date().toISOString().slice(0, 10) };
+  if (sim) {
+    document.title = 'Pack Integrity Simulation';
+    const w = name.trim().split(/\s+/), unit = (w.length > 1 ? w[0][0] + '.' + w[w.length - 1] : w[0]).toUpperCase();
+    $('#go').textContent = 'RUN PACK INTEGRITY SIMULATION';
+    $('#sub').textContent = 'UNIT ' + unit + ' // LOS ANGELES GHOSTBUSTERS // HOLD FIRE TO TEST. SOUND ON';
+    $('#ptag').textContent = 'SIMULATION COMPLETE // UNIT ' + unit + ' POWERED DOWN';
+  }
   // Phones only allow sound after a tap, so the monitor opens from this button and makes its sound engine in the tap.
-  if (sim) { document.title = 'Pack Integrity Simulation'; const w = name.trim().split(/\s+/), unit = w.length > 1 ? w[0][0] + '.' + w[w.length - 1] : w[0]; document.getElementById('go').textContent = 'RUN PACK INTEGRITY SIMULATION'; document.getElementById('sub').textContent = 'UNIT ' + unit.toUpperCase() + ' // LOS ANGELES GHOSTBUSTERS // HOLD FIRE TO TEST. SOUND ON'; }
-  document.getElementById('go').onclick = () => {
+  const run = () => {
+    pitch.classList.remove('on'); start.style.display = '';
     let audioCtx = null; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume().catch(() => {}); } catch (e) { /* no sound */ }
     window.openPackMonitor({ ...ctx, audioCtx });
   };
+  $('#go').onclick = run; $('#again').onclick = run;
 })();
 </script>
 </body>

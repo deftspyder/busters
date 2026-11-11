@@ -1609,7 +1609,7 @@ async function readQrPicture(file) {
 async function openPack() {
   // Make the sound engine right now, inside the tap, so phones let the pack hum start straight away.
   let audioCtx = null; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume().catch(() => {}); } catch (e) { /* no sound */ }
-  try { await loadScript('pack.js?v=35'); } catch (e) { if (audioCtx) audioCtx.close().catch(() => {}); return toast('Could not load the pack monitor. Check your connection.'); }
+  try { await loadScript('pack.js?v=36'); } catch (e) { if (audioCtx) audioCtx.close().catch(() => {}); return toast('Could not load the pack monitor. Check your connection.'); }
   try { window.openPackMonitor({ S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO, audioCtx }); } catch (e) { console.error(e); toast('The pack monitor hit an error: ' + e.message); }
 }
 

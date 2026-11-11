@@ -406,6 +406,7 @@
         clearInterval(booting); let i = 0; booting = setInterval(() => { if (i < BOOT.length) log('BOOT: ' + BOOT[i++]); else clearInterval(booting); }, 260);
         buzz([20, 40, 20]);
       } else log('MODE: ' + (m ? MODES[m] : 'SHUTDOWN'));
+      if (ctx.sim && was > 0 && m === 0) { log('SIMULATION COMPLETE // PACK POWERED DOWN'); setTimeout(() => { if (mode === 0) close(); }, 1400); } // public simulation ends when the pack is turned off
       if (m === 3) buzz([60, 60, 60]);
       tone(); paintButtons();
     }
@@ -543,7 +544,7 @@
     const onVis = () => { if (!audio) return; if (document.hidden) audio.ac.suspend().catch(() => {}); else if (el.isConnected) audio.ac.resume().catch(() => {}); };
     const onHide = () => close();
     document.addEventListener('visibilitychange', onVis); addEventListener('pagehide', onHide);
-    function close() { if (window.__pkClose === close) window.__pkClose = null; document.removeEventListener('visibilitychange', onVis); removeEventListener('pagehide', onHide); timers.forEach(clearInterval); clearTimeout(ventTimer); clearInterval(booting); cancelAnimationFrame(raf); stopAudio(); if (lock) lock.release().catch(() => {}); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); removeEventListener('resize', onResize); }
+    function close() { if (window.__pkClose === close) window.__pkClose = null; if (ctx.onClose) setTimeout(ctx.onClose, 0); document.removeEventListener('visibilitychange', onVis); removeEventListener('pagehide', onHide); timers.forEach(clearInterval); clearTimeout(ventTimer); clearInterval(booting); cancelAnimationFrame(raf); stopAudio(); if (lock) lock.release().catch(() => {}); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); removeEventListener('resize', onResize); }
     const key = e => {
       if (e.repeat) return;
       const k = e.key.toLowerCase();
