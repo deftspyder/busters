@@ -125,7 +125,7 @@ begin
     'content', case when p_done or who is null then null else 'Thanks for busting! ' || who end,
     'embeds', jsonb_build_array(jsonb_strip_nulls(jsonb_build_object('color', case when p_done then 5763719 else 3908599 end,
       'author', jsonb_build_object('name', case when p_done then '📷 Photos collected · thanks everyone!' else '📷 Photo call' end,
-                                   'icon_url', 'https://deftspyder.github.io/busters/icons/icon-192.png'),
+                                   'icon_url', 'https://busters.app/icons/icon-192.png'),
       'title', left(e.title, 250),
       'description', public.dc_day(e.event_date) || E'\n\n' || case when p_done
         then 'We have what we need. Still got a great shot? The upload link stays open.'

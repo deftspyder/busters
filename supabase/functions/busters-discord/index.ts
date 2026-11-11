@@ -5,7 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const URL_ = Deno.env.get("SUPABASE_URL")!;
 const sb = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-const CORS = { "Access-Control-Allow-Origin": "https://deftspyder.github.io", "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info", "Access-Control-Allow-Methods": "POST, OPTIONS", "Vary": "Origin" };
+const CORS = { "Access-Control-Allow-Origin": "https://busters.app", "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info", "Access-Control-Allow-Methods": "POST, OPTIONS", "Vary": "Origin" };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { "Content-Type": "application/json", ...CORS } });
 const API = "https://discord.com/api/v10";
 
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     const { data: d } = await sb.from("crew_discord").select("bot_token,channel_id").eq("crew_id", crew).maybeSingle();
     if (!d?.bot_token) return json({ error: "No bot token saved yet" }, 400);
-    const H = { Authorization: "Bot " + d.bot_token, "User-Agent": "DiscordBot (https://deftspyder.github.io/busters, 1)" };
+    const H = { Authorization: "Bot " + d.bot_token, "User-Agent": "DiscordBot (https://busters.app, 1)" };
 
     const me = await fetch(API + "/users/@me", { headers: H });
     if (me.status === 401) return json({ error: "Discord says the bot token is wrong. Reset it in the Developer Portal and paste the new one." }, 400);

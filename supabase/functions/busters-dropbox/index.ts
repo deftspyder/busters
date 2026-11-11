@@ -2,7 +2,7 @@
 // (done in the database, where the app secret lives) and send them back to the app's Media page.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
-const APP = "https://deftspyder.github.io/busters/";
+const APP = "https://busters.app/";
 
 Deno.serve(async (req) => {
   const u = new URL(req.url);
