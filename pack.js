@@ -45,7 +45,7 @@
 /* header */
 .pk .hd{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;margin:6px 6px 0}
 .pk .emb{width:clamp(34px,6vh,64px);aspect-ratio:1;image-rendering:pixelated;filter:drop-shadow(0 0 4px var(--ph))}
-.pk .ttl{font-size:1.25em;letter-spacing:.12em;line-height:1.15}
+.pk .ttl{font-size:1.25em;letter-spacing:.12em;line-height:1.15;color:#eafff4}
 .pk .sub{opacity:.7;font-size:.8em;letter-spacing:.1em}
 .pk .md{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-size:.85em;letter-spacing:.08em;text-align:right}
 .pk .md i{width:8px;height:8px;border-radius:50%;background:var(--ph);box-shadow:0 0 8px var(--ph);animation:pkb 1.4s infinite;flex:0 0 auto}
@@ -68,6 +68,19 @@
 .pk .cl{position:absolute;width:6%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(#fff,var(--ph) 45%,transparent 70%);box-shadow:0 0 14px var(--ph),0 0 30px var(--ph);transition:left .15s,top .15s;display:none}
 .pk.on .cl{display:block}
 .pk .nopk{position:relative;text-align:center;padding:12px;line-height:1.6}
+.pk .sc .map{position:absolute;inset:0;padding:8px 6px 6px}
+.pk .map svg{width:100%;height:100%;display:block;overflow:visible}
+.pk .map .ed{fill:none;stroke:var(--ph);stroke-width:1.4;opacity:.55;stroke-dasharray:4 5}
+.pk.on .map .ed{animation:pkflow var(--fs,1.6s) linear infinite;opacity:.9}
+@keyframes pkflow{to{stroke-dashoffset:-18}}
+.pk .map .nd rect{fill:#010806;stroke:var(--ph);stroke-width:1.2;filter:drop-shadow(0 0 3px var(--ph))}
+.pk .map .nd text{fill:#fff;font:9px "Share Tech Mono",monospace;letter-spacing:.06em;text-anchor:middle}
+.pk .map .nd text.s{fill:var(--ph);font-size:6px;opacity:.85}
+.pk .map .ring{fill:none;stroke:var(--ph);filter:drop-shadow(0 0 4px var(--ph))}
+.pk .map .lt{fill:#0b1a14;stroke:var(--ph);stroke-width:1}
+.pk .map .lt.hot{fill:var(--ph);filter:drop-shadow(0 0 6px var(--ph)) drop-shadow(0 0 12px var(--ph))}
+.pk .map .core{fill:var(--ph);opacity:.25}.pk.on .map .core{opacity:.8;filter:drop-shadow(0 0 8px var(--ph))}
+.pk .map .cap{fill:var(--ph);font:7px "Share Tech Mono",monospace;letter-spacing:.2em;text-anchor:middle;opacity:.8}
 .pk .nopk img{width:min(40vw,22vh);image-rendering:pixelated;filter:drop-shadow(0 0 8px var(--ph));display:block;margin:0 auto 10px}
 .pk .os{grid-area:os;height:clamp(38px,7vh,90px);position:relative;overflow:hidden}
 .pk .os canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -191,15 +204,29 @@
       makeEmblem(u => { const e = $('#pkemb', el); if (e && u) e.src = u; const l2 = $('#pklg2', el); if (l2 && u) l2.innerHTML = `<div style="text-align:center"><img src="${u}" style="width:min(70%,18vh);image-rendering:pixelated;filter:drop-shadow(0 0 6px var(--ph))" alt=""><div class="sub" style="margin-top:6px">LOS ANGELES GHOSTBUSTERS</div></div>`; });
       drawArt(); paintButtons(); renderLog(); wire();
     }
+    function systemsMap() {
+      const N = { PWR: [55, 40, 'POWER CELL'], PPD: [150, 40, 'POWER DIST'], BST: [245, 40, 'BOOSTER'], ION: [55, 116, 'ION ARM'], INJ: [150, 116, 'INJECTORS'], HGA: [245, 116, 'H\u2082 ACTUATOR'],
+        SYN: [40, 238, 'SYNC GEN'], NF: [260, 238, 'N-FILTER'], CRK: [55, 322, 'CRANK GEN'], HS: [150, 330, 'HEAT SINK'], RIB: [245, 322, 'RIBBON'] };
+      const C = [150, 238], E = [['PWR', 'PPD'], ['PPD', 'BST'], ['ION', 'PWR'], ['PPD', 'INJ'], ['HGA', 'INJ'], ['BST', 'HGA'], ['ION', 'SYN'], ['CRK', 'SYN'], ['HS', 'RIB'], ['NF', 'RIB']];
+      const line = (a, b) => `<path class="ed" d="M${a[0]} ${a[1]} L${b[0]} ${b[1]}"/>`;
+      const toC = k => { const a = N[k]; return `<path class="ed" d="M${a[0]} ${a[1]} Q${(a[0] + C[0]) / 2} ${a[1] - 6} ${C[0]} ${C[1]}"/>`; };
+      const lights = [[0, -40], [40, 0], [0, 40], [-40, 0]];
+      return `<svg viewBox="0 6 300 368" preserveAspectRatio="xMidYMid meet" aria-label="Proton pack systems map">
+        ${E.map(([a, b]) => line(N[a], N[b])).join('')}${['INJ', 'SYN', 'NF', 'HS'].map(toC).join('')}
+        <circle class="ring" cx="${C[0]}" cy="${C[1]}" r="62" stroke-width="1.5"/><circle class="ring" cx="${C[0]}" cy="${C[1]}" r="54" stroke-width=".6" stroke-dasharray="2 4"/>
+        ${lights.map(([dx, dy], i) => `<circle class="lt" id="pkL${i}" cx="${C[0] + dx}" cy="${C[1] + dy}" r="11"/>`).join('')}
+        <circle class="core" cx="${C[0]}" cy="${C[1]}" r="14"/>
+        <text class="cap" x="${C[0] + 74}" y="${C[1] - 58}">CYCLOTRON</text>
+        ${Object.entries(N).map(([k, [x, y, sub]]) => `<g class="nd"><rect x="${x - 34}" y="${y - 15}" width="68" height="30" rx="4"/><text x="${x}" y="${y + 1}">${k === 'NF' ? 'N-F' : k}</text><text class="s" x="${x}" y="${y + 10}">${sub}</text></g>`).join('')}
+        <text class="cap" x="150" y="366">SYSTEMS MAP // LOS ANGELES DIVISION</text>
+      </svg>`;
+    }
     const rw = (label, k, u) => `<div class="rw"><span>${label}</span><b id="v-${k}" data-u="${u ? ' ' + u : ''}">--${u ? ' ' + u : ''}</b></div>`;
 
     function drawArt() {
       const box = $('#pkart', el), sc = $('#pksc', el); if (!box) return;
       const pk = pack();
-      if (!pk.img) {
-        makeEmblem(u => { box.className = 'nopk'; box.innerHTML = `${u ? `<img src="${u}" alt="LAGB">` : ''}<div class="gl">NO PACK SCAN LOADED</div><div class="sub">${can('crew_admin') ? 'MORE &gt; SET UP PACK PHOTO' : 'ASK A CREW ADMIN TO ADD ONE'}</div>`; });
-        return;
-      }
+      if (!pk.img) { box.className = 'map'; box.style.width = box.style.height = ''; el._fit = null; box.innerHTML = systemsMap(); return; }
       trace(pk.img, t => {
         if (!t) return;
         const fit = () => { const r = sc.getBoundingClientRect(), k = Math.min((r.width - 12) / t.w, (r.height - 12) / t.h); box.style.width = Math.max(10, t.w * k) + 'px'; box.style.height = Math.max(10, t.h * k) + 'px'; };
@@ -290,6 +317,7 @@
       const ck = $('#pkclk', el); if (ck) ck.textContent = clock();
       // cyclotron light steps around the cyclotron marker
       const cl = $('#pkcl', el), m = (pack().marks || {}).cyclotron;
+      if (!pack().img) { el.style.setProperty('--fs', [1.6, 1.6, .9, .45][mode] / (firing ? 2 : 1) + 's'); if (mode) step += mode === 3 ? 1 : (firing ? .7 : mode === 2 ? .5 : .25); const q = Math.floor(step) % 4; for (let i = 0; i < 4; i++) { const L = $('#pkL' + i, el); if (L) L.classList.toggle('hot', !!mode && i === q); } }
       if (cl && m && mode) { step += mode === 3 ? 1 : (firing ? .7 : mode === 2 ? .5 : .25); const q = Math.floor(step) % 4, a = [-90, 0, 90, 180][q] * Math.PI / 180; cl.style.left = (m[0] + 7 * Math.cos(a)) + '%'; cl.style.top = (m[1] + 5 * Math.sin(a)) + '%'; }
       if (audio) tone();
     }
