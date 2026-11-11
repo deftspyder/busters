@@ -15,14 +15,15 @@
 </style>
 </head>
 <body>
-<div class="again"><div><button id="go">POWER UP PACK</button><p>LOS ANGELES GHOSTBUSTERS // TAP TO START, SOUND ON</p></div></div>
-<script src="pack.js?v=34"></script>
+<div class="again"><div><button id="go">POWER UP PACK</button><p id="sub">LOS ANGELES GHOSTBUSTERS // TAP TO START, SOUND ON</p></div></div>
+<script src="pack.js?v=35"></script>
 <script>
 // Public demo of the Busters pack monitor: no sign-in and no member data. The name comes from the link,
 // e.g. pack.html?name=Bill%20Palmatary
 (() => {
   const q = new URLSearchParams(location.search);
-  const name = (q.get('name') || 'Demo Buster').slice(0, 60);
+  const sim = q.has('sim') || /\/sim(\.html)?$/.test(location.pathname);
+  const name = (q.get('name') || q.get('n') || 'Demo Buster').slice(0, 60);
   const me = { id: 'demo-' + name, full_name: name, status: 'active' };
   const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -35,8 +36,9 @@
       lights: [[39.7, 69.7], [66.8, 69.7], [62.3, 83.5, 40], [43, 83.5, 40]]
     } }
   };
-  const ctx = { S, $, esc, toast, rpc: async () => {}, can: () => false, nameOf: p => p.full_name, upcoming: () => [], todayISO: () => new Date().toISOString().slice(0, 10) };
+  const ctx = { sim, S, $, esc, toast, rpc: async () => {}, can: () => false, nameOf: p => p.full_name, upcoming: () => [], todayISO: () => new Date().toISOString().slice(0, 10) };
   // Phones only allow sound after a tap, so the monitor opens from this button and makes its sound engine in the tap.
+  if (sim) { document.title = 'Pack Integrity Simulation'; const w = name.trim().split(/\s+/), unit = w.length > 1 ? w[0][0] + '.' + w[w.length - 1] : w[0]; document.getElementById('go').textContent = 'RUN PACK INTEGRITY SIMULATION'; document.getElementById('sub').textContent = 'UNIT ' + unit.toUpperCase() + ' // LOS ANGELES GHOSTBUSTERS // HOLD FIRE TO TEST. SOUND ON'; }
   document.getElementById('go').onclick = () => {
     let audioCtx = null; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume().catch(() => {}); } catch (e) { /* no sound */ }
     window.openPackMonitor({ ...ctx, audioCtx });

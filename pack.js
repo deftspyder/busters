@@ -286,7 +286,7 @@
     function frame() {
       const p = person();
       el.innerHTML = `<div class="hd box"><img class="emb" id="pkemb" alt="">
-        <div style="min-width:0"><div class="ttl gl">LAGB // PROTON PACK</div><div class="sub">LOS ANGELES DIVISION</div></div>
+        <div style="min-width:0"><div class="ttl gl">LAGB // PROTON PACK</div><div class="sub">${ctx.sim ? 'PACK INTEGRITY SIMULATION' : 'LOS ANGELES DIVISION'}</div></div>
         <div class="who"><div class="nm">${esc(shortName(p))}</div><div class="md gl"><i></i><span id="pkmode">${MODES[mode]}</span><span id="pkclk" style="opacity:.7">${clock()}</span></div></div></div>
       <button class="x" id="pkx2" aria-label="Exit">&#10005;</button>
       <div class="bd">
