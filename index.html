@@ -315,6 +315,11 @@ input.in{min-width:0}
 /* sign in */
 .gate{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px var(--pad) 48px;max-width:440px;margin:0 auto}
 .gate .mark{width:min(320px,80%);margin:0 auto 20px}
+.bmark{text-align:center;margin:0 auto 26px;width:min(340px,86%)}
+.bmark-name{font-family:"Bebas Neue",Impact,sans-serif;font-size:clamp(60px,20vw,100px);line-height:.9;white-space:nowrap;letter-spacing:.06em;color:#fff;
+  text-shadow:0 0 10px var(--cyan),0 0 26px rgba(53,178,232,.55);padding-left:.06em}
+.bmark-hz{height:14px;margin:10px 0 12px;border-radius:2px;background:repeating-linear-gradient(-45deg,var(--hazard) 0 12px,#111 12px 24px);box-shadow:0 0 14px rgba(255,212,0,.25)}
+.bmark-tag{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
 
 /* personnel */
 .ptable{width:100%;border-collapse:collapse;font-size:13px}
@@ -416,10 +421,12 @@ async function boot() {
   enter();
 }
 
+// Busters' own brand mark (the app, not any one crew): the name in Bebas with caution stripes under it.
+const BRAND = `<div class="bmark" role="img" aria-label="Busters"><div class="bmark-name">BUSTERS</div><div class="bmark-hz"></div><div class="bmark-tag">Crew app for Ghostbusters franchises</div></div>`;
 function renderGate(step = 'email', email = '') {
   $('#layer').innerHTML = '';
   $('#app').innerHTML = `<div class="gate">
-    <img class="mark" src="img/wordmark-stacked.png" alt="The Los Angeles Ghostbusters">
+    ${BRAND}
     <div class="card">
       ${step === 'email' ? `
         <h2>Sign in to Busters</h2>
@@ -465,7 +472,7 @@ async function enter(name) {
 }
 
 function renderNeedName() {
-  $('#app').innerHTML = `<div class="gate"><img class="mark" src="img/wordmark-stacked.png" alt="">
+  $('#app').innerHTML = `<div class="gate">${BRAND}
     <div class="card"><h2>Ask to join</h2>
     <p class="muted small">We don't have this email on the crew list yet. Tell us your name and a crew admin will approve you.</p>
     <form id="f"><label class="f"><span>Your full name</span><input class="in" name="n" required autocomplete="name"></label>
@@ -475,7 +482,7 @@ function renderNeedName() {
   $('#out').onclick = () => sb.auth.signOut();
 }
 function renderWaiting(crew) {
-  $('#app').innerHTML = `<div class="gate"><img class="mark" src="img/wordmark-stacked.png" alt="">
+  $('#app').innerHTML = `<div class="gate">${BRAND}
     <div class="card"><h2>Waiting for approval</h2>
     <p class="muted">Your request to join ${esc(crew || 'the crew')} is in. You'll get access as soon as an admin approves it.</p>
     <div class="btns" style="margin-top:12px"><button class="btn" id="re">Check again</button><button class="btn ghost" id="out">Sign out</button></div></div></div>`;
