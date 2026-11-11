@@ -233,8 +233,8 @@
 
     const el = document.createElement('div'); el.className = 'pk m0'; document.body.appendChild(el);
     const person = () => crew.find(p => p.id === cur) || S.me || crew[0];
-    // First initial and last name, like "B. Pernod".
-    const shortName = p => { if (!p) return 'UNASSIGNED'; const w = String(p.full_name || '').trim().split(/\s+/); return w.length > 1 ? w[0][0].toUpperCase() + '. ' + w[w.length - 1] : (w[0] || 'UNASSIGNED'); };
+    // First initial and last name, like "B.Pernod".
+    const shortName = p => { if (!p) return 'UNASSIGNED'; const w = String(p.full_name || '').trim().split(/\s+/); return w.length > 1 ? w[0][0].toUpperCase() + '.' + w[w.length - 1] : (w[0] || 'UNASSIGNED'); };
 
     function frame() {
       const p = person();
