@@ -1206,6 +1206,7 @@ function scheduleCard(box) {
       <label class="check"><input type="checkbox" id="ds-new" ${d.post_new ? 'checked' : ''}><span>Post an event when it's added</span></label>
       <div class="sched-row"><span>Reminder bumps</span><span class="chips" style="padding:0">${[14, 7, 3, 1].map(n => `<button class="chip ${rd.has(n) ? 'on' : ''}" data-rd="${n}">${n === 7 ? '1 week' : n === 14 ? '2 weeks' : n === 1 ? '1 day' : n + ' days'} before</button>`).join('')}</span></div>
       <label class="check"><input type="checkbox" id="ds-last" ${d.last_call ? 'checked' : ''}><span>Last call 48 hours before</span></label>
+      <label class="check"><input type="checkbox" id="ds-thr" ${d.post_threads !== false ? 'checked' : ''}><span>Start a thread for each event's questions (every card links to it, and changes are noted there)</span></label>
       <label class="check" style="align-items:flex-start"><input type="checkbox" id="ds-short" ${d.post_short ? 'checked' : ''}><span>When an event is short on Busters, start posting
         <select class="in sm" id="ds-sdays">${opt([1, 2, 3, 5, 7, 14], d.short_days, v => v + (v === 1 ? ' day' : ' days'))}</select> ahead, then bump
         <select class="in sm" id="ds-every">${opt([0, 4, 6, 8, 12, 24], d.short_every, v => v ? 'every ' + v + ' hours' : 'only once')}</select> until it's covered</span></label>
@@ -1217,7 +1218,7 @@ function scheduleCard(box) {
     </div>`;
     box.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => b.classList.toggle('on'));
     $('#ds-save', box).onclick = async () => {
-      const p = { post_new: $('#ds-new', box).checked, last_call: $('#ds-last', box).checked, post_short: $('#ds-short', box).checked,
+      const p = { post_new: $('#ds-new', box).checked, last_call: $('#ds-last', box).checked, post_threads: $('#ds-thr', box).checked, post_short: $('#ds-short', box).checked,
         short_days: Number($('#ds-sdays', box).value), short_every: Number($('#ds-every', box).value),
         quiet_from: Number($('#ds-qf', box).value), quiet_to: Number($('#ds-qt', box).value), max_posts: Number($('#ds-max', box).value),
         remind_days: [...box.querySelectorAll('[data-rd].on')].map(b => Number(b.dataset.rd)) };
