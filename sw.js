@@ -7,7 +7,7 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: 'Busters', body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Busters', {
-    body: d.body || '', icon: 'icons/icon-192.png', tag: d.tag || undefined, data: { url: d.url || './' }
+    body: d.body || '', icon: 'icons/icon-192.png?v=3', tag: d.tag || undefined, data: { url: d.url || './' }
   }));
 });
 
