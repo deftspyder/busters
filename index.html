@@ -277,13 +277,13 @@ input.in{min-width:0}
 @media (min-width:600px){.scrim.right{justify-content:flex-end;align-items:flex-start;padding:64px max(16px,calc((100vw - 760px) / 2 + 16px)) 20px}.scrim.right .sheet{max-width:380px}}
 .scrim.full{padding:0}.scrim.full .sheet{max-width:none;width:100%;height:100%;max-height:none;border-radius:0;border:0;display:flex;flex-direction:column;padding:14px 0 calc(14px + env(safe-area-inset-bottom))}
 .qrhead{display:flex;align-items:center;padding:0 var(--pad) 10px}.qrhead h3{margin:0;flex:1}
-.qrtrack{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;min-height:0}.qrtrack::-webkit-scrollbar{display:none}
-.qrcard{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 var(--pad);text-align:center}
-.qrbox{background:#fff;border-radius:18px;padding:16px;width:min(82vw,52vh,360px);aspect-ratio:1;display:grid;place-items:center}
+.qrtrack{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;gap:10px;overflow-y:auto;min-height:0;padding:0 var(--pad)}
+.qrcard{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.qrbox{background:#fff;border-radius:14px;padding:10px;width:min(66vw,calc((100dvh - 300px) / 2),320px);min-width:150px;aspect-ratio:1;display:grid;place-items:center}
 .qrbox img,.qrbox svg{width:100%;height:auto;display:block}
 .scrim.full .grab{display:none}
-.qrcard h2{margin:4px 0 0;font-size:22px}.qrdots{display:flex;gap:8px;justify-content:center;padding:10px 0}
-.qrdots i{width:8px;height:8px;border-radius:50%;background:var(--line)}.qrdots i.on{background:var(--cyan)}
+.qrcard h2{margin:2px 0 0;font-size:18px}.qrcard .qrsub{font-size:13px}
+.qrcard .qrbtns{display:flex;gap:8px}
 .dcode{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}
 .sheet .grab{width:42px;height:5px;border-radius:3px;background:#2a3240;margin:-6px auto 12px}
 .menuitem{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink);text-decoration:none}
@@ -1419,14 +1419,12 @@ async function openQR() {
   sheet(`<div class="qrhead"><h3>Scan to donate</h3><button class="iconbtn" data-close aria-label="Close">&#10005;</button></div>
     <div class="qrtrack" id="qrt">${codes.map((c, i) => `<div class="qrcard">
       <div class="qrbox" id="qrb${i}">${c.url ? '' : `<img src="${esc(c.img)}" alt="QR code for ${esc(c.label)}">`}</div>
-      <h2>${esc(c.label)}</h2>${c.sub ? `<div class="muted">${esc(c.sub)}</div>` : ''}
-      ${c.url ? `<div style="display:flex;gap:8px"><button class="btn sm" data-qcopy="${esc(c.url)}">Copy link</button><a class="btn sm ghost" href="${esc(c.url)}" target="_blank" rel="noopener">Open ↗</a></div>` : ''}
+      <h2>${esc(c.label)}</h2>${c.sub ? `<div class="muted qrsub">${esc(c.sub)}</div>` : ''}
+      ${c.url ? `<div class="qrbtns"><button class="btn sm" data-qcopy="${esc(c.url)}">Copy link</button><a class="btn sm ghost" href="${esc(c.url)}" target="_blank" rel="noopener">Open ↗</a></div>` : ''}
     </div>`).join('')}</div>
-    ${codes.length > 1 ? `<div class="qrdots" id="qrd">${codes.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div><div class="tiny dim" style="text-align:center">Swipe for more</div>` : ''}`, async s => {
+`, async s => {
     s.parentNode.classList.add('full');
     s.querySelectorAll('[data-qcopy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.qcopy); toast('Link copied'); } catch (e) { toast(b.dataset.qcopy); } });
-    const t = $('#qrt', s), d = $('#qrd', s);
-    if (d) t.onscroll = () => { const i = Math.round(t.scrollLeft / t.clientWidth); d.querySelectorAll('i').forEach((x, k) => x.classList.toggle('on', k === i)); };
     try { await loadScript(QR_LIB); } catch (e) { return toast('Could not load the QR maker. Check your connection.'); }
     codes.forEach((c, i) => { if (!c.url) return; const q = qrcode(0, 'M'); q.addData(c.url); q.make(); $('#qrb' + i, s).innerHTML = q.createSvgTag({ cellSize: 8, margin: 0, scalable: true }); });
   });
@@ -1444,7 +1442,7 @@ function donateCodesCard(box) {
       <button class="btn sm danger" data-del style="margin-left:auto">Remove</button></div>
   </div>`;
   box.innerHTML = `<h2>Donate QR codes</h2><div class="card">
-    <div class="small muted">Shown big when anyone taps the QR button at the top. Swipe between them. Up to 4.</div>
+    <div class="small muted">Shown big when anyone taps the QR button at the top, stacked on one screen. Up to 4 (two fit best on a phone).</div>
     ${DC.map(row).join('')}
     <div style="display:flex;gap:8px;margin-top:12px">${DC.length < 4 ? '<button class="btn sm" id="dc-add">+ Add a code</button>' : ''}<button class="btn sm primary" id="dc-save" style="margin-left:auto">Save codes</button></div>
     <div class="tiny dim" style="margin-top:8px">Zelle: in the Chase app open Pay &amp; transfer, Zelle, then your QR code, save it as a picture and use "Use a QR picture". Busters reads the link out of it so the code stays sharp.</div>
