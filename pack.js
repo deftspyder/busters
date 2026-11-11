@@ -66,8 +66,13 @@
 .pk .bd{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto auto auto;grid-template-areas:"sc sc" "os os" "p1 p2" "p3 p4";gap:6px;padding:6px;min-height:0;overflow:hidden}
 .pk .sc{grid-area:sc;position:relative;min-height:0;overflow:hidden;display:grid;place-items:center}
 .pk .sc .grid{position:absolute;inset:0;background-image:linear-gradient(color-mix(in srgb,var(--ph) 10%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--ph) 10%,transparent) 1px,transparent 1px);background-size:18px 18px}
-.pk .sc .warn{position:absolute;top:6px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.85em;letter-spacing:.12em;padding:2px 8px;border:1px solid var(--ph);background:#000c;display:none;animation:pkb .6s infinite;z-index:2}
-.pk.m3 .sc .warn{display:block}
+.pk .os .warn{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.85em;letter-spacing:.12em;padding:2px 8px;border:1px solid var(--ph);background:#000c;display:none;animation:pkb .6s infinite;z-index:2}
+.pk.m3 .os .warn{display:block;color:#ff6a50;border-color:#ff5a3c;text-shadow:0 0 6px #ff3b2f}
+.pk.m3 .md{color:#ff6a50;text-shadow:0 0 6px #ff3b2f}.pk.m3 .md i{background:#ff3b2f;box-shadow:0 0 10px #ff3b2f;animation-duration:.5s}
+.pk.m3 .rw b{color:#ffb199;text-shadow:0 0 6px #ff3b2f}
+.pk.m3 .mk:not(.oos) b{border-color:#ff5a3c;box-shadow:0 0 8px #ff3b2f;animation:pkb .7s infinite}
+.pk.m3 .map .lt.hot{fill:#ff3b2f;filter:drop-shadow(0 0 6px #ff3b2f)}.pk.m3 .map .core{fill:#ff3b2f}
+.pk.m3 .cb #b3{color:#fff;border-color:#ff5a3c;background:#3a0d06;box-shadow:0 0 10px #ff3b2f88}
 .pk .art{position:relative}
 .pk .art .tr{position:absolute;inset:0;background:var(--ph);-webkit-mask-size:100% 100%;mask-size:100% 100%;filter:drop-shadow(0 0 3px var(--ph));transition:opacity .5s}
 .pk.m0 .art .tr{opacity:.55}
@@ -106,7 +111,6 @@
 .pk .vt{position:absolute;right:6px;top:6px;z-index:3;display:flex;border:1px solid color-mix(in srgb,var(--ph) 55%,transparent);border-radius:6px;overflow:hidden}
 .pk .vt button{font:inherit;font-size:.66em;letter-spacing:.1em;padding:4px 8px;min-height:26px;background:#000c;color:var(--ph);border:0;cursor:pointer}
 .pk .vt button.on{background:color-mix(in srgb,var(--ph) 25%,#000);color:#fff}
-.pk.m3 .vt{top:34px}
 .pk .art.dg .mk{transform:translate(-5px,-50%);font-size:clamp(10px,1.45vh,15px);letter-spacing:.04em}
 .pk .art.dg .mk.l{flex-direction:row-reverse;transform:translate(calc(-100% + 5px),-50%)}
 .pk .art.dg .mk b{width:10px;height:10px;background:#010806}
@@ -225,8 +229,8 @@
         <div class="who"><span class="nm">${esc(shortName(p))}</span></div></div>
       <button class="x" id="pkx2" aria-label="Exit">&#10005;</button>
       <div class="bd">
-        <div class="sc box" id="pksc"><div class="grid"></div><div class="vt" id="pkvt"></div><div class="warn">WARNING // CONTAINMENT FIELD UNSTABLE</div><div id="pkart"></div></div>
-        <div class="os box"><div class="t" id="pkost">CYCL: STOP // FIELD: OFFLINE</div><canvas id="pkos"></canvas></div>
+        <div class="sc box" id="pksc"><div class="grid"></div><div class="vt" id="pkvt"></div><div id="pkart"></div></div>
+        <div class="os box"><div class="warn">WARNING // CONTAINMENT FIELD UNSTABLE</div><div class="t" id="pkost">CYCL: STOP // FIELD: OFFLINE</div><canvas id="pkos"></canvas></div>
         <div class="pn box" id="pk1"><h4>POWER CORE</h4>${rw('Power Cell', 'cell', '%')}${rw('Booster', 'boost', 'kV')}${rw('Ion Arm', 'ion', '\u00b5A')}${rw('PPD', 'ppd')}</div>
         <div class="pn box" id="pk2"><h4>H\u2082 SYSTEM</h4>${rw('Injectors', 'inj', 'PSI')}${rw('Flow', 'flow', 'L/s')}${rw('HGA', 'hga')}${rw('Crank Gen', 'crank', 'Hz')}</div>
         <div class="pn box" id="pk3"><h4>CYCLOTRON</h4>${rw('Rotation', 'rpm', 'RPM')}${rw('Field', 'field', 'T')}${rw('Stability', 'stab', '%')}${rw('N-Filter', 'nf')}</div>
@@ -281,7 +285,7 @@
 
     function paintButtons() {
       el.className = 'pk m' + mode + (mode ? ' on' : '') + (firing ? ' fire' : '') + (edit ? ' edit' : '');
-      el.style.setProperty('--ph', PH[mode]);
+      el.style.setProperty('--ph', PH[mode === 3 ? 1 : mode]); // overload keeps the frame; only indicators go red
       ['b1', 'b2', 'b3'].forEach((b, i) => { const x = $('#' + b, el); if (x) x.classList.toggle('on', mode === i + 1); });
       const b0 = $('#b0', el); if (b0) { b0.classList.toggle('on', mode > 0); b0.textContent = mode ? 'PACK ON' : 'PACK OFF'; }
       const m = $('#pkmode', el); if (m) m.textContent = firing ? 'FIRING' : MODES[mode];
