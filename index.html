@@ -1165,11 +1165,11 @@ function discordCard(d) {
       <label class="f"><span>Bot token (kept private, never shown again)</span><input class="in" id="dc-tok" type="password" autocomplete="off" placeholder="Paste the token from the Bot page"></label>
       <label class="f"><span>Channel ID</span><input class="in" id="dc-ch" inputmode="numeric" autocomplete="off" placeholder="Right-click the channel, Copy Channel ID"></label>
       <button class="btn sm primary" id="dc-connect" style="margin-top:10px">Connect</button><div id="dc-msg" class="small" style="margin-top:6px"></div>`;
-  return `<h2>Discord posts</h2><div class="card">${head}<div id="dc-recent"></div>
+  return `<h2>Discord posts</h2><div class="card">${head}<div id="dc-link"></div><div id="dc-recent"></div>
     <hr style="border:0;border-top:1px solid var(--line, #222);margin:14px 0">
     <label class="check"><input type="checkbox" id="dc-short" ${d.post_short !== false ? 'checked' : ''}><span>Nudge when an event is short on Busters, <select class="in" id="dc-days" style="width:auto;display:inline-block;padding:2px 6px">${[1, 2, 3, 5, 7, 14].map(n => `<option ${(d.short_days || 3) === n ? 'selected' : ''} value="${n}">${n} ${n === 1 ? 'day' : 'days'}</option>`).join('')}</select> ahead</span></label>
     <label class="check"><input type="checkbox" id="dc-changes" ${d.post_changes !== false ? 'checked' : ''}><span>Post what changed when an upcoming event is updated (times, date, places, parking, cancelled)</span></label>
-    <label class="check"><input type="checkbox" id="dc-photos" ${d.post_photos !== false ? 'checked' : ''}><span>Ask for photos and videos the day after an event</span></label>
+    <label class="check" style="opacity:.55"><input type="checkbox" id="dc-photos" disabled ${d.post_photos ? 'checked' : ''}><span>Ask for photos and videos the day after an event <span class="tiny dim">(coming with Jeff's Dropbox drop)</span></span></label>
     <div class="tiny dim" style="margin-top:6px">Posts go out between 9am and 9pm, once per event, and never ping @everyone. Editors can also post any event from its page.</div>
     <button class="btn sm" id="dc-save" style="margin-top:10px">Save post settings</button>
   </div>`;
@@ -1189,7 +1189,7 @@ function wireDiscord() {
   rpc('discord_settings', { p_crew: S.crew.id }).then(d => {
     box.innerHTML = discordCard(d);
     const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
-    on('#dc-save', async () => { try { await rpc('set_discord', { p_crew: S.crew.id, p_url: null, p_short: $('#dc-short').checked, p_days: Number($('#dc-days').value), p_photos: $('#dc-photos').checked }); await rpc('set_discord_changes', { p_crew: S.crew.id, p_on: $('#dc-changes').checked }); toast('Saved'); } catch (_) { } });
+    on('#dc-save', async () => { try { await rpc('set_discord', { p_crew: S.crew.id, p_url: null, p_short: $('#dc-short').checked, p_days: Number($('#dc-days').value), p_photos: false }); await rpc('set_discord_changes', { p_crew: S.crew.id, p_on: $('#dc-changes').checked }); toast('Saved'); } catch (_) { } });
     on('#dc-connect', async () => {
       const tok = $('#dc-tok').value.trim(), ch = $('#dc-ch').value.trim();
       if (!tok) return toast('Paste the bot token first.');
@@ -1202,6 +1202,16 @@ function wireDiscord() {
       discordCheck();
     });
     on('#dc-off', async () => { if (!confirmBox('Disconnect the Busters bot from Discord?')) return; try { await rpc('set_discord_bot', { p_crew: S.crew.id, p_token: '', p_channel: null }); toast('Disconnected'); } catch (_) { } wireDiscord(); });
+    if (d.has_bot) rpc('discord_unlinked_list', { p_crew: S.crew.id }).then(rows => {
+      const el = $('#dc-link'); if (!el || !rows || !rows.length) return;
+      const opts = S.people.filter(p => ['active', 'rookie'].includes(p.status)).sort((a, b) => nameOf(a).localeCompare(nameOf(b))).map(p => `<option value="${p.id}">${esc(nameOf(p))}</option>`).join('');
+      el.innerHTML = `<div class="gc-lbl" style="margin-top:14px;color:var(--warn)">Who is this? (tapped a button in Discord)</div>${rows.map(x => `<div class="row" style="gap:8px;flex-wrap:wrap"><div class="grow small"><b>${esc(x.display_name || x.username)}</b> <span class="dim">@${esc(x.username || '')}</span>${x.pending ? `<div class="tiny muted">Waiting: ${esc(x.pending)}</div>` : ''}</div><select class="in" data-dcu="${esc(x.discord_user_id)}" style="width:auto;max-width:170px"><option value="">Pick a Buster</option>${opts}<option value="none">Not a member</option></select></div>`).join('')}`;
+      el.querySelectorAll('[data-dcu]').forEach(sel => sel.onchange = async () => {
+        if (!sel.value) return;
+        try { await rpc('link_discord', { p_crew: S.crew.id, p_discord_user: sel.dataset.dcu, p_person: sel.value === 'none' ? null : sel.value }); } catch (_) { return; }
+        toast(sel.value === 'none' ? 'Removed' : 'Linked. Their answer counts now.'); wireDiscord(); if (sel.value !== 'none') refresh();
+      });
+    }).catch(() => {});
     if (d.has_bot) rpc('discord_recent', { p_crew: S.crew.id }).then(rows => {
       const el = $('#dc-recent'); if (!el || !rows || !rows.length) return;
       el.innerHTML = `<div class="gc-lbl" style="margin-top:14px">Recent posts</div>${rows.map(x => `<div class="row" style="align-items:flex-start;gap:8px"><div class="grow small"><div class="pre" style="max-height:3.2em;overflow:hidden">${esc(x.preview || x.kind)}</div><div class="tiny dim">${esc(x.kind)}, ${new Date(x.at).toLocaleString()}</div></div><button class="btn sm ghost" data-dcdel="${x.id}">Delete</button></div>`).join('')}`;
