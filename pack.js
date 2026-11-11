@@ -140,11 +140,12 @@
 .pk .boom .bz{height:8px;background:repeating-linear-gradient(-45deg,var(--al) 0 8px,transparent 8px 16px);opacity:.75}
 .pk .boom .bh{display:flex;justify-content:space-between;gap:10px;padding:6px 12px;font-size:.8em;white-space:nowrap;letter-spacing:.2em;border-bottom:1px solid color-mix(in srgb,var(--al) 35%,transparent);opacity:.9}
 .pk .boom .bi{padding:2.4vh 4vw 2.6vh}
-.pk .boom .b1{font-size:clamp(13px,2vh,20px);letter-spacing:.2em;text-shadow:0 0 6px var(--al)}
-.pk .boom .b2{color:#fff;font-size:clamp(32px,6.5vh,76px);line-height:1.08;letter-spacing:.08em;margin:1.4vh 0 .6vh;text-shadow:0 0 8px var(--al),0 0 22px var(--al)}
-.pk .boom .b4{color:#fff;font-size:clamp(15px,2.6vh,30px);letter-spacing:.16em;margin-bottom:1.6vh;text-shadow:0 0 8px var(--al)}
+.pk .boom .b1{color:#fff;font-size:clamp(30px,6vh,72px);line-height:1.08;letter-spacing:.08em;text-shadow:0 0 8px var(--al),0 0 22px var(--al)}
+.pk .boom .b2{font-size:clamp(17px,2.9vh,36px);line-height:1.1;letter-spacing:.06em;white-space:nowrap;margin:1.8vh 0 .4vh;text-shadow:0 0 8px var(--al)}
+.pk .boom .b4{font-size:clamp(14px,2.3vh,26px);letter-spacing:.16em;margin-bottom:1.6vh;text-shadow:0 0 8px var(--al)}
 .pk .boom .b5{display:none;font-size:clamp(12px,1.7vh,18px);letter-spacing:.2em;margin:.4vh 0 1.4vh}
 .pk.vent .boom .b5{display:block}
+.pk.vent .boom .b1{font-size:clamp(16px,2.6vh,30px);letter-spacing:.16em}
 .pk .boom .b5 b{display:block;font-weight:400;color:#fff;font-size:clamp(40px,8vh,96px);letter-spacing:.1em;line-height:1.1;text-shadow:0 0 10px var(--al),0 0 26px var(--al)}
 .pk .boom .b5 i{display:block;height:10px;border:1px solid color-mix(in srgb,var(--al) 70%,transparent);border-radius:2px;margin:1vh auto 0;max-width:80%;padding:1px}
 .pk .boom .b5 u{display:block;height:100%;background:var(--al);box-shadow:0 0 8px var(--al)}
@@ -293,7 +294,7 @@
         <div class="pn box" id="pk4"><h4>THROWER</h4>${rw('Heat Sink', 'heat', '\u00b0C')}${rw('Sync Gen', 'syn', 'MeV')}${rw('Ribbon', 'rib', 'Gb/s')}${rw('Containment', 'cont')}</div>
         <div class="lg box" id="pklg"></div><div class="lg2 box" id="pklg2"></div>
       </div>
-      <div class="boom"><div class="bx"><div class="bz"></div><div class="bh"><span id="pkbh">ALERT // CONTAINMENT</span><span>LAGB</span></div><div class="bi"><div class="b1" id="pkb1">&#9888; IMMINENT PACK FAILURE</div><div class="b2">STAND BACK<br>3 MILES</div><div class="b4">UPWIND FROM PACK</div><div class="b5" id="pkvc"></div><div class="b3" id="pkb3">RELEASE TRIGGER TO VENT</div></div><div class="bz"></div></div></div>
+      <div class="boom"><div class="bx"><div class="bz"></div><div class="bh"><span id="pkbh">ALERT // CONTAINMENT</span><span>LAGB</span></div><div class="bi"><div class="b1" id="pkb1">&#9888; IMMINENT<br>PACK FAILURE</div><div class="b2">STAND BACK 3 MILES</div><div class="b4">UPWIND FROM PACK</div><div class="b5" id="pkvc"></div><div class="b3" id="pkb3">RELEASE TRIGGER TO VENT</div></div><div class="bz"></div></div></div>
       <div class="cb">
         <button id="b0">${mode ? 'PACK ON' : 'PACK OFF'}</button><button id="b1">IDLE</button><button id="b2">STREAM</button>
         <button id="bf" class="fire">FIRE</button><button id="ba">${audio ? 'SOUND ON' : 'SOUND'}</button><button id="bm">MORE</button></div>
@@ -346,7 +347,7 @@
       const b0 = $('#b0', el); if (b0) { b0.classList.toggle('on', mode > 0); b0.textContent = mode ? 'PACK ON' : 'PACK OFF'; }
       const b3 = $('#pkb3', el); if (b3) b3.textContent = ventTimer ? 'EMERGENCY VENT IN PROGRESS // DO NOT APPROACH' : 'RELEASE TRIGGER TO VENT';
       const bh = $('#pkbh', el); if (bh) bh.textContent = ventTimer ? 'EMERGENCY VENT' : 'ALERT // CONTAINMENT';
-      const b1 = $('#pkb1', el); if (b1) b1.innerHTML = ventTimer ? 'VENTING IN PROGRESS' : '&#9888; IMMINENT PACK FAILURE';
+      const b1 = $('#pkb1', el); if (b1) b1.innerHTML = ventTimer ? 'VENTING IN PROGRESS' : '&#9888; IMMINENT<br>PACK FAILURE';
       const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'EMERGENCY VENT' : 'TOTAL FAILURE') : firing ? (failed.length ? 'CASCADE FAILURE' : 'FIRING') : failed.length ? 'RECOVERING' : MODES[mode];
     }
 
