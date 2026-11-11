@@ -1,4 +1,5 @@
-// Busters Discord interactions: Discord calls this when someone taps Going / Maybe / Can't on a Busters card.
+// Busters Discord interactions: Discord calls this when someone taps a button on a Busters card
+// (Going / Maybe / Can't, or Details).
 // Set as the app's Interactions Endpoint URL in the Discord Developer Portal. Every request is checked against
 // the app's public key. The answer is saved in Busters, the tapper gets a private confirmation, and the card's
 // Busters count is refreshed.
@@ -43,8 +44,13 @@ Deno.serve(async (req) => {
     const { data: m } = await sb.rpc("discord_match", { p_app: i.application_id, p_user: u.id, p_username: u.username || null, p_display: u.global_name || null, p_nick: i.member?.nick || null });
     const a = { going: "Going", maybe: "Maybe", no: "Can't" }[eventId] || eventId;
     if (m?.status === "ok") return reply(`✅ Test worked. Busters knows you as **${m.name}**, and would have marked you **${a}**. Nothing was saved.`);
-    if (m?.status === "unlinked") return reply(`The tap reached Busters, but it couldn't match your Discord account to a member yet. You'll show up on the Team tab under "Who is this?" for linking. Nothing was saved.`);
+    if (m?.status === "unlinked") return reply(`The tap reached Busters, but it couldn't match your Discord account to a member yet. You'll show up under Admin, then Crew, in "Who is this?" for linking. Nothing was saved.`);
     return reply("The tap reached Busters, but something's off with the setup.");
+  }
+  if (kind === "details") {                                           // private reply with the fuller event info
+    const { data: emb } = await sb.rpc("discord_details", { p_app: i.application_id, p_event: eventId });
+    if (!emb) return reply("Couldn't find that event anymore.");
+    return json({ type: 4, data: { embeds: [emb], flags: 64 } });
   }
   if (kind !== "rsvp") return reply("Busters doesn't know that button.");
   const { data: r, error } = await sb.rpc("discord_answer", {
@@ -58,16 +64,29 @@ Deno.serve(async (req) => {
   if (r.status === "past") return reply("That event has already happened.");
   if (r.status !== "ok") return reply("Something went wrong saving that.");
 
-  // Refresh the card's Busters count for everyone (in the background, after replying).
+  // Refresh the card's counts for everyone (in the background, after replying). The card is rebuilt the way
+  // Busters drew it (same kind and note), so the Going and Maybe numbers stay in the card's own layout.
   const msg = i.message;
-  if (msg?.embeds?.[0] && d.bot_token) {
-    const emb = msg.embeds[0];
-    emb.fields = (emb.fields || []).map((f: any) => f.name === "Busters" ? { ...f, value: r.count } : f);
+  if (msg?.id && d.bot_token) {
     // @ts-ignore EdgeRuntime is provided by Supabase
-    EdgeRuntime.waitUntil(fetch(`${API}/channels/${msg.channel_id}/messages/${msg.id}`, {
-      method: "PATCH", headers: { Authorization: "Bot " + d.bot_token, "User-Agent": UA, "Content-Type": "application/json" },
-      body: JSON.stringify({ embeds: msg.embeds, components: msg.components }),
-    }).catch(() => {}));
+    EdgeRuntime.waitUntil((async () => {
+      const { data: l } = await sb.from("discord_log").select("id,card_kind,card_extra").eq("message_id", msg.id).maybeSingle();
+      let embeds = msg.embeds;
+      if (l?.card_kind) {
+        const { data: emb } = await sb.rpc("dc_embed", { p_event: eventId, p_kind: l.card_kind, p_extra: l.card_extra });
+        if (emb) embeds = [emb];
+      } else if (embeds?.[0]) {
+        embeds[0].fields = (embeds[0].fields || []).map((f: any) => f.name === "Busters" ? { ...f, value: r.count } : f);
+      }
+      const res = await fetch(`${API}/channels/${msg.channel_id}/messages/${msg.id}`, {
+        method: "PATCH", headers: { Authorization: "Bot " + d.bot_token, "User-Agent": UA, "Content-Type": "application/json" },
+        body: JSON.stringify({ embeds, components: msg.components }),
+      }).catch(() => null);
+      if (res?.ok && l?.id) {
+        const { data: ev } = await sb.from("events_full").select("going").eq("id", eventId).maybeSingle();
+        if (ev) await sb.from("discord_log").update({ going_shown: ev.going }).eq("id", l.id);
+      }
+    })().catch(() => {}));
   }
   const said = r.answer === "going" ? `You're **Going** to **${r.title}**. See you there, ${r.name}!`
     : r.answer === "maybe" ? `Marked you as **Maybe** for **${r.title}**.`
