@@ -1215,6 +1215,8 @@ function scheduleCard(box) {
       <label class="check"><input type="checkbox" id="ds-thr" ${d.post_threads !== false ? 'checked' : ''}><span>Start a thread for each event's questions (every card links to it, and changes are noted there)</span></label>
       <label class="check"><input type="checkbox" id="ds-ev" ${d.post_events !== false ? 'checked' : ''}><span>Add events to the server's Events list, kept in sync (silent, no pings)</span></label>
       <label class="check"><input type="checkbox" id="ds-dm" ${d.dm_interested !== false ? 'checked' : ''}><span>DM anyone who taps Interested there but hasn't answered, once per event</span></label>
+      <label class="check"><input type="checkbox" id="ds-gbm" ${d.post_milestones !== false ? 'checked' : ''}><span>Give Back milestones: post every $5,000 and at 25, 50, 75 and 100% of our goal</span></label>
+      <label class="check"><input type="checkbox" id="ds-gbu" ${d.post_giveback_updates !== false ? 'checked' : ''}><span>Give Back updates: post the new standings whenever Sony updates the totals (only the newest card stays)</span></label>
       <label class="check" style="align-items:flex-start"><input type="checkbox" id="ds-short" ${d.post_short ? 'checked' : ''}><span>When an event is short on Busters, start posting
         <select class="in sm" id="ds-sdays">${opt([1, 2, 3, 5, 7, 14], d.short_days, v => v + (v === 1 ? ' day' : ' days'))}</select> ahead, then bump
         <select class="in sm" id="ds-every">${opt([0, 4, 6, 8, 12, 24], d.short_every, v => v ? 'every ' + v + ' hours' : 'only once')}</select> until it's covered</span></label>
@@ -1226,7 +1228,7 @@ function scheduleCard(box) {
     </div>`;
     box.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => b.classList.toggle('on'));
     $('#ds-save', box).onclick = async () => {
-      const p = { post_new: $('#ds-new', box).checked, last_call: $('#ds-last', box).checked, post_threads: $('#ds-thr', box).checked, post_events: $('#ds-ev', box).checked, dm_interested: $('#ds-dm', box).checked, post_short: $('#ds-short', box).checked,
+      const p = { post_new: $('#ds-new', box).checked, last_call: $('#ds-last', box).checked, post_threads: $('#ds-thr', box).checked, post_events: $('#ds-ev', box).checked, dm_interested: $('#ds-dm', box).checked, post_milestones: $('#ds-gbm', box).checked, post_giveback_updates: $('#ds-gbu', box).checked, post_short: $('#ds-short', box).checked,
         short_days: Number($('#ds-sdays', box).value), short_every: Number($('#ds-every', box).value),
         quiet_from: Number($('#ds-qf', box).value), quiet_to: Number($('#ds-qt', box).value), max_posts: Number($('#ds-max', box).value),
         remind_days: [...box.querySelectorAll('[data-rd].on')].map(b => Number(b.dataset.rd)) };
