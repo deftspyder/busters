@@ -861,7 +861,7 @@ function renderBrief(m, e) {
     await refresh(); openEvent(e.id); toast('Saved');
   };
   const ed = $('#edit'); if (ed) ed.onclick = () => editEvent(e);
-  const td = $('#todc'); if (td) td.onclick = () => sheet(`<h3>Post to Discord</h3><p class="small muted">Posts ${esc(e.title)} with its date, how many are going, and a sign-up link.</p>
+  const td = $('#todc'); if (td) td.onclick = () => sheet(`<h3>Post to Discord</h3><p class="small muted">Posts ${esc(e.title)} with its date and how many are going.</p>
     <label class="f"><span>Add a line (optional)</span><input class="in" id="dc-note" maxlength="300" placeholder="We could use a few more for this one!"></label>
     <div class="btns" style="margin-top:12px"><button class="btn primary" id="dc-go">Post it</button><button class="btn ghost" data-close>Not now</button></div>`, sh => {
     $('#dc-go', sh).onclick = async () => {
@@ -1168,6 +1168,7 @@ function discordCard(d) {
   return `<h2>Discord posts</h2><div class="card">${head}<div id="dc-recent"></div>
     <hr style="border:0;border-top:1px solid var(--line, #222);margin:14px 0">
     <label class="check"><input type="checkbox" id="dc-short" ${d.post_short !== false ? 'checked' : ''}><span>Nudge when an event is short on Busters, <select class="in" id="dc-days" style="width:auto;display:inline-block;padding:2px 6px">${[1, 2, 3, 5, 7, 14].map(n => `<option ${(d.short_days || 3) === n ? 'selected' : ''} value="${n}">${n} ${n === 1 ? 'day' : 'days'}</option>`).join('')}</select> ahead</span></label>
+    <label class="check"><input type="checkbox" id="dc-changes" ${d.post_changes !== false ? 'checked' : ''}><span>Post what changed when an upcoming event is updated (times, date, places, parking, cancelled)</span></label>
     <label class="check"><input type="checkbox" id="dc-photos" ${d.post_photos !== false ? 'checked' : ''}><span>Ask for photos and videos the day after an event</span></label>
     <div class="tiny dim" style="margin-top:6px">Posts go out between 9am and 9pm, once per event, and never ping @everyone. Editors can also post any event from its page.</div>
     <button class="btn sm" id="dc-save" style="margin-top:10px">Save post settings</button>
@@ -1188,7 +1189,7 @@ function wireDiscord() {
   rpc('discord_settings', { p_crew: S.crew.id }).then(d => {
     box.innerHTML = discordCard(d);
     const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
-    on('#dc-save', async () => { try { await rpc('set_discord', { p_crew: S.crew.id, p_url: null, p_short: $('#dc-short').checked, p_days: Number($('#dc-days').value), p_photos: $('#dc-photos').checked }); toast('Saved'); } catch (_) { } });
+    on('#dc-save', async () => { try { await rpc('set_discord', { p_crew: S.crew.id, p_url: null, p_short: $('#dc-short').checked, p_days: Number($('#dc-days').value), p_photos: $('#dc-photos').checked }); await rpc('set_discord_changes', { p_crew: S.crew.id, p_on: $('#dc-changes').checked }); toast('Saved'); } catch (_) { } });
     on('#dc-connect', async () => {
       const tok = $('#dc-tok').value.trim(), ch = $('#dc-ch').value.trim();
       if (!tok) return toast('Paste the bot token first.');
