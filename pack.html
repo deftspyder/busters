@@ -36,7 +36,7 @@
   <h1>Thanks for testing the pack!</h1>
   <p>The Los Angeles Ghostbusters are volunteers who suit up for kids in hospitals, parades and charity events all over LA.</p>
   <p>We raise money for Starlight Children's Foundation through Ghostbusters Give Back, bringing comfort and fun to kids in hospitals and their families. If you enjoyed the simulation, a donation of any size helps.</p>
-  <a class="btn" href="https://donate.starlight.org/fundraiser/3526698" target="_blank" rel="noopener"><b>DONATE TO STARLIGHT FOR LAGB</b><span>Ghostbusters Give Back, Starlight Children's Foundation</span></a>
+  <a class="btn" id="dstar" href="https://donate.starlight.org/fundraiser/3526698" target="_blank" rel="noopener"><b>DONATE TO STARLIGHT FOR LAGB</b><span>Ghostbusters Give Back, Starlight Children's Foundation</span></a>
   <a class="btn alt" href="https://enroll.zellepay.com/qr-codes/?data=eyJuYW1lIjoiMzEwIFlPVU5HIFBST0ZFU1NJT05BTFMiLCJ0b2tlbiI6ImxhZ2hvc3RidXN0ZXJzIiwiYWN0aW9uIjoicGF5bWVudCJ9" target="_blank" rel="noopener"><b>DONATE TO LAGB WITH ZELLE</b><span>Our nonprofit, 310 Young Professionals</span></a>
   <button class="ghost" id="again">RUN THE SIMULATION AGAIN</button>
 </div><div class="bz"></div></div></div>
@@ -64,6 +64,10 @@
   const start = $('#start'), pitch = $('#pitch');
   const showPitch = () => { start.style.display = 'none'; pitch.classList.add('on'); window.scrollTo(0, 0); };
   const ctx = { sim, onClose: sim ? showPitch : null, S, $, esc, toast, rpc: async () => {}, can: () => false, nameOf: p => p.full_name, upcoming: () => [], todayISO: () => new Date().toISOString().slice(0, 10) };
+  // A member's own Starlight page (tied to the LAGB team) for their pack's QR; everyone else gets the team page.
+  const STARLIGHT = { 'bill palmatary': '7718546' };
+  const own = STARLIGHT[name.trim().toLowerCase().replace(/\s+/g, ' ')];
+  if (own) $('#dstar').href = 'https://donate.starlight.org/fundraiser/' + own;
   if (sim) {
     document.title = 'Pack Integrity Simulation';
     const w = name.trim().split(/\s+/), unit = (w.length > 1 ? w[0][0] + '.' + w[w.length - 1] : w[0]).toUpperCase();
