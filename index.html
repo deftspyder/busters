@@ -410,6 +410,9 @@ const nameOf = p => p ? (p.callsign ? `${p.full_name} (${p.callsign})` : p.full_
 
 /* ---------- boot and sign-in ---------- */
 async function boot() {
+  // A sign-in link that didn't work comes back with an error in the address; say so instead of silently showing the sign-in page.
+  const bad = new URLSearchParams(location.hash.slice(1)).get('error_code') || new URLSearchParams(location.search).get('error_code');
+  if (bad) { history.replaceState(null, '', location.pathname); setTimeout(() => toast(bad === 'otp_expired' ? 'That sign-in link expired or was already used. Only the newest email works, so send a new one.' : 'That sign-in link didn\'t work. Send a new one.'), 300); }
   const { data } = await sb.auth.getSession();
   S.session = data.session;
   sb.auth.onAuthStateChange((ev, session) => {
