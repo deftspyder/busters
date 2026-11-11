@@ -57,13 +57,6 @@ h2{font-size:26px}h3{font-size:20px}
 .tab.on::after{left:-1px;z-index:1;border-left:1px solid;border-color:rgba(255,190,120,.9);box-shadow:0 0 6px #ff9a3c,0 0 14px rgba(255,140,50,.55),inset 0 8px 10px -6px rgba(255,140,50,.5);clip-path:inset(-24px -24px 0 -24px)}
 .tab.on svg{filter:drop-shadow(0 0 3px var(--cyan)) drop-shadow(0 0 8px rgba(53,178,232,.7))}
 .tab .badge{position:absolute;top:8px;left:calc(50% + 6px);background:var(--pink);color:#fff;border-radius:9px;font-size:10px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;font-weight:700}
-@media(min-width:900px){
-  body{padding-bottom:0}
-  .tabs{position:sticky;top:61px;bottom:auto;border-top:0;border-bottom:1px solid var(--line)}
-  .tab{flex-direction:row;height:46px;font-size:14px;gap:8px}
-  .tab svg{width:18px;height:18px}
-  .tab .badge{position:static}
-}
 
 /* cards and rows */
 .sec{margin:20px 0}
@@ -288,7 +281,6 @@ input.in{min-width:0}
 
 .fab{position:fixed;right:max(16px,calc((100vw - 760px) / 2 + 16px));bottom:calc(var(--tabh) + 40px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:18px;border:0;background:var(--cyan);color:#001018;display:grid;place-items:center;cursor:pointer;z-index:40;box-shadow:0 6px 18px rgba(0,0,0,.5)}
 .fab:active{transform:scale(.95)}
-@media (min-width:900px){.fab{bottom:24px}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom));background:var(--ink);color:#000;padding:10px 16px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw}
 
 /* sign in */
