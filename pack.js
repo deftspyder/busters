@@ -35,6 +35,25 @@
     ['inj', 'injectors', 'INJ', 'INJECTORS', 1], ['flow', 'hga', 'HGA', 'HGA FLOW', 1], ['crank', 'crank', 'CRK', 'CRANK GEN', -1],
     ['rpm', 'cyclotron', '', 'CYCLOTRON', 1], ['stab', 'cyclotron', '', 'FIELD STABILITY', -1], ['heat', 'heatsink', 'HS', 'HEAT SINK', 1],
     ['syn', 'sync_gen', 'SYN', 'SYNC GEN', 1], ['rib', 'ribbon', 'RIB', 'RIBBON CABLE', -1], ['ppd', 'ppd', 'PPD', 'POWER DISTRIBUTOR', 0], ['nf', 'n_filter', 'NF', 'N-FILTER', 0]];
+  const LORE = ['DO NOT CROSS THE STREAMS', 'TOTAL PROTONIC REVERSAL IS BAD', 'TRAP ARMED // DO NOT LOOK INTO THE TRAP',
+    'CONTAINMENT UNIT: DO NOT SHUT OFF', 'GATEKEEPER SCAN: NEGATIVE', 'KEYMASTER SCAN: NEGATIVE', 'CLEAR YOUR MIND',
+    'IF ASKED WHETHER YOU ARE A GOD, SAY YES', 'MOOD SLIME: KEEP IT POSITIVE',
+    'STAY FROSTY', 'CHECK THE AIR DUCTS', 'ORBITAL OPTION: NOT AUTHORIZED',
+    'THERMAL SCAN: NO CLOAKED CONTACTS', 'MUD CAMOUFLAGE: NOT REQUIRED',
+    'FLUX CAPACITOR: FLUXING', 'POWER DRAW: 1.21 GIGAWATTS', 'PERIMETER FENCE: ONLINE', 'WATER GLASS: NO RIPPLES',
+    'GROUND VIBRATION: NONE // STAY ON THE ROCKS', 'NO WATER, NO BRIGHT LIGHT, NO SNACKS AFTER MIDNIGHT', 'SHIELDS AT 100%'];
+  // Log line classes, calm to alarming: routine, boot, advisory, stream, recover, warn, fail, critical.
+  const LORE_SET = new Set(LORE);
+  function lineClass(t) {
+    if (/^(CRITICAL|EMERGENCY)/.test(t) || /STAND BACK|TOTAL PACK FAILURE/.test(t)) return 'critical';
+    if (/^FAILURE:|CASCADE FAILURE/.test(t)) return 'fail';
+    if (/^OK:|^RESTORED|VENT COMPLETE|CASCADE HALTED/.test(t)) return 'recover';
+    if (/^WARN|OUT OF SPEC|TEMPERATURE CRITICAL|LOCKED OUT/.test(t)) return 'warn';
+    if (/^STREAM:/.test(t)) return 'stream';
+    if (/^(BOOT|MODE|LINK)/.test(t)) return 'boot';
+    if (LORE_SET.has(t)) return 'advisory';
+    return 'routine';
+  }
   const MODES = ['OFF', 'IDLE', 'STREAM ACTIVE', 'TOTAL FAILURE'];
   // Order systems fail in once the stream has been held past 8 seconds (cyclotron last, at 18 seconds).
   const FAIL_ORDER = ['heat', 'rib', 'nf', 'inj', 'flow', 'boost', 'ion', 'syn', 'ppd', 'crank', 'cell', 'stab', 'rpm'];
@@ -137,6 +156,16 @@
 .pk .art.dg .mk span{background:#000d;border:1px solid color-mix(in srgb,var(--ph) 45%,transparent);padding:1px 4px;border-radius:3px;color:#fff;white-space:nowrap}
 .pk .art.dg .mk.oos span{border-color:#ffb000;color:#ffd27a}
 .pk #pk1{grid-area:p1}.pk #pk2{grid-area:p2}.pk #pk3{grid-area:p3}.pk #pk4{grid-area:p4}
+.pk .lc-routine{color:#4f9e72}
+.pk .lc-boot{color:#eafff4;text-shadow:0 0 6px #4dff9a}
+.pk .lc-advisory{color:#5fe3ff;text-shadow:0 0 6px #35b2e8}
+.pk .lc-stream{color:#7fc8ff;text-shadow:0 0 6px #3fb6ff}
+.pk .lc-recover{color:#b6ff6a;text-shadow:0 0 6px #7dff3a}
+.pk .lc-warn{color:#ffc24a;text-shadow:0 0 6px #ff9a00}
+.pk .lc-fail{color:#ff5a46;text-shadow:0 0 8px #ff2a1a}
+.pk .lc-critical{color:#fff;background:#5a0b05;text-shadow:0 0 8px #ff2a1a}
+.pk .lg .lc-critical{padding:0 4px;border-radius:2px}
+.pk .tick.lc-critical{border-color:#ff3b2f}
 .pk .lg{display:none;grid-area:lg;padding:6px 8px;overflow:hidden;font-size:.8em;line-height:1.45}
 .pk .tick{grid-area:tk;padding:5px 10px;font-size:1.05em;letter-spacing:.04em;color:#eafff4;text-shadow:0 0 6px var(--ph);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 /* controls */
@@ -312,13 +341,13 @@
       const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'EMERGENCY VENT' : 'TOTAL FAILURE') : firing ? (failed.length ? 'CASCADE FAILURE' : 'FIRING') : failed.length ? 'RECOVERING' : MODES[mode];
     }
 
-    function log(t) { logLines.unshift(clock() + '  ' + t); logLines = logLines.slice(0, 60); renderLog(); }
+    function log(t) { logLines.unshift({ t: clock() + '  ' + t, c: lineClass(t) }); logLines = logLines.slice(0, 60); renderLog(); }
     function renderLog() {
       const l = $('#pklg', el);
       if (l && l.offsetParent) { // fill the box with as many lines as fit, newest first, no half-cut line at the bottom
-        l.innerHTML = '<div class="sub" style="margin-bottom:4px">BOOT SEQUENCE</div>' + logLines.map(x => '<div>&gt; ' + esc(x) + '</div>').join('');
+        l.innerHTML = '<div class="sub" style="margin-bottom:4px">BOOT SEQUENCE</div>' + logLines.map(x => '<div class="lc-' + x.c + '">&gt; ' + esc(x.t) + '</div>').join('');
         while (l.children.length > 1 && l.scrollHeight > l.clientHeight + 1) l.lastElementChild.remove();
-      } const t = $('#pktick', el); if (t) t.textContent = logLines[0] ? '> ' + logLines[0] : ''; }
+      } const t = $('#pktick', el); if (t) { t.textContent = logLines[0] ? '> ' + logLines[0].t : ''; t.className = 'tick box' + (logLines[0] ? ' lc-' + logLines[0].c : ''); } }
 
     let booting = null;
     // Firing for more than 8 seconds overheats the pack (overload). Letting go vents it, then it settles back.
@@ -529,13 +558,6 @@
     timers.push(setInterval(() => { if (who === 'cycle' && !edit) { cur = nextCycle(); frame(); } }, 20000));
     const TECH = () => ['PING: TELEMETRY REFRESHED', 'SYS: FIELD LENS RECALIBRATED', 'N-FILTER: PARTICULATE ' + Math.round(10 + mode * 6) + ' PPM',
       'ION ARM: ALIGNMENT HOLDING', 'PKE: BACKGROUND WITHIN LIMITS', 'BOOSTER: CAPACITOR RECHARGED', 'RIBBON CABLE: HANDSHAKE OK'];
-    const LORE = ['DO NOT CROSS THE STREAMS', 'TOTAL PROTONIC REVERSAL IS BAD', 'TRAP ARMED // DO NOT LOOK INTO THE TRAP',
-      'CONTAINMENT UNIT: DO NOT SHUT OFF', 'GATEKEEPER SCAN: NEGATIVE', 'KEYMASTER SCAN: NEGATIVE', 'CLEAR YOUR MIND',
-      'IF ASKED WHETHER YOU ARE A GOD, SAY YES', 'MOOD SLIME: KEEP IT POSITIVE',
-      'STAY FROSTY', 'CHECK THE AIR DUCTS', 'ORBITAL OPTION: NOT AUTHORIZED',
-      'THERMAL SCAN: NO CLOAKED CONTACTS', 'MUD CAMOUFLAGE: NOT REQUIRED',
-      'FLUX CAPACITOR: FLUXING', 'POWER DRAW: 1.21 GIGAWATTS', 'PERIMETER FENCE: ONLINE', 'WATER GLASS: NO RIPPLES',
-      'GROUND VIBRATION: NONE // STAY ON THE ROCKS', 'NO WATER, NO BRIGHT LIGHT, NO SNACKS AFTER MIDNIGHT', 'SHIELDS AT 100%'];
     let lastLine = '';
     timers.push(setInterval(() => {
       if (!mode || failed.length || mode === 3) return;
