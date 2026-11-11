@@ -561,10 +561,14 @@
     timers.push(setInterval(() => { if (who === 'cycle' && !edit) { cur = nextCycle(); frame(); } }, 20000));
     const TECH = () => ['PING: TELEMETRY REFRESHED', 'SYS: FIELD LENS RECALIBRATED', 'N-FILTER: PARTICULATE ' + Math.round(10 + mode * 6) + ' PPM',
       'ION ARM: ALIGNMENT HOLDING', 'PKE: BACKGROUND WITHIN LIMITS', 'BOOSTER: CAPACITOR RECHARGED', 'RIBBON CABLE: HANDSHAKE OK'];
-    let lastLine = '';
+    let lastLine = '', lastEgg = performance.now(), eggs = [];
     timers.push(setInterval(() => {
       if (!mode || failed.length || mode === 3) return;
-      let line; do { const t = TECH(); line = Math.random() < .5 ? t[Math.floor(Math.random() * t.length)] : LORE[Math.floor(Math.random() * LORE.length)]; } while (line === lastLine);
+      // easter eggs: about 1 line in 15, never within 2 minutes of the last one, and no repeats until all have shown
+      const egg = Math.random() < 1 / 15 && performance.now() - lastEgg > 120000;
+      let line;
+      if (egg) { if (!eggs.length) eggs = LORE.slice().sort(() => Math.random() - .5); line = eggs.pop(); lastEgg = performance.now(); }
+      else { const t = TECH(); do { line = t[Math.floor(Math.random() * t.length)]; } while (line === lastLine); }
       lastLine = line; log(line);
     }, 5000));
   };
