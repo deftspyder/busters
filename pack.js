@@ -65,7 +65,7 @@
 .pk .who .nm{font-size:1.5em;line-height:1.1;letter-spacing:.08em;font-weight:700;text-transform:uppercase;color:#fff;text-shadow:0 0 8px var(--ph),0 0 18px var(--ph);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .pk .x{position:absolute;top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));z-index:6;background:#000a;border:1px solid var(--ph);color:var(--ph);border-radius:50%;width:30px;height:30px;font:inherit;cursor:pointer;display:none}
 /* body: phone first */
-.pk .bd{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto auto auto;grid-template-areas:"sc sc" "os os" "p1 p2" "p3 p4";gap:6px;padding:6px;min-height:0;overflow:hidden}
+.pk .bd{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto auto auto auto;grid-template-areas:"sc sc" "tk tk" "os os" "p1 p2" "p3 p4";gap:6px;padding:6px;min-height:0;overflow:hidden}
 .pk .sc{grid-area:sc;position:relative;min-height:0;overflow:hidden;display:grid;place-items:center}
 .pk .sc .grid{position:absolute;inset:0;background-image:linear-gradient(color-mix(in srgb,var(--ph) 10%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--ph) 10%,transparent) 1px,transparent 1px);background-size:18px 18px}
 .pk .os .warn{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.85em;letter-spacing:.12em;padding:2px 8px;border:1px solid var(--ph);background:#000c;display:none;animation:pkb .6s infinite;z-index:2}
@@ -133,7 +133,7 @@
 .pk .art.dg .mk.oos span{border-color:#ffb000;color:#ffd27a}
 .pk #pk1{grid-area:p1}.pk #pk2{grid-area:p2}.pk #pk3{grid-area:p3}.pk #pk4{grid-area:p4}
 .pk .lg{display:none;grid-area:lg;padding:6px 8px;overflow:hidden;font-size:.8em;line-height:1.45}
-.pk .tick{grid-column:1/-1;padding:3px 10px;font-size:.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+.pk .tick{grid-area:tk;padding:5px 10px;font-size:1.05em;letter-spacing:.04em;color:#eafff4;text-shadow:0 0 6px var(--ph);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 /* controls */
 .pk .cb{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:#010806;position:relative;z-index:6}
 .pk .cb button{font:inherit;font-size:.78em;letter-spacing:.06em;color:var(--ph);background:#000;border:1px solid color-mix(in srgb,var(--ph) 50%,transparent);border-radius:8px;min-height:44px;padding:2px;cursor:pointer;touch-action:manipulation}
@@ -148,9 +148,8 @@
 @media (min-aspect-ratio:1/1) and (min-width:700px){
   .pk{font-size:clamp(11px,1.7vh,20px)}
   .pk .hd{padding-right:46px}
-  .pk .bd{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"p1 sc p3" "p2 sc p4" "lg sc lg2" "lg os lg2"}
+  .pk .bd{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto auto;grid-template-areas:"p1 sc p3" "p2 sc p4" "lg sc lg2" "lg tk lg2" "lg os lg2"}
   .pk .lg{display:block}.pk .lg2{grid-area:lg2;display:grid;place-items:center}
-  .pk .tick{display:none}
   .pk .cb{grid-template-columns:repeat(6,minmax(0,140px));justify-content:center}
   .pk .x{display:block}
 }
@@ -244,6 +243,7 @@
       <button class="x" id="pkx2" aria-label="Exit">&#10005;</button>
       <div class="bd">
         <div class="sc box" id="pksc"><div class="grid"></div><div class="vt" id="pkvt"></div><div id="pkart"></div></div>
+        <div class="tick box" id="pktick"></div>
         <div class="os box"><div class="warn">WARNING // CONTAINMENT FIELD UNSTABLE</div><div class="t" id="pkost">CYCL: STOP // FIELD: OFFLINE</div><canvas id="pkos"></canvas></div>
         <div class="pn box" id="pk1"><h4>POWER CORE</h4>${rw('Power Cell', 'cell', '%')}${rw('Booster', 'boost', 'kV')}${rw('Ion Arm', 'ion', '\u00b5A')}${rw('PPD', 'ppd')}</div>
         <div class="pn box" id="pk2"><h4>H\u2082 SYSTEM</h4>${rw('Injectors', 'inj', 'PSI')}${rw('Flow', 'flow', 'L/s')}${rw('HGA', 'hga')}${rw('Crank Gen', 'crank', 'Hz')}</div>
@@ -251,7 +251,6 @@
         <div class="pn box" id="pk4"><h4>THROWER</h4>${rw('Heat Sink', 'heat', '\u00b0C')}${rw('Sync Gen', 'syn', 'MeV')}${rw('Ribbon', 'rib', 'Gb/s')}${rw('Containment', 'cont')}</div>
         <div class="lg box" id="pklg"></div><div class="lg2 box" id="pklg2"></div>
       </div>
-      <div class="tick" id="pktick"></div>
       <div class="boom"><div class="bx"><div class="b1">&#9888; IMMINENT PACK FAILURE &#9888;</div><div class="b2">STAND BACK<br>3 MILES</div><div class="b4">UPWIND FROM PACK</div><div class="b3" id="pkb3">RELEASE TRIGGER TO VENT</div></div></div>
       <div class="cb">
         <button id="b0">${mode ? 'PACK ON' : 'PACK OFF'}</button><button id="b1">IDLE</button><button id="b2">STREAM</button>
