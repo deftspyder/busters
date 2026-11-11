@@ -312,8 +312,13 @@
       const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'EMERGENCY VENT' : 'TOTAL FAILURE') : firing ? (failed.length ? 'CASCADE FAILURE' : 'FIRING') : failed.length ? 'RECOVERING' : MODES[mode];
     }
 
-    function log(t) { logLines.unshift(clock() + '  ' + t); logLines = logLines.slice(0, 14); renderLog(); }
-    function renderLog() { const l = $('#pklg', el); if (l) l.innerHTML = '<div class="sub" style="margin-bottom:4px">BOOT SEQUENCE</div>' + logLines.map(x => '&gt; ' + esc(x)).join('<br>'); const t = $('#pktick', el); if (t) t.textContent = logLines[0] ? '> ' + logLines[0] : ''; }
+    function log(t) { logLines.unshift(clock() + '  ' + t); logLines = logLines.slice(0, 60); renderLog(); }
+    function renderLog() {
+      const l = $('#pklg', el);
+      if (l && l.offsetParent) { // fill the box with as many lines as fit, newest first, no half-cut line at the bottom
+        l.innerHTML = '<div class="sub" style="margin-bottom:4px">BOOT SEQUENCE</div>' + logLines.map(x => '<div>&gt; ' + esc(x) + '</div>').join('');
+        while (l.children.length > 1 && l.scrollHeight > l.clientHeight + 1) l.lastElementChild.remove();
+      } const t = $('#pktick', el); if (t) t.textContent = logLines[0] ? '> ' + logLines[0] : ''; }
 
     let booting = null;
     // Firing for more than 8 seconds overheats the pack (overload). Letting go vents it, then it settles back.
