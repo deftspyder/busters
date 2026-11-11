@@ -130,20 +130,25 @@
 .pk .mk.fail b{border-color:#ff3b2f;background:#ff3b2f;box-shadow:0 0 10px #ff3b2f,0 0 20px #ff2a1a;animation:pkb .35s infinite}
 .pk .art.dg .mk.fail span{border-color:#ff3b2f;color:#ff8a7a}
 .pk .map .nd.fail rect{stroke:#ff3b2f;fill:#2a0603;filter:drop-shadow(0 0 6px #ff3b2f)}.pk .map .nd.fail text.s{fill:#ff8a7a}
-.pk .boom{position:absolute;inset:0;z-index:9;display:none;place-items:center;background:radial-gradient(ellipse at center,#3a0000cc,#000c 75%);pointer-events:none}
+.pk .boom{--al:#ff4d3a;position:absolute;inset:0;z-index:4;display:none;place-items:center;padding:4vh 4vw;background:color-mix(in srgb,var(--al) 10%,#000c);pointer-events:none}
+.pk.vent .boom{--al:#ffb000}
 .pk.crit .boom,.pk.vent .boom{display:grid}
-.pk .boom .bx{border:3px solid #ff3b2f;border-radius:10px;background:#120000e6;padding:3vh 6vw;text-align:center;box-shadow:0 0 30px #ff2a1a,inset 0 0 30px #ff2a1a55;max-width:92vw}
-.pk.crit .boom .bx{animation:pkring .7s infinite}
-.pk .boom .b1{color:#ffb199;font-size:clamp(14px,2.4vh,26px);letter-spacing:.14em}
-.pk .boom .b2{color:#fff;font-weight:700;font-size:clamp(34px,7vh,90px);line-height:1.05;letter-spacing:.06em;margin:1.2vh 0;text-shadow:0 0 12px #ff3b2f,0 0 30px #ff2a1a}
-.pk .boom .b4{color:#fff;font-weight:700;font-size:clamp(16px,3vh,36px);letter-spacing:.12em;margin:-.4vh 0 1.4vh;text-shadow:0 0 10px #ff3b2f}
-.pk .boom .b5{display:none;color:#ffcf66;font-size:clamp(12px,1.8vh,20px);letter-spacing:.2em;margin:.4vh 0 1.4vh}
+.pk .boom .bx{width:min(560px,94vw);border:1px solid color-mix(in srgb,var(--al) 75%,transparent);border-radius:6px;background:color-mix(in srgb,var(--al) 7%,#010806);
+  box-shadow:inset 0 0 26px color-mix(in srgb,var(--al) 22%,transparent),0 0 22px color-mix(in srgb,var(--al) 30%,transparent);text-align:center;color:var(--al);overflow:hidden}
+.pk.crit .boom .bx{animation:pkalert .9s infinite}
+@keyframes pkalert{50%{box-shadow:inset 0 0 40px color-mix(in srgb,var(--al) 40%,transparent),0 0 40px color-mix(in srgb,var(--al) 55%,transparent);border-color:var(--al)}}
+.pk .boom .bz{height:8px;background:repeating-linear-gradient(-45deg,var(--al) 0 8px,transparent 8px 16px);opacity:.75}
+.pk .boom .bh{display:flex;justify-content:space-between;gap:10px;padding:6px 12px;font-size:.8em;white-space:nowrap;letter-spacing:.2em;border-bottom:1px solid color-mix(in srgb,var(--al) 35%,transparent);opacity:.9}
+.pk .boom .bi{padding:2.4vh 4vw 2.6vh}
+.pk .boom .b1{font-size:clamp(13px,2vh,20px);letter-spacing:.2em;text-shadow:0 0 6px var(--al)}
+.pk .boom .b2{color:#fff;font-size:clamp(32px,6.5vh,76px);line-height:1.08;letter-spacing:.08em;margin:1.4vh 0 .6vh;text-shadow:0 0 8px var(--al),0 0 22px var(--al)}
+.pk .boom .b4{color:#fff;font-size:clamp(15px,2.6vh,30px);letter-spacing:.16em;margin-bottom:1.6vh;text-shadow:0 0 8px var(--al)}
+.pk .boom .b5{display:none;font-size:clamp(12px,1.7vh,18px);letter-spacing:.2em;margin:.4vh 0 1.4vh}
 .pk.vent .boom .b5{display:block}
-.pk .boom .b5 b{display:block;color:#fff;font-weight:700;font-size:clamp(40px,8vh,100px);letter-spacing:.08em;line-height:1.1;text-shadow:0 0 12px #ffb000,0 0 28px #ff9a00}
-.pk .boom .b5 i{display:block;height:8px;border:1px solid #ffb000;border-radius:5px;margin-top:.8vh;overflow:hidden}
-.pk .boom .b5 u{display:block;height:100%;background:linear-gradient(90deg,#ff9a00,#ffd27a);box-shadow:0 0 10px #ffb000}
-.pk .boom .b3{color:#ffcf66;font-size:clamp(12px,1.8vh,20px);letter-spacing:.16em}
-.pk.vent .boom .b1{color:#ffcf66}.pk.vent .boom .bx{border-color:#ffb000;box-shadow:0 0 24px #ff9a00}
+.pk .boom .b5 b{display:block;font-weight:400;color:#fff;font-size:clamp(40px,8vh,96px);letter-spacing:.1em;line-height:1.1;text-shadow:0 0 10px var(--al),0 0 26px var(--al)}
+.pk .boom .b5 i{display:block;height:10px;border:1px solid color-mix(in srgb,var(--al) 70%,transparent);border-radius:2px;margin:1vh auto 0;max-width:80%;padding:1px}
+.pk .boom .b5 u{display:block;height:100%;background:var(--al);box-shadow:0 0 8px var(--al)}
+.pk .boom .b3{font-size:clamp(11px,1.6vh,17px);letter-spacing:.18em;opacity:.95}
 .pk.crit .cb,.pk.vent .cb{position:relative;z-index:10}
 .pk .rw.oos span,.pk .rw.oos b{color:#ffc24a;text-shadow:0 0 6px #ff9a00;opacity:1}
 .pk .rw.oos b{animation:pkglow 1s infinite}
@@ -288,7 +293,7 @@
         <div class="pn box" id="pk4"><h4>THROWER</h4>${rw('Heat Sink', 'heat', '\u00b0C')}${rw('Sync Gen', 'syn', 'MeV')}${rw('Ribbon', 'rib', 'Gb/s')}${rw('Containment', 'cont')}</div>
         <div class="lg box" id="pklg"></div><div class="lg2 box" id="pklg2"></div>
       </div>
-      <div class="boom"><div class="bx"><div class="b1">&#9888; IMMINENT PACK FAILURE &#9888;</div><div class="b2">STAND BACK<br>3 MILES</div><div class="b4">UPWIND FROM PACK</div><div class="b5" id="pkvc"></div><div class="b3" id="pkb3">RELEASE TRIGGER TO VENT</div></div></div>
+      <div class="boom"><div class="bx"><div class="bz"></div><div class="bh"><span id="pkbh">ALERT // CONTAINMENT</span><span>LAGB</span></div><div class="bi"><div class="b1" id="pkb1">&#9888; IMMINENT PACK FAILURE</div><div class="b2">STAND BACK<br>3 MILES</div><div class="b4">UPWIND FROM PACK</div><div class="b5" id="pkvc"></div><div class="b3" id="pkb3">RELEASE TRIGGER TO VENT</div></div><div class="bz"></div></div></div>
       <div class="cb">
         <button id="b0">${mode ? 'PACK ON' : 'PACK OFF'}</button><button id="b1">IDLE</button><button id="b2">STREAM</button>
         <button id="bf" class="fire">FIRE</button><button id="ba">${audio ? 'SOUND ON' : 'SOUND'}</button><button id="bm">MORE</button></div>
@@ -340,6 +345,8 @@
       ['b1', 'b2'].forEach((b, i) => { const x = $('#' + b, el); if (x) x.classList.toggle('on', mode === i + 1); });
       const b0 = $('#b0', el); if (b0) { b0.classList.toggle('on', mode > 0); b0.textContent = mode ? 'PACK ON' : 'PACK OFF'; }
       const b3 = $('#pkb3', el); if (b3) b3.textContent = ventTimer ? 'EMERGENCY VENT IN PROGRESS // DO NOT APPROACH' : 'RELEASE TRIGGER TO VENT';
+      const bh = $('#pkbh', el); if (bh) bh.textContent = ventTimer ? 'EMERGENCY VENT' : 'ALERT // CONTAINMENT';
+      const b1 = $('#pkb1', el); if (b1) b1.innerHTML = ventTimer ? 'VENTING IN PROGRESS' : '&#9888; IMMINENT PACK FAILURE';
       const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'EMERGENCY VENT' : 'TOTAL FAILURE') : firing ? (failed.length ? 'CASCADE FAILURE' : 'FIRING') : failed.length ? 'RECOVERING' : MODES[mode];
     }
 
