@@ -8,7 +8,7 @@
   // Systems that can be marked on the pack photo (keys match saved markers).
   const DIAG = { cyclotron: 'CYCLOTRON', power_cell: 'POWER CELL', sync_gen: 'SYNC GEN', booster: 'BOOSTER', ion_arm: 'ION ARM', ppd: 'PPD',
     injectors: 'INJECTORS', hga: 'HGA', crank: 'CRANK GEN', n_filter: 'N-FILTER', heatsink: 'GUNBOX', ribbon: 'RIBBON' };
-  const LEFT = { ion_arm: 1, power_cell: 1, injectors: 1, ribbon: 1, hga: 1, heatsink: 1, sync_gen: 1, crank: 1 };
+  const LEFT = { ion_arm: 1, power_cell: 1, injectors: 1, ribbon: 1, hga: 1, heatsink: 1, sync_gen: 1, crank: 1, cyclotron: 1 };
   const MARKS = [
     ['cyclotron', 'Cyclotron', 'CYC'], ['power_cell', 'Power Cell', 'PWR'], ['sync_gen', 'Synchronous Generator', 'SYN'],
     ['booster', 'Booster', 'BST'], ['ion_arm', 'Ion Arm', 'ION'], ['ppd', 'Primary Power Distributor', 'PPD'],
@@ -73,7 +73,7 @@
 .pk.m0 .art .tr{opacity:.55}
 .pk .mk{position:absolute;transform:translate(-50%,-50%);font-size:.7em;letter-spacing:.05em;color:#fff;display:flex;align-items:center;gap:3px;pointer-events:none;text-shadow:0 0 4px #000,0 0 4px #000}
 .pk .mk b{width:8px;height:8px;border:1px solid var(--ph);border-radius:50%;box-shadow:0 0 6px var(--ph);flex:0 0 auto}
-.pk .cl{position:absolute;width:6%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(#fff,var(--ph) 45%,transparent 70%);box-shadow:0 0 14px var(--ph),0 0 30px var(--ph);transition:left .15s,top .15s;display:none}
+.pk .cl{position:absolute;width:7.5%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(#fff 0,#ff6a50 35%,#ff2a1a 60%,transparent 72%);box-shadow:0 0 12px #ff3b2f,0 0 26px #ff3b2f88;display:none}
 .pk.on .cl{display:block}
 .pk .nopk{position:relative;text-align:center;padding:12px;line-height:1.6}
 .pk .sc .map{position:absolute;inset:0;padding:8px 6px 6px}
@@ -385,7 +385,7 @@
       const x = c.getContext('2d'), w = c.width, h = c.height, t = performance.now() / 1000;
       x.clearRect(0, 0, w, h);
       const amp = [0.02, .25, .36, .44][mode] + (firing ? .1 : 0), fr = [0, 1.2, 2.4, 4][mode] + (firing ? 3 : 0), col = PH[mode];
-      [[col, 0], ['#ff9a3c', 1.7]].forEach(([cc, ph], j) => {
+      [['#3fb6ff', 0], ['#ff9a3c', 1.7]].forEach(([cc, ph], j) => {
         x.beginPath(); x.lineWidth = 2 * dpr; x.strokeStyle = cc; x.shadowColor = cc; x.shadowBlur = 8 * dpr;
         for (let i = 0; i <= w; i += 3) { const u = i / w; let y = Math.sin(u * Math.PI * (2 + j) + t * fr + ph) * amp; if (mode === 3 || firing) y += (Math.random() - .5) * .08; x.lineTo(i, h / 2 + y * h); }
         x.stroke();
