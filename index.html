@@ -41,9 +41,12 @@ h2{font-size:26px}h3{font-size:20px}
 .top .logo{height:26px;flex:0 0 auto}
 .top .sp{flex:1}
 .hz{height:10px;background:repeating-linear-gradient(-45deg,var(--hazard) 0 10px,#111 10px 20px)}
-.iconbtn.cyc circle[class^="cl"]{fill:#3a0b0b;stroke:#000;stroke-width:.8;animation:cycl 4.8s infinite}
-.iconbtn.cyc .cl2{animation-delay:1.2s}.iconbtn.cyc .cl3{animation-delay:2.4s}.iconbtn.cyc .cl4{animation-delay:3.6s}
-@keyframes cycl{0%,20%{fill:#ff4a3a;filter:drop-shadow(0 0 3px #ff3b2f)}32%,100%{fill:#4a1212;filter:none}}
+.iconbtn.cyc circle[class^="cl"]{fill:#4a1212;stroke:#000;stroke-width:.8;animation:4s step-end infinite}
+.iconbtn.cyc .cl1{animation-name:cyA}.iconbtn.cyc .cl2{animation-name:cyB}.iconbtn.cyc .cl3{animation-name:cyC}.iconbtn.cyc .cl4{animation-name:cyD}
+@keyframes cyA{0%{fill:#ff4a3a;stroke:#ffb3a8}25%{fill:#4a1212;stroke:#000}}
+@keyframes cyB{0%{fill:#4a1212;stroke:#000}25%{fill:#ff4a3a;stroke:#ffb3a8}50%{fill:#4a1212;stroke:#000}}
+@keyframes cyC{0%{fill:#4a1212;stroke:#000}50%{fill:#ff4a3a;stroke:#ffb3a8}75%{fill:#4a1212;stroke:#000}}
+@keyframes cyD{0%{fill:#4a1212;stroke:#000}75%{fill:#ff4a3a;stroke:#ffb3a8}}
 @media (prefers-reduced-motion:reduce){.iconbtn.cyc circle[class^="cl"]{animation:none;fill:#ff3b2f}}
 .iconbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;padding:0}
 .avatar{width:36px;height:36px;border-radius:50%;background:var(--sunset);color:#000;font-weight:700;display:grid;place-items:center;font-size:14px;border:0;cursor:pointer}
