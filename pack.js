@@ -58,9 +58,9 @@
 .pk .md{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-size:.85em;letter-spacing:.08em;text-align:right}
 .pk .md i{width:8px;height:8px;border-radius:50%;background:var(--ph);box-shadow:0 0 8px var(--ph);animation:pkb 1.4s infinite;flex:0 0 auto}
 @keyframes pkb{50%{opacity:.2}}
-.pk .who{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;border-top:1px dashed color-mix(in srgb,var(--ph) 35%,transparent);padding-top:6px;min-width:0}
+.pk .who{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;border-top:1px dashed color-mix(in srgb,var(--ph) 35%,transparent);padding-top:6px;min-width:0;justify-content:flex-end;text-align:right}
 .pk .who .l{font-size:.75em;letter-spacing:.2em;opacity:.75;white-space:nowrap}
-.pk .who .nm{font-size:1.6em;letter-spacing:.06em;color:#fff;text-shadow:0 0 8px var(--ph),0 0 18px var(--ph);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pk .who .nm{font-size:1.6em;letter-spacing:.08em;font-weight:700;text-transform:uppercase;color:#fff;text-shadow:0 0 8px var(--ph),0 0 18px var(--ph);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .pk .x{position:absolute;top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));z-index:6;background:#000a;border:1px solid var(--ph);color:var(--ph);border-radius:50%;width:30px;height:30px;font:inherit;cursor:pointer;display:none}
 /* body: phone first */
 .pk .bd{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto auto auto;grid-template-areas:"sc sc" "os os" "p1 p2" "p3 p4";gap:6px;padding:6px;min-height:0;overflow:hidden}
