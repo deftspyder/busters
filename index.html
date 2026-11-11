@@ -284,41 +284,6 @@ input.in{min-width:0}
 .scrim.full .grab{display:none}
 .qrcard h2{margin:2px 0 0;font-size:18px}.qrcard .qrsub{font-size:13px}
 .qrcard .qrbtns{display:flex;gap:8px}
-.pp{position:fixed;inset:0;z-index:100;background:radial-gradient(ellipse at 30% 40%,#0c1a24,#000 70%);color:#e8f6ff;display:grid;grid-template-rows:auto 1fr auto;font-family:"DM Sans",system-ui,sans-serif;overflow:hidden;cursor:none}
-.pp.cur{cursor:default}
-.pp .pptop{display:flex;align-items:center;gap:2vw;padding:1.6vh 2.4vw}.pp .pptop img{height:6vh}
-.pp .pptitle{font-family:"Bebas Neue";font-size:3.4vh;letter-spacing:.3em;color:var(--cyan);text-shadow:0 0 8px var(--cyan);flex:1;text-align:right}
-.pp .ppctl{display:flex;gap:8px;opacity:0;transition:opacity .3s}.pp.cur .ppctl{opacity:1}
-.pp .ppctl button{background:#111a;border:1px solid #fff3;color:#fff;border-radius:10px;padding:6px 12px;cursor:pointer}
-.pp .ppmain{display:grid;grid-template-columns:1.25fr 1fr;gap:2.4vw;padding:0 2.4vw 1.6vh;min-height:0}
-@media (orientation:portrait){.pp .ppmain{grid-template-columns:1fr;grid-template-rows:auto auto}}
-.pp .panel{border:2px solid #35b2e855;border-radius:22px;background:#04101899;box-shadow:inset 0 0 40px #35b2e822,0 0 24px #35b2e822;padding:2.2vh 2vw;display:flex;flex-direction:column;min-height:0}
-.pp .lbl{font-family:"Bebas Neue";letter-spacing:.25em;font-size:2.2vh;color:#7fcff0}
-.pp .rig{display:flex;align-items:center;gap:3vw;flex:1;min-height:0}
-.pp .cyc{position:relative;width:min(30vh,22vw);aspect-ratio:1;flex:0 0 auto}
-.pp .cyc .ring{position:absolute;inset:0;border-radius:50%;border:3px solid #333;box-shadow:inset 0 0 30px #000}
-.pp .cyc i{position:absolute;width:24%;aspect-ratio:1;border-radius:50%;background:#3a0b0b;border:2px solid #000;animation:cyc 1.2s infinite;transform:translate(-50%,-50%)}
-.pp .cyc i:nth-child(2){left:50%;top:14%}.pp .cyc i:nth-child(3){left:86%;top:50%;animation-delay:.3s}.pp .cyc i:nth-child(4){left:50%;top:86%;animation-delay:.6s}.pp .cyc i:nth-child(5){left:14%;top:50%;animation-delay:.9s}
-@keyframes cyc{0%,24%{background:#ff3b2f;box-shadow:0 0 18px #ff3b2f,0 0 40px #ff6a3d}25%,100%{background:#3a0b0b;box-shadow:none}}
-.pp .cyc b{position:absolute;inset:34%;border-radius:50%;background:radial-gradient(#9be8ff,#35b2e8 45%,#0a3a55);box-shadow:0 0 30px #35b2e8;animation:core 2.4s ease-in-out infinite}
-@keyframes core{50%{box-shadow:0 0 60px #35b2e8,0 0 90px #35b2e888;filter:brightness(1.3)}}
-.pp .cells{display:flex;flex-direction:column-reverse;gap:.6vh;width:4.2vw;height:min(30vh,26vw)}
-.pp .cells i{flex:1;border-radius:4px;background:#0b2230;border:1px solid #000}
-.pp .cells i.on{background:linear-gradient(90deg,#35b2e8,#9be8ff);box-shadow:0 0 10px #35b2e8}
-.pp .read{flex:1;min-width:0}
-.pp .big{font-family:"Bebas Neue";font-size:9vh;line-height:1;color:#fff;text-shadow:0 0 14px #35b2e8,0 0 30px #35b2e888}
-.pp .sub{font-size:2.2vh;color:#a9c7d6;margin-top:.6vh}
-.pp .bar{height:2.6vh;border-radius:99px;background:#0b2230;border:1px solid #35b2e855;margin-top:1.6vh;overflow:hidden}
-.pp .bar i{display:block;height:100%;background:linear-gradient(90deg,#ff8c78,#ff5e86,#9b6fb0,#35b2e8);box-shadow:0 0 16px #ff5e86;transition:width 1.5s}
-.pp .slide{margin-top:2vh;min-height:16vh;border-top:1px solid #35b2e833;padding-top:1.6vh;transition:opacity .6s}
-.pp .slide h4{margin:0 0 .8vh;font-family:"Bebas Neue";letter-spacing:.2em;font-size:2.6vh;color:var(--cream)}
-.pp .slide .row2{display:flex;gap:1.2vw;font-size:2.4vh;padding:.4vh 0}.pp .slide .row2 b{color:var(--cyan);min-width:9vw}
-.pp .codes{display:flex;gap:2vw;justify-content:center;align-items:center;flex:1;min-height:0}
-.pp .code{flex:1;max-width:46%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1vh}
-.pp .code .q{background:#fff;border-radius:16px;padding:1.2vh;width:min(100%,44vh);aspect-ratio:1;box-shadow:0 0 30px #35b2e855}
-.pp .code .q svg,.pp .code .q img{width:100%;height:auto;display:block}
-.pp .code h5{margin:0;font-family:"Bebas Neue";font-size:3vh;letter-spacing:.06em;color:#fff}.pp .code div{font-size:1.8vh;color:#a9c7d6}
-.pp .ppfoot{height:2vh;background:repeating-linear-gradient(-45deg,var(--hazard) 0 2vh,#111 2vh 4vh)}
 .dcode{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}
 .sheet .grab{width:42px;height:5px;border-radius:3px;background:#2a3240;margin:-6px auto 12px}
 .menuitem{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink);text-decoration:none}
@@ -1509,57 +1474,8 @@ async function readQrPicture(file) {
   return { img };
 }
 
-/* ---------- proton pack event display ---------- */
-let ppTimers = [], ppLock = null;
-async function openPack() {
-  const el = document.createElement('div'); el.className = 'pp'; el.id = 'pp';
-  el.innerHTML = `<div class="pptop"><img src="img/wordmark-wide.png" alt="The Los Angeles Ghostbusters"><div class="pptitle">Proton Pack Monitor</div>
-      <div class="ppctl"><button id="ppfs">Full screen</button><button id="ppx">Exit</button></div></div>
-    <div class="ppmain">
-      <div class="panel"><div class="lbl">Ghostbusters Give Back</div>
-        <div class="rig"><div class="cyc"><div class="ring"></div><i></i><i></i><i></i><i></i><b></b></div>
-          <div class="cells" id="ppcells">${'<i></i>'.repeat(10)}</div>
-          <div class="read"><div class="big" id="ppamt">$0</div><div class="sub" id="ppsub"></div><div class="bar"><i id="ppbar" style="width:0"></i></div><div class="sub" id="ppgoal"></div></div></div>
-        <div class="slide" id="ppslide"></div></div>
-      <div class="panel"><div class="lbl" style="text-align:center">Scan to support</div><div class="codes" id="ppcodes"></div></div>
-    </div><div class="ppfoot"></div>`;
-  document.body.appendChild(el);
-  const close = () => { ppTimers.forEach(clearInterval); ppTimers = []; if (ppLock) { ppLock.release().catch(() => {}); ppLock = null; } if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); };
-  const key = e => { if (e.key === 'Escape' && !document.fullscreenElement) close(); };
-  document.addEventListener('keydown', key);
-  $('#ppx', el).onclick = close;
-  $('#ppfs', el).onclick = () => (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()).catch(() => {});
-  let hide; el.onmousemove = el.ontouchstart = () => { el.classList.add('cur'); clearTimeout(hide); hide = setTimeout(() => el.classList.remove('cur'), 2500); };
-  try { ppLock = await navigator.wakeLock.request('screen'); } catch (e) { /* screen may sleep */ }
-  const fill = () => {
-    const g = S.gb || {}; const amt = Number(g.amount) || 0, goal = Number(g.goal) || 0, pct = goal ? Math.min(100, Math.round(100 * amt / goal)) : 0;
-    $('#ppamt', el).textContent = money0(amt);
-    $('#ppsub', el).textContent = g.rank ? `raised by ${S.crew.short || 'LAGB'}, #${g.rank} of ${g.groups} chapters nationwide` : 'raised for Starlight Children\'s Foundation';
-    $('#ppbar', el).style.width = pct + '%';
-    $('#ppgoal', el).textContent = goal ? `${pct}% of our ${money0(goal)} goal` : '';
-    const codes = donateCodes();
-    $('#ppcodes', el).innerHTML = codes.length ? codes.slice(0, 2).map((c, i) => `<div class="code"><div class="q" id="ppq${i}">${c.url ? '' : `<img src="${esc(c.img)}" alt="">`}</div><h5>${esc(c.label)}</h5>${c.sub ? `<div>${esc(c.sub)}</div>` : ''}</div>`).join('') : '<div class="sub">Add donate codes on the Team tab.</div>';
-    loadScript(QR_LIB).then(() => codes.slice(0, 2).forEach((c, i) => { if (!c.url) return; const q = qrcode(0, 'M'); q.addData(c.url); q.make(); const b = $('#ppq' + i, el); if (b) b.innerHTML = q.createSvgTag({ cellSize: 8, margin: 0, scalable: true }); })).catch(() => {});
-  };
-  // power cells rise and fall like a charging pack
-  let lvl = 0, dir = 1; ppTimers.push(setInterval(() => { lvl += dir; if (lvl >= 10 || lvl <= 0) dir = -dir; $('#ppcells', el).querySelectorAll('i').forEach((c, k) => c.classList.toggle('on', k < lvl)); }, 180));
-  // rotating info panel
-  const slides = () => {
-    const yr = todayISO().slice(0, 4);
-    const next = upcoming().filter(e => e.status === 'scheduled').slice(0, 4);
-    const done = S.events.filter(e => e.status !== 'cancelled' && e.event_date.startsWith(yr) && e.event_date < todayISO()).length;
-    return [
-      next.length ? `<h4>Catch us next</h4>${next.map(e => `<div class="row2"><b>${fmtDay(e.event_date, { month: 'short', day: 'numeric' })}</b><span>${esc(e.title)}</span></div>`).join('')}` : '',
-      `<h4>Who we help</h4><div class="row2"><span>Starlight Children's Foundation, Make-A-Wish, Shriners Children's and kids' hospitals across Southern California.</span></div>`,
-      done ? `<h4>${yr} so far</h4><div class="row2"><b>${done}</b><span>appearances by the Los Angeles Ghostbusters this year</span></div>` : '',
-      `<h4>Who you gonna call?</h4><div class="row2"><span>Every dollar goes to the kids. Scan a code to donate, and thank you!</span></div>`
-    ].filter(Boolean);
-  };
-  let si = 0; const show = () => { const sl = slides(), box = $('#ppslide', el); box.style.opacity = 0; setTimeout(() => { box.innerHTML = sl[si % sl.length]; box.style.opacity = 1; si++; }, 600); };
-  fill(); show();
-  ppTimers.push(setInterval(show, 9000));
-  ppTimers.push(setInterval(async () => { try { await loadAll(); fill(); } catch (e) { /* keep showing the last numbers */ } }, 10 * 60000));
-}
+/* ---------- proton pack monitor (pack.js) ---------- */
+async function openPack() { try { await loadScript('pack.js?v=1'); openPackMonitor(); } catch (e) { toast('Could not load the pack monitor.'); } }
 
 /* ---------- profile and menu ---------- */
 function openProfile() {
@@ -1651,7 +1567,7 @@ function openMenu() {
     <a class="menuitem" href="https://forms.wix.com/r/7168473352057652079" target="_blank" rel="noopener"><span class="grow">Event request form</span><span class="muted">↗</span></a>
     <a class="menuitem" href="https://forms.wix.com/r/6936122162306613874" target="_blank" rel="noopener"><span class="grow">Recruit form</span><span class="muted">↗</span></a>
     <a class="menuitem" href="https://www.losangelesgb.com/" target="_blank" rel="noopener"><span class="grow">About LAGB</span><span class="muted">↗</span></a>
-    <a class="menuitem" id="pp"><span class="grow">Proton pack display<div class="small muted">Full-screen event screen with donate codes</div></span><span class="muted">›</span></a>
+    <a class="menuitem" id="pp"><span class="grow">Proton pack monitor<div class="small muted">In-world pack diagnostics, assigned to a Buster</div></span><span class="muted">›</span></a>
     <a class="menuitem" id="how"><span class="grow">How to use Busters</span><span class="muted">›</span></a>
     <a class="menuitem" href="mailto:deftspyder@gmail.com?subject=Busters%20feedback"><span class="grow">Send feedback</span><span class="muted">↗</span></a>
     ${can('crew_admin') ? `<div class="small muted" style="margin:14px 0 4px;text-transform:uppercase;letter-spacing:.08em">Admin</div>
