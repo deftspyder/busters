@@ -1146,34 +1146,62 @@ function goalCard() {
     <button class="btn sm" id="gb-save" style="margin-top:10px">Save goal</button>
   </div></div>`;
 }
+// Discord bot permissions: View Channels, Send Messages, Embed Links, Attach Files, Read Message History,
+// Add Reactions, Create Public Threads, Send Messages in Threads.
+const DC_PERMS = '309237763136';
+const dcInvite = id => `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(id)}&scope=bot%20applications.commands&permissions=${DC_PERMS}`;
 function discordCard(d) {
   d = d || {};
-  const when = d.last ? new Date(d.last.at).toLocaleString() : '';
-  return `<h2>Discord posts</h2><div class="card">
-    ${d.has_hook ? `<div style="display:flex;align-items:center;gap:8px"><span class="pill good">Connected</span><span class="small muted">webhook ending ${esc(d.tail)}</span></div>
-      ${d.last ? `<div class="tiny dim" style="margin-top:6px">Last post: ${esc(d.last.kind)}, ${when}${d.last.status >= 200 && d.last.status < 300 ? '' : ' <span style="color:var(--bad)">(failed, code ' + esc(String(d.last.status)) + ')</span>'}</div>` : ''}
-      <div class="btns" style="margin-top:10px"><button class="btn sm" id="dc-test">Send a test post</button><button class="btn sm ghost" id="dc-off">Disconnect</button></div>`
-    : `<div class="small muted">Busters can post into an LAGB Discord channel. In Discord, open the channel's settings: Edit Channel, Integrations, Webhooks, New Webhook, then Copy Webhook URL and paste it here. <a href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks" target="_blank" rel="noopener">How webhooks work</a></div>
-      <label class="f"><span>Webhook link (kept private)</span><input class="in" id="dc-url" type="url" autocomplete="off" placeholder="https://discord.com/api/webhooks/..."></label>`}
-    <label class="check" style="margin-top:12px"><input type="checkbox" id="dc-short" ${d.post_short !== false ? 'checked' : ''}><span>Nudge when an event is short on Busters, <select class="in" id="dc-days" style="width:auto;display:inline-block;padding:2px 6px">${[1, 2, 3, 5, 7, 14].map(n => `<option ${(d.short_days || 3) === n ? 'selected' : ''} value="${n}">${n} ${n === 1 ? 'day' : 'days'}</option>`).join('')}</select> ahead</span></label>
+  const ok = st => st >= 200 && st < 300;
+  const last = d.last ? `<div class="tiny dim" style="margin-top:6px">Last post: ${esc(d.last.kind)}, ${new Date(d.last.at).toLocaleString()}${ok(d.last.status) ? '' : ' <span style="color:var(--bad)">(failed, code ' + esc(String(d.last.status)) + ')</span>'}</div>` : '';
+  const ready = d.has_bot && d.channel_id && d.channel_name;
+  const head = d.has_bot
+    ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pill ${ready ? 'good' : 'warn'}">${ready ? 'Connected' : 'Almost there'}</span><span class="small muted">${d.bot_name ? 'as <b>' + esc(d.bot_name) + '</b>' : 'bot saved'}${d.channel_name ? ', posting in <b>#' + esc(d.channel_name) + '</b>' : ''}</span></div>
+      ${!ready ? `<div class="small" style="margin-top:8px">${d.app_id ? `Invite the bot to the LAGB server: <a href="${dcInvite(d.app_id)}" target="_blank" rel="noopener">Add Busters to Discord</a>, pick Los Angeles Ghostbusters, then Authorize. Come back and tap Check.` : 'Tap Check to finish setup.'}</div>` : ''}
+      <div id="dc-msg" class="small" style="margin-top:6px"></div>${last}
+      <label class="f"><span>Channel ID</span><input class="in" id="dc-ch" inputmode="numeric" autocomplete="off" value="${esc(d.channel_id || '')}" placeholder="Right-click the channel, Copy Channel ID"></label>
+      <div class="btns" style="margin-top:10px">${ready ? '<button class="btn sm" id="dc-test">Send a test post</button>' : ''}<button class="btn sm" id="dc-check">Check</button>${d.app_id && ready ? `<a class="btn sm ghost" href="${dcInvite(d.app_id)}" target="_blank" rel="noopener">Invite link</a>` : ''}<button class="btn sm ghost" id="dc-off">Disconnect</button></div>`
+    : `<div class="small muted">Busters posts into the LAGB Discord as its own bot. Make the bot at <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">discord.com/developers/applications</a> (New Application, then Bot, then Reset Token), and copy a channel ID with Developer Mode on (User Settings, Advanced).</div>
+      <label class="f"><span>Bot token (kept private, never shown again)</span><input class="in" id="dc-tok" type="password" autocomplete="off" placeholder="Paste the token from the Bot page"></label>
+      <label class="f"><span>Channel ID</span><input class="in" id="dc-ch" inputmode="numeric" autocomplete="off" placeholder="Right-click the channel, Copy Channel ID"></label>
+      <button class="btn sm primary" id="dc-connect" style="margin-top:10px">Connect</button><div id="dc-msg" class="small" style="margin-top:6px"></div>`;
+  return `<h2>Discord posts</h2><div class="card">${head}
+    <hr style="border:0;border-top:1px solid var(--line, #222);margin:14px 0">
+    <label class="check"><input type="checkbox" id="dc-short" ${d.post_short !== false ? 'checked' : ''}><span>Nudge when an event is short on Busters, <select class="in" id="dc-days" style="width:auto;display:inline-block;padding:2px 6px">${[1, 2, 3, 5, 7, 14].map(n => `<option ${(d.short_days || 3) === n ? 'selected' : ''} value="${n}">${n} ${n === 1 ? 'day' : 'days'}</option>`).join('')}</select> ahead</span></label>
     <label class="check"><input type="checkbox" id="dc-photos" ${d.post_photos !== false ? 'checked' : ''}><span>Ask for photos and videos the day after an event</span></label>
     <div class="tiny dim" style="margin-top:6px">Posts go out between 9am and 9pm, once per event, and never ping @everyone. Editors can also post any event from its page.</div>
-    <button class="btn sm primary" id="dc-save" style="margin-top:10px">Save</button>
+    <button class="btn sm" id="dc-save" style="margin-top:10px">Save post settings</button>
   </div>`;
+}
+async function discordCheck() {
+  const msg = $('#dc-msg'); if (msg) msg.textContent = 'Checking with Discord...';
+  try {
+    const { data } = await sb.auth.getSession();
+    const res = await fetch(SB_URL + '/functions/v1/busters-discord', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: 'Bearer ' + data.session.access_token }, body: JSON.stringify({ crew: S.crew.id }) });
+    const r = await res.json();
+    if (r.error) toast(r.error); else if (r.channel_error) toast(r.channel_error); else if (r.channel) toast('Connected to #' + r.channel);
+  } catch (_) { toast('Could not reach Discord. Try again.'); }
+  wireDiscord();
 }
 function wireDiscord() {
   const box = $('#discord'); if (!box) return;
   rpc('discord_settings', { p_crew: S.crew.id }).then(d => {
     box.innerHTML = discordCard(d);
-    const save = async url => {
-      try {
-        await rpc('set_discord', { p_crew: S.crew.id, p_url: url, p_short: $('#dc-short').checked, p_days: Number($('#dc-days').value), p_photos: $('#dc-photos').checked });
-      } catch (err) { return; }
-      toast(url === '' ? 'Disconnected' : 'Saved'); wireDiscord();
-    };
-    $('#dc-save').onclick = () => { const u = $('#dc-url'); save(u && u.value.trim() ? u.value.trim() : null); };
-    const off = $('#dc-off'); if (off) off.onclick = () => { if (confirmBox('Disconnect Busters from Discord?')) save(''); };
-    const t = $('#dc-test'); if (t) t.onclick = async () => { const st = await rpc('discord_test', { p_crew: S.crew.id }); toast(st >= 200 && st < 300 ? 'Posted. Check the channel.' : 'Discord said no (code ' + st + ')'); wireDiscord(); };
+    const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
+    on('#dc-save', async () => { try { await rpc('set_discord', { p_crew: S.crew.id, p_url: null, p_short: $('#dc-short').checked, p_days: Number($('#dc-days').value), p_photos: $('#dc-photos').checked }); toast('Saved'); } catch (_) { } });
+    on('#dc-connect', async () => {
+      const tok = $('#dc-tok').value.trim(), ch = $('#dc-ch').value.trim();
+      if (!tok) return toast('Paste the bot token first.');
+      try { await rpc('set_discord_bot', { p_crew: S.crew.id, p_token: tok, p_channel: ch || null }); } catch (_) { return; }
+      discordCheck();
+    });
+    on('#dc-check', async () => {
+      const ch = $('#dc-ch').value.trim();
+      if (ch !== (d.channel_id || '')) { try { await rpc('set_discord_bot', { p_crew: S.crew.id, p_token: null, p_channel: ch }); } catch (_) { return; } }
+      discordCheck();
+    });
+    on('#dc-off', async () => { if (!confirmBox('Disconnect the Busters bot from Discord?')) return; try { await rpc('set_discord_bot', { p_crew: S.crew.id, p_token: '', p_channel: null }); toast('Disconnected'); } catch (_) { } wireDiscord(); });
+    on('#dc-test', async () => { const st = await rpc('discord_test', { p_crew: S.crew.id }); toast(st >= 200 && st < 300 ? 'Posted. Check the channel.' : 'Discord said no (code ' + st + ')'); wireDiscord(); });
   }).catch(() => {});
 }
 function renderTeam(m) {
