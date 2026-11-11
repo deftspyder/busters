@@ -467,7 +467,10 @@ async function enter(name) {
   S.crew = { id: res.crew_id, short: res.crew };
   await loadAll();
   if (!S.me) return renderBlocked('removed');
+  const dbx = new URLSearchParams(location.search).get('dropbox');
+  if (dbx) { S.tab = 'team'; S.adminTab = 'media'; history.replaceState(null, '', location.pathname); }
   renderShell();
+  if (dbx) toast({ connected: 'Dropbox connected. Photo calls start the morning after each event.', cancelled: 'Dropbox connection cancelled', expired: 'That link expired. Tap Connect Dropbox again.' }[dbx] || 'Dropbox could not connect. Try again.');
   const hash = location.hash.slice(1); if (hash.startsWith('event/')) openEvent(hash.slice(6));
 }
 
@@ -1301,6 +1304,52 @@ function wireDiscord() {
     on('#dc-test', async () => { const st = await rpc('discord_test', { p_crew: S.crew.id }); toast(st >= 200 && st < 300 ? 'Posted. Check the channel.' : 'Discord said no (code ' + st + ')'); wireDiscord(); });
   }).catch(() => {});
 }
+// Media (Jeff): Dropbox connected once, then one row per past event with who has sent photos.
+function mediaCard(box) {
+  rpc('media_status', { p_crew: S.crew.id }).then(d => {
+    const day = x => new Date(x + 'T12:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const keys = d.is_admin && !d.connected ? `<div class="card" style="margin-top:10px"><div class="small muted">${d.has_app ? 'Dropbox app keys are saved. Paste new ones to replace them.' : 'First, a crew admin pastes the App key and App secret from the Busters app at dropbox.com/developers/apps.'}</div>
+        <label class="f"><span>App key</span><input class="in" id="mk-key" autocomplete="off"></label>
+        <label class="f"><span>App secret</span><input class="in" id="mk-sec" type="password" autocomplete="off"></label>
+        <button class="btn sm" id="mk-save" style="margin-top:10px">Save keys</button></div>` : '';
+    const conn = d.connected
+      ? `<div class="card"><div class="small">📦 Connected to Dropbox as <b>${esc(d.account || d.email || 'Dropbox')}</b>. Photos go to <b>${esc(d.root)}</b>, one folder per event.</div>
+         <div class="small muted" style="margin-top:6px">The morning after an event, Busters posts a photo call in its Discord thread. Photos posted there are copied into the folder, and anyone can use the upload link instead. One automatic reminder goes out 3 days later.</div>
+         <div class="btns" style="margin-top:10px"><a class="btn sm" href="https://www.dropbox.com/home${encodeURI(d.root)}" target="_blank" rel="noopener">Open in Dropbox</a><button class="btn sm ghost" id="m-off">Disconnect</button></div></div>`
+      : `<div class="card"><div class="small">Connect the Dropbox account where event photos and videos should go. Busters makes a folder and an upload link for each event, and nobody needs a Dropbox account to send photos.</div>
+         <button class="btn sm primary" id="m-con" style="margin-top:10px" ${d.has_app ? '' : 'disabled'}>Connect Dropbox</button>${d.has_app ? '' : '<div class="tiny dim" style="margin-top:6px">Waiting on a crew admin to add the app keys.</div>'}</div>`;
+    const rows = (d.events || []).map(e => {
+      const st = e.completed_at ? '✅ Complete' : !e.called_at ? (d.connected ? 'Photo call not posted yet' : 'Not started') : `${e.answered} of ${e.went} answered`;
+      return `<div class="row" data-me="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">${day(e.event_date)} · ${st}${e.files ? ` · ${e.files} file${e.files == 1 ? '' : 's'}` : ''}</div></div><span class="btn sm">Open</span></div>`;
+    }).join('');
+    box.innerHTML = `<h2>Event photos</h2>${conn}${keys}
+      <h2 style="margin-top:16px">Past events</h2>${rows || '<div class="empty">No past events with Busters in the last 90 days.</div>'}`;
+    const ms = $('#mk-save'); if (ms) ms.onclick = async () => { await rpc('media_set_app', { p_crew: S.crew.id, p_key: $('#mk-key').value, p_secret: $('#mk-sec').value }); toast('Keys saved'); mediaCard(box); };
+    const mc = $('#m-con'); if (mc) mc.onclick = async () => { location.href = await rpc('media_connect_url', { p_crew: S.crew.id }); };
+    const mo = $('#m-off'); if (mo) mo.onclick = async () => { if (!confirmBox('Disconnect Dropbox? Photos already saved stay in Dropbox. New photo calls stop until it is connected again.')) return; await rpc('media_disconnect', { p_crew: S.crew.id }); toast('Disconnected'); mediaCard(box); };
+    box.querySelectorAll('[data-me]').forEach(r => r.onclick = () => mediaEvent((d.events || []).find(x => x.id === r.dataset.me), d.connected, () => mediaCard(box)));
+  }).catch(() => { box.innerHTML = '<div class="empty">Event photos could not load right now.</div>'; });
+}
+async function mediaEvent(ev, connected, after) {
+  const x = await rpc('media_event', { p_event: ev.id }); const m = x.media || {};
+  const grp = (k, label) => { const ps = x.people.filter(p => (p.answer || 'waiting') === k); return ps.length ? `<div class="small" style="margin-top:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;font-size:11px">${label} (${ps.length})</div>` + ps.map(p => `<div class="small">${esc(p.name)}${p.files ? ` · ${p.files} file${p.files == 1 ? '' : 's'}` : ''}</div>`).join('') : ''; };
+  sheet(`<h2>${esc(ev.title)}</h2><div class="small muted">${new Date(ev.event_date + 'T12:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}${m.completed_at ? ' · ✅ marked complete' : m.called_at ? ' · photo call posted ' + new Date(m.called_at).toLocaleDateString() : ''}</div>
+    ${grp('uploaded', '📷 Sent photos')}${grp('none', 'No photos')}${grp('waiting', 'Waiting')}
+    <div class="tiny dim" style="margin-top:8px">Photos people send through the upload link land in the folder too, but Busters can't tell who sent them.</div>
+    <div class="btns" style="margin-top:14px;flex-wrap:wrap">
+      ${!m.called_at && connected ? '<button class="btn sm primary" id="me-call">Post photo call now</button>' : ''}
+      ${m.called_at && !m.completed_at ? '<button class="btn sm" id="me-rem">Send reminder</button>' : ''}
+      ${m.called_at ? `<button class="btn sm" id="me-done">${m.completed_at ? 'Reopen' : 'Mark complete'}</button>` : ''}
+      ${m.request_url ? '<button class="btn sm" id="me-link">Copy upload link</button>' : ''}
+      ${m.folder_path ? `<a class="btn sm" href="https://www.dropbox.com/home${encodeURI(m.folder_path)}" target="_blank" rel="noopener">Open folder</a>` : ''}
+      <button class="btn sm ghost" data-close>Close</button></div>`, s => {
+    const on2 = (id, f) => { const b = $(id, s); if (b) b.onclick = f; };
+    on2('#me-call', async () => { const st = await rpc('media_call_now', { p_event: ev.id }); toast(st >= 200 && st < 300 ? 'Photo call posted in the event thread' : st === -2 ? 'Dropbox said no. Try reconnecting it.' : st === -3 ? 'Could not open the event thread in Discord' : 'Discord said no (code ' + st + ')'); closeSheet(); after(); });
+    on2('#me-rem', async () => { const st = await rpc('media_remind', { p_event: ev.id }); toast(st === 0 ? 'Everyone has answered' : st >= 200 && st < 300 ? 'Reminder sent' : 'Discord said no (code ' + st + ')'); });
+    on2('#me-done', async () => { await rpc('media_complete', { p_event: ev.id, p_done: !m.completed_at }); toast(m.completed_at ? 'Reopened' : 'Marked complete'); closeSheet(); after(); });
+    on2('#me-link', async () => { try { await navigator.clipboard.writeText(m.request_url); toast('Upload link copied'); } catch (e) { prompt('Upload link', m.request_url); } });
+  });
+}
 function renderTeam(m) {
   const pending = can('approve_members') ? S.people.filter(p => p.status === 'pending') : [];
   const ev = can('add_events') || can('edit_events');
@@ -1329,7 +1378,7 @@ function renderTeam(m) {
     personnel: () => `<div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}</div>
       <div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>
       ${can('manage_recruits') ? '<div class="small muted">Contact details, dues and rookie dates are in the Personnel roster.</div>' : ''}`,
-    media: () => `<div class="sec"><div class="empty">Event photos and videos land here once Jeff's Dropbox drop is hooked up: past events, who has sent photos, reminders, and Mark complete.</div></div>`,
+    media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
     crew: () => `<div class="btns">${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div>
       ${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
         + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div><div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`
@@ -1340,6 +1389,7 @@ function renderTeam(m) {
   m.querySelectorAll('[data-ad]').forEach(b => b.onclick = () => { S.adminTab = b.dataset.ad; renderTeam(m); scrollTo(0, 0); });
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
   if ($('#dcsched')) scheduleCard($('#dcsched'));
+  if ($('#mediabox')) mediaCard($('#mediabox'));
   if ($('#donatecodes')) donateCodesCard($('#donatecodes'));
   const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
     const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };

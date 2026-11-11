@@ -68,6 +68,12 @@ Deno.serve(async (req) => {
     if (!emb) return reply("Couldn't find that event anymore.");
     return json({ type: 4, data: { embeds: [emb], flags: 64 } });
   }
+  if (kind === "photos") {                                            // "No photos from me" on the photo call
+    const { data: r } = await sb.rpc("media_answer_discord", { p_app: i.application_id, p_user: u.id, p_username: u.username || null, p_display: u.global_name || null, p_nick: i.member?.nick || null, p_event: eventId });
+    if (r?.status === "ok") return reply(`Thanks, noted: no photos from you for **${r.title}**. Find some later? Post them here anytime.`);
+    if (r?.status === "unlinked") return reply(`Thanks! I couldn't match your Discord account to a Busters member yet, so an admin will need to link you before this counts.`);
+    return reply("Couldn't find that event anymore.");
+  }
   if (kind !== "rsvp") return reply("Busters doesn't know that button.");
   const { data: r, error } = await sb.rpc("discord_answer", {
     p_app: i.application_id, p_user: u.id, p_username: u.username || null, p_display: u.global_name || null,
