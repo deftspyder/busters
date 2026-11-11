@@ -275,6 +275,16 @@ input.in{min-width:0}
 .scrim{height:100vh;height:100dvh}
 @media (min-width:600px){.scrim{align-items:center;padding:20px}.sheet{border-radius:20px;max-height:calc(100dvh - 40px);padding-bottom:18px}.sheet .grab{display:none}}
 @media (min-width:600px){.scrim.right{justify-content:flex-end;align-items:flex-start;padding:64px max(16px,calc((100vw - 760px) / 2 + 16px)) 20px}.scrim.right .sheet{max-width:380px}}
+.scrim.full{padding:0}.scrim.full .sheet{max-width:none;width:100%;height:100%;max-height:none;border-radius:0;border:0;display:flex;flex-direction:column;padding:14px 0 calc(14px + env(safe-area-inset-bottom))}
+.qrhead{display:flex;align-items:center;padding:0 var(--pad) 10px}.qrhead h3{margin:0;flex:1}
+.qrtrack{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;min-height:0}.qrtrack::-webkit-scrollbar{display:none}
+.qrcard{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 var(--pad);text-align:center}
+.qrbox{background:#fff;border-radius:18px;padding:16px;width:min(82vw,52vh,360px);aspect-ratio:1;display:grid;place-items:center}
+.qrbox img,.qrbox svg{width:100%;height:auto;display:block}
+.scrim.full .grab{display:none}
+.qrcard h2{margin:4px 0 0;font-size:22px}.qrdots{display:flex;gap:8px;justify-content:center;padding:10px 0}
+.qrdots i{width:8px;height:8px;border-radius:50%;background:var(--line)}.qrdots i.on{background:var(--cyan)}
+.dcode{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}
 .sheet .grab{width:42px;height:5px;border-radius:3px;background:#2a3240;margin:-6px auto 12px}
 .menuitem{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink);text-decoration:none}
 .menuitem:last-child{border-bottom:0}
@@ -341,6 +351,7 @@ const ICON = {
   team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L6.8 5M3.5 12l1.2 1.2 2.1-2.2M3.5 18l1.2 1.2 2.1-2.2"/></svg>',
   list: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
   cal: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  qr: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>',
   menu: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   nav: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>'
@@ -490,12 +501,13 @@ function renderShell() {
     <header class="top"><div class="bar">
       <img class="logo" src="img/wordmark-wide.png" alt="The Los Angeles Ghostbusters">
       <div class="sp"></div>
+      <button class="iconbtn" id="qr" title="Donate QR codes" aria-label="Donate QR codes">${ICON.qr}</button>
       <button class="avatar" id="av" title="Your profile">${esc(initials(S.me.full_name))}</button>
       <button class="iconbtn" id="menu" title="Menu">${ICON.menu}</button>
     </div><div class="hz"></div></header>
     <nav class="tabs"><div class="tabs-in" id="tabs"></div></nav>
     <main class="wrap" id="main"></main>`;
-  $('#av').onclick = openProfile; $('#menu').onclick = openMenu;
+  $('#av').onclick = openProfile; $('#menu').onclick = openMenu; $('#qr').onclick = openQR;
   render();
 }
 function teamCount() {
@@ -1248,8 +1260,9 @@ function renderTeam(m) {
   m.innerHTML = `<div class="sec"><h2>Team ${ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
     <div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div></div>
     <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>
-    ${can('crew_admin') ? adoptionCard() + goalCard() + '<div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`;
+    ${can('crew_admin') ? adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div><div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`;
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
+  if ($('#donatecodes')) donateCodesCard($('#donatecodes'));
   const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
     const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
     const goal = num('#gb-goal'), last = num('#gb-last');
@@ -1393,6 +1406,74 @@ async function renderLog(m) {
     <div class="log">${(data || []).map(l => `<div><b>${esc(l.actor_id ? nameOf(personById(l.actor_id)) : /sheet|calendar/.test(l.action) ? 'Google bridge' : 'Busters')}</b> <span class="muted">${esc(l.summary || l.action)}</span><div class="tiny dim">${new Date(l.at).toLocaleString()}</div></div>`).join('') || '<div class="empty">Nothing here yet.</div>'}</div>`;
   $('#bk').onclick = () => { S.view = null; render(); };
   m.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.logf = b.dataset.f; renderLog(m); });
+}
+
+/* ---------- donate QR codes ---------- */
+const QR_LIB = 'lib/qrcode.js';
+const QR_READ = 'lib/jsQR.js';
+const loadScript = src => new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = no; document.head.appendChild(t); });
+const donateCodes = () => ((S.settings || {}).donate_codes || []).filter(c => c && (c.url || c.img));
+async function openQR() {
+  const codes = donateCodes();
+  if (!codes.length) return sheet(`<h3>Donate QR codes</h3><p class="muted">No donation codes are set up yet.${can('crew_admin') ? ' Add them on the Team tab, under Donate QR codes.' : ' Ask a crew admin to add them.'}</p><button class="btn block" data-close>Close</button>`);
+  sheet(`<div class="qrhead"><h3>Scan to donate</h3><button class="iconbtn" data-close aria-label="Close">&#10005;</button></div>
+    <div class="qrtrack" id="qrt">${codes.map((c, i) => `<div class="qrcard">
+      <div class="qrbox" id="qrb${i}">${c.url ? '' : `<img src="${esc(c.img)}" alt="QR code for ${esc(c.label)}">`}</div>
+      <h2>${esc(c.label)}</h2>${c.sub ? `<div class="muted">${esc(c.sub)}</div>` : ''}
+      ${c.url ? `<div style="display:flex;gap:8px"><button class="btn sm" data-qcopy="${esc(c.url)}">Copy link</button><a class="btn sm ghost" href="${esc(c.url)}" target="_blank" rel="noopener">Open ↗</a></div>` : ''}
+    </div>`).join('')}</div>
+    ${codes.length > 1 ? `<div class="qrdots" id="qrd">${codes.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div><div class="tiny dim" style="text-align:center">Swipe for more</div>` : ''}`, async s => {
+    s.parentNode.classList.add('full');
+    s.querySelectorAll('[data-qcopy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.qcopy); toast('Link copied'); } catch (e) { toast(b.dataset.qcopy); } });
+    const t = $('#qrt', s), d = $('#qrd', s);
+    if (d) t.onscroll = () => { const i = Math.round(t.scrollLeft / t.clientWidth); d.querySelectorAll('i').forEach((x, k) => x.classList.toggle('on', k === i)); };
+    try { await loadScript(QR_LIB); } catch (e) { return toast('Could not load the QR maker. Check your connection.'); }
+    codes.forEach((c, i) => { if (!c.url) return; const q = qrcode(0, 'M'); q.addData(c.url); q.make(); $('#qrb' + i, s).innerHTML = q.createSvgTag({ cellSize: 8, margin: 0, scalable: true }); });
+  });
+}
+let DC = null;
+function donateCodesCard(box) {
+  if (!DC) DC = JSON.parse(JSON.stringify((S.settings || {}).donate_codes || []));
+  const row = (c, i) => `<div class="dcode" data-i="${i}">
+    <label class="f" style="margin:0"><span>Name on the code</span><input class="in" data-k="label" maxlength="60" value="${esc(c.label || '')}" placeholder="Donate to LAGB with Zelle"></label>
+    <label class="f"><span>Small line underneath (optional)</span><input class="in" data-k="sub" maxlength="90" value="${esc(c.sub || '')}" placeholder="Los Angeles Ghostbusters, a 501(c)(3)"></label>
+    <label class="f"><span>Link the QR opens</span><input class="in" data-k="url" inputmode="url" value="${esc(c.url || '')}" placeholder="https://..."></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+      <label class="btn sm" style="margin:0">Use a QR picture<input type="file" accept="image/*" data-pic hidden></label>
+      ${c.img && !c.url ? '<span class="tiny dim">Using the uploaded picture</span>' : ''}
+      <button class="btn sm danger" data-del style="margin-left:auto">Remove</button></div>
+  </div>`;
+  box.innerHTML = `<h2>Donate QR codes</h2><div class="card">
+    <div class="small muted">Shown big when anyone taps the QR button at the top. Swipe between them. Up to 4.</div>
+    ${DC.map(row).join('')}
+    <div style="display:flex;gap:8px;margin-top:12px">${DC.length < 4 ? '<button class="btn sm" id="dc-add">+ Add a code</button>' : ''}<button class="btn sm primary" id="dc-save" style="margin-left:auto">Save codes</button></div>
+    <div class="tiny dim" style="margin-top:8px">Zelle: in the Chase app open Pay &amp; transfer, Zelle, then your QR code, save it as a picture and use "Use a QR picture". Busters reads the link out of it so the code stays sharp.</div>
+  </div>`;
+  box.querySelectorAll('.dcode').forEach(el => {
+    const i = Number(el.dataset.i);
+    el.querySelectorAll('[data-k]').forEach(inp => inp.oninput = () => { DC[i][inp.dataset.k] = inp.value.trim(); if (inp.dataset.k === 'url' && inp.value.trim()) delete DC[i].img; });
+    $('[data-del]', el).onclick = () => { DC.splice(i, 1); donateCodesCard(box); };
+    $('[data-pic]', el).onchange = async ev => { const f = ev.target.files[0]; if (!f) return; const r = await readQrPicture(f); if (!r) return; if (r.url) { DC[i].url = r.url; delete DC[i].img; toast('Link read from the picture'); } else { DC[i].img = r.img; DC[i].url = ''; toast("Couldn't read a link, so the picture itself will be shown"); } donateCodesCard(box); };
+  });
+  const add = $('#dc-add', box); if (add) add.onclick = () => { DC.push({ label: '', sub: '', url: '' }); donateCodesCard(box); };
+  $('#dc-save', box).onclick = async () => {
+    const clean = DC.map(c => ({ label: (c.label || '').trim(), sub: (c.sub || '').trim(), ...(c.url ? { url: c.url.trim() } : {}), ...(!c.url && c.img ? { img: c.img } : {}) }));
+    await rpc('set_donate_codes', { p_crew: S.crew.id, p_codes: clean });
+    DC = null; await refresh(); toast('Codes saved');
+  };
+}
+async function readQrPicture(file) {
+  const bmp = await createImageBitmap(file).catch(() => null);
+  if (!bmp) { toast("That picture couldn't be opened."); return null; }
+  const draw = max => { const k = Math.min(1, max / Math.max(bmp.width, bmp.height)); const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); const x = c.getContext('2d'); x.drawImage(bmp, 0, 0, c.width, c.height); return c; };
+  try {
+    await loadScript(QR_READ);
+    const c = draw(1200), px = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+    const hit = jsQR(px.data, c.width, c.height);
+    if (hit && /^https:\/\//i.test(hit.data)) return { url: hit.data };
+  } catch (e) { /* fall back to the picture */ }
+  let img = draw(500).toDataURL('image/png'); if (img.length > 290000) img = draw(500).toDataURL('image/jpeg', .85);
+  return { img };
 }
 
 /* ---------- profile and menu ---------- */
