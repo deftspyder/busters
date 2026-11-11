@@ -15,7 +15,7 @@
 </style>
 </head>
 <body>
-<div class="again"><div><button id="go">OPEN PACK MONITOR</button><p>LOS ANGELES GHOSTBUSTERS</p></div></div>
+<div class="again"><div><button id="go">POWER UP PACK</button><p>LOS ANGELES GHOSTBUSTERS // TAP TO START, SOUND ON</p></div></div>
 <script src="pack.js?v=29"></script>
 <script>
 // Public demo of the Busters pack monitor: no sign-in and no member data. The name comes from the link,
@@ -37,14 +37,10 @@
   };
   const ctx = { S, $, esc, toast, rpc: async () => {}, can: () => false, nameOf: p => p.full_name, upcoming: () => [], todayISO: () => new Date().toISOString().slice(0, 10) };
   // Phones only allow sound after a tap, so the monitor opens from this button and makes its sound engine in the tap.
-  // Opens straight away. Browsers hold sound until the first tap, so the hum starts on the first touch anywhere.
-  // This button only shows after Exit, to bring the monitor back.
-  const open = () => {
+  document.getElementById('go').onclick = () => {
     let audioCtx = null; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume().catch(() => {}); } catch (e) { /* no sound */ }
     window.openPackMonitor({ ...ctx, audioCtx });
   };
-  document.getElementById('go').onclick = open;
-  open();
 })();
 </script>
 </body>
