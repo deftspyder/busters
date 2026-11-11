@@ -58,7 +58,7 @@
   // Order systems fail in once the stream has been held past 8 seconds (cyclotron last, at 18 seconds).
   const CASCADE_AT = 5; // the cascade warning waits until several systems have failed (about 11 s of firing)
   const FAIL_ORDER = ['heat', 'rib', 'nf', 'inj', 'flow', 'boost', 'ion', 'syn', 'ppd', 'crank', 'cell', 'stab', 'rpm'];
-  const PH = ['#2f7d58', '#4dff9a', '#5fe3ff', '#ff5a3c']; // phosphor colour per mode
+  const PH = ['#2f7d58', '#4dff9a', '#4dff9a', '#ff5a3c']; // Stream stays green; only the parts that change on a real pack change colour // phosphor colour per mode
   const BOOT = ['KERNEL LINK ESTABLISHED', 'LOS ANGELES DIVISION AUTHENTICATED', 'CARBON CELL ONLINE', 'CYCLOTRON ROTATION NOMINAL',
     'N-FILTER PURGE COMPLETE', 'SYNCHRONOUS GENERATOR IN PHASE', 'ION ARM ALIGNMENT VERIFIED', 'PARTICLE THROWER SAFETY: ON', 'PACK READY'];
 
@@ -114,7 +114,10 @@
 .pk .map .nd text.s{fill:var(--md);font-size:6px;opacity:.85}
 .pk .map .ring{fill:none;stroke:var(--md);filter:drop-shadow(0 0 4px var(--md))}
 .pk .map .lt{fill:#0b1a14;stroke:var(--md);stroke-width:1}
-.pk .map .lt.hot{fill:var(--md);filter:drop-shadow(0 0 6px var(--md)) drop-shadow(0 0 12px var(--md))}
+.pk .map .lt.hot{fill:#ff3b2f;stroke:#ff6a50;filter:drop-shadow(0 0 6px #ff3b2f) drop-shadow(0 0 12px #ff3b2f)}
+.pk.m2 .mk[data-mk=power_cell]:not(.oos):not(.fail) b{border-color:#5fc8ff;background:#5fc8ff;box-shadow:0 0 8px #3aa8ff,0 0 18px #3aa8ff;animation:pkb 1.1s infinite}
+.pk.m2 .map .nd[data-nd=PWR]:not(.oos):not(.fail) rect{stroke:#5fc8ff;filter:drop-shadow(0 0 4px #3aa8ff) drop-shadow(0 0 9px #3aa8ff)}
+.pk.m2 .map .nd[data-nd=PWR]:not(.oos):not(.fail) text{fill:#9fdcff}
 .pk .map .core{fill:var(--md);opacity:.25}.pk.on .map .core{opacity:.8;filter:drop-shadow(0 0 8px var(--md))}
 .pk .map .cap{fill:var(--md);font:7px "Share Tech Mono",monospace;letter-spacing:.2em;text-anchor:middle;opacity:.8}
 .pk .nopk img{width:min(40vw,22vh);image-rendering:pixelated;filter:drop-shadow(0 0 8px var(--ph));display:block;margin:0 auto 10px}
