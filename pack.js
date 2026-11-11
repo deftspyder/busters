@@ -450,8 +450,11 @@
       const word = (id, txt, bad) => { const b = $('#v-' + id, el); if (b) { b.textContent = txt; b.classList.toggle('bad', !!bad); } };
       // systems drift out of spec now and then, then recover
       const now = performance.now();
+      // the random drift pauses (and clears quietly) while the pack is failing, so the log reads as one slide into failure
+      const failing = failed.length > 0 || mode === 3;
+      if (failing) Object.keys(oos).forEach(k => delete oos[k]);
       Object.keys(oos).forEach(k => { if (now > oos[k].until || !mode) { const e = EX.find(x => x[0] === k); delete oos[k]; if (mode) log('OK: ' + e[3] + ' BACK IN SPEC'); } });
-      if (mode && Math.random() < [0, .012, .02, .045][mode] && Object.keys(oos).length < (mode === 3 ? 3 : 2)) {
+      if (mode && !failing && Math.random() < [0, .012, .02, .045][mode] && Object.keys(oos).length < (mode === 3 ? 3 : 2)) {
         const free = EX.filter(e => !oos[e[0]]), e = free[Math.floor(Math.random() * free.length)];
         if (e) { oos[e[0]] = { until: now + 3500 + Math.random() * 5000, dir: e[4], amt: .18 + Math.random() * .2 }; log('WARN: ' + e[3] + ' OUT OF SPEC'); buzz(15); }
       }
