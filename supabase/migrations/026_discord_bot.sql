@@ -9,20 +9,26 @@ alter table public.crew_discord
   add column if not exists app_id text;
 
 -- Sends one message, through the bot if it's set up, otherwise the webhook. Internal only.
+-- Also sets busters.dc_msg (message id:channel) and busters.dc_text for the log row that follows (see 027).
 create or replace function public.discord_send(p_crew uuid, p_text text) returns int
 language plpgsql security definer set search_path = public, extensions as $$
 declare d public.crew_discord; r record; body text;
 begin
+  perform set_config('busters.dc_msg', '', true);
+  perform set_config('busters.dc_text', left(p_text, 200), true);
   select * into d from public.crew_discord where crew_id = p_crew;
   if d.crew_id is null then return null; end if;
   body := json_build_object('content', left(p_text, 1900),
             'allowed_mentions', json_build_object('parse', json_build_array()))::text;
   if d.bot_token is not null and d.channel_id is not null then
-    select status into r from extensions.http((
+    select status, content into r from extensions.http((
       'POST', 'https://discord.com/api/v10/channels/' || d.channel_id || '/messages',
       array[extensions.http_header('Authorization', 'Bot ' || d.bot_token),
             extensions.http_header('User-Agent', 'DiscordBot (https://deftspyder.github.io/busters, 1)')],
       'application/json', body)::extensions.http_request);
+    if r.status between 200 and 299 then
+      perform set_config('busters.dc_msg', coalesce(r.content::jsonb->>'id', '') || ':' || d.channel_id, true);
+    end if;
     return r.status;
   elsif d.webhook_url is not null then
     select status into r from extensions.http_post(d.webhook_url,
