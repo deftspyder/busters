@@ -360,7 +360,7 @@
     function wire() {
       const on = (id, f) => { const b = $('#' + id, el); if (b) b.onclick = f; };
       on('b0', () => setMode(mode ? 0 : 1)); on('b1', () => setMode(1)); on('b2', () => setMode(2));
-      on('ba', () => { audio ? stopAudio() : startAudio(); frame(); });
+      on('ba', () => { if (audio) { stopAudio(); try { localStorage.setItem('pk-sound', 'off'); } catch (x) { /* ignore */ } } else { startAudio(); try { localStorage.removeItem('pk-sound'); } catch (x) { /* ignore */ } } frame(); });
       on('bm', () => $('#pkmore', el).classList.toggle('open'));
       on('pkx', close); on('pkx2', close);
       on('pkfs', () => (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()).catch(() => toast('Full screen is not available here. On iPhone, add Busters to your home screen.')));
@@ -470,7 +470,7 @@
         o1.type = 'sawtooth'; o2.type = 'sine'; f.type = 'lowpass'; f.frequency.value = 600; g.gain.value = 0;
         o1.connect(f); o2.connect(f); f.connect(g); g.connect(ac.destination); o1.start(); o2.start();
         audio = { ac, g, f, o1, o2 }; tone();
-      } catch (e) { toast('Sound is not available here.'); }
+      } catch (e) { /* no sound on this device */ }
     }
     function stopAudio() { if (!audio) return; try { audio.ac.close(); } catch (e) { /* ignore */ } audio = null; }
     function tone() {
@@ -496,6 +496,16 @@
     if (who === 'cycle') cur = nextCycle();
     log('LINK: LOS ANGELES DIVISION');
     frame(); loop();
+    // Sound is on by default (unless this person turned it off before). Phones only allow sound after a tap,
+    // so it starts now if the browser allows it and otherwise wakes on the first touch.
+    let soundOff = false; try { soundOff = localStorage.getItem('pk-sound') === 'off'; } catch (e) { /* ignore */ }
+    if (!soundOff) {
+      startAudio();
+      const wake = () => { if (audio && audio.ac.state === 'suspended') audio.ac.resume().catch(() => {}); };
+      el.addEventListener('pointerdown', wake, { capture: true });
+      el.addEventListener('keydown', wake, { capture: true });
+      if (audio) { const b = $('#ba', el); if (b) b.textContent = 'SOUND ON'; }
+    }
     setTimeout(() => setMode(1), 400); // pack starts powered on, with its boot sequence
     timers.push(setInterval(tick, 120));
     timers.push(setInterval(() => { if (who === 'cycle' && !edit) { cur = nextCycle(); frame(); } }, 20000));
