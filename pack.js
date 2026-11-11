@@ -351,7 +351,7 @@
 
     let booting = null;
     // Firing for more than 8 seconds overheats the pack (overload). Letting go vents it, then it settles back.
-    // Firing: heat warning at 5 s, systems fail one after another from 8 s, total failure at 18 s.
+    // Firing: no warnings for the first 8 s, then systems fail one after another, total failure at 18 s.
     // Letting go stops the cascade; failed systems come back one by one (after a vent if it reached total failure).
     let fireStart = 0, prevMode = 1, ventTimer = null, ventEnd = 0, warned = false, failed = [], lastRestore = 0;
     const exName = k => (EX.find(x => x[0] === k) || [, , , k.toUpperCase()])[3];
@@ -375,7 +375,6 @@
       const now = performance.now();
       if (firing && mode !== 3) {
         const held = now - fireStart;
-        if (held > 5000 && !warned) { warned = true; log('HEAT SINK: TEMPERATURE CRITICAL'); buzz(20); }
         if (held > 8000) {
           const want = Math.min(FAIL_ORDER.length, 1 + Math.floor((held - 8000) / (10000 / FAIL_ORDER.length)));
           while (failed.length < want) { const k = FAIL_ORDER[failed.length]; failed.push(k); log('FAILURE: ' + exName(k)); buzz(25); if (failed.length === 1) log('WARNING: CASCADE FAILURE IN PROGRESS'); paintButtons(); }
@@ -451,7 +450,7 @@
       // systems drift out of spec now and then, then recover
       const now = performance.now();
       // the random drift pauses (and clears quietly) while the pack is failing, so the log reads as one slide into failure
-      const failing = failed.length > 0 || mode === 3;
+      const failing = failed.length > 0 || mode === 3 || firing; // no drift warnings while firing either
       if (failing) Object.keys(oos).forEach(k => delete oos[k]);
       Object.keys(oos).forEach(k => { if (now > oos[k].until || !mode) { const e = EX.find(x => x[0] === k); delete oos[k]; if (mode) log('OK: ' + e[3] + ' BACK IN SPEC'); } });
       if (mode && !failing && Math.random() < [0, .012, .02, .045][mode] && Object.keys(oos).length < (mode === 3 ? 3 : 2)) {
