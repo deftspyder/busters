@@ -50,6 +50,7 @@ h2{font-size:26px}h3{font-size:20px}
 .tab{flex:1;height:var(--tabh);border:0;background:none;color:var(--dim);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;cursor:pointer;position:relative}
 .tab svg{width:22px;height:22px}
 .tab.on{color:#bfeaff;text-shadow:0 0 4px var(--cyan),0 0 10px var(--cyan),0 0 18px rgba(53,178,232,.6);background:radial-gradient(ellipse 60% 70% at 50% 55%,rgba(53,178,232,.16),transparent 75%)}
+.tab.on::after{content:"";position:absolute;inset:6px 6px;border:1px solid rgba(120,210,255,.85);border-radius:14px;box-shadow:0 0 6px var(--cyan),0 0 14px rgba(53,178,232,.55),inset 0 0 8px rgba(53,178,232,.45);pointer-events:none}
 .tab.on svg{filter:drop-shadow(0 0 3px var(--cyan)) drop-shadow(0 0 8px rgba(53,178,232,.7))}
 .tab+.tab::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:1px;background:var(--line)}
 .tab .badge{position:absolute;top:8px;left:calc(50% + 6px);background:var(--pink);color:#fff;border-radius:9px;font-size:10px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;font-weight:700}
