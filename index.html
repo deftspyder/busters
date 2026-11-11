@@ -1485,8 +1485,10 @@ async function readQrPicture(file) {
 
 /* ---------- proton pack monitor (pack.js) ---------- */
 async function openPack() {
-  try { await loadScript('pack.js?v=17'); } catch (e) { return toast('Could not load the pack monitor. Check your connection.'); }
-  try { window.openPackMonitor({ S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO }); } catch (e) { console.error(e); toast('The pack monitor hit an error: ' + e.message); }
+  // Make the sound engine right now, inside the tap, so phones let the pack hum start straight away.
+  let audioCtx = null; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume().catch(() => {}); } catch (e) { /* no sound */ }
+  try { await loadScript('pack.js?v=18'); } catch (e) { return toast('Could not load the pack monitor. Check your connection.'); }
+  try { window.openPackMonitor({ S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO, audioCtx }); } catch (e) { console.error(e); toast('The pack monitor hit an error: ' + e.message); }
 }
 
 /* ---------- profile and menu ---------- */

@@ -218,6 +218,7 @@
 
   window.openPackMonitor = function (ctx) {
     const { S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO } = ctx;
+    let sharedAc = ctx.audioCtx || null; // made during the tap that opened the monitor, so phones allow sound
     if (!document.getElementById('pk-css')) { const st = document.createElement('style'); st.id = 'pk-css'; st.textContent = CSS; document.head.appendChild(st); }
     if (!document.getElementById('pk-font')) { const l = document.createElement('link'); l.id = 'pk-font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'; document.head.appendChild(l); }
     const pack = () => (S.settings && S.settings.pack_monitor) || {};
@@ -464,7 +465,8 @@
     // sound (off until tapped): a low hum that rises with the mode
     function startAudio() {
       try {
-        const ac = new (window.AudioContext || window.webkitAudioContext)(), g = ac.createGain(), f = ac.createBiquadFilter(), o1 = ac.createOscillator(), o2 = ac.createOscillator();
+        const ac = sharedAc && sharedAc.state !== 'closed' ? sharedAc : new (window.AudioContext || window.webkitAudioContext)(); sharedAc = null; if (ac.state === 'suspended') ac.resume().catch(() => {});
+        const g = ac.createGain(), f = ac.createBiquadFilter(), o1 = ac.createOscillator(), o2 = ac.createOscillator();
         o1.type = 'sawtooth'; o2.type = 'sine'; f.type = 'lowpass'; f.frequency.value = 600; g.gain.value = 0;
         o1.connect(f); o2.connect(f); f.connect(g); g.connect(ac.destination); o1.start(); o2.start();
         audio = { ac, g, f, o1, o2 }; tone();
@@ -497,11 +499,12 @@
     // Sound is on by default (unless this person turned it off before). Phones only allow sound after a tap,
     // so it starts now if the browser allows it and otherwise wakes on the first touch.
     let soundOff = false; try { soundOff = localStorage.getItem('pk-sound') === 'off'; } catch (e) { /* ignore */ }
+    if (soundOff && sharedAc) { try { sharedAc.close(); } catch (e) { /* ignore */ } sharedAc = null; }
     if (!soundOff) {
       startAudio();
       const wake = () => { if (audio && audio.ac.state === 'suspended') audio.ac.resume().catch(() => {}); };
-      el.addEventListener('pointerdown', wake, { capture: true });
-      el.addEventListener('keydown', wake, { capture: true });
+      ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach(t => el.addEventListener(t, wake, { capture: true }));
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
       if (audio) { const b = $('#ba', el); if (b) b.textContent = 'SOUND ON'; }
     }
     setTimeout(() => setMode(1), 400); // pack starts powered on, with its boot sequence
