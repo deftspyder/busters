@@ -278,6 +278,8 @@ input.in{min-width:0}
 .menuitem{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink);text-decoration:none}
 .menuitem:last-child{border-bottom:0}
 .menuitem .grow{flex:1}
+.menu-r{text-align:right}
+.menu-r .menuitem .grow{text-align:right}
 
 .fab{position:fixed;right:max(16px,calc((100vw - 760px) / 2 + 16px));bottom:calc(var(--tabh) + 40px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:18px;border:0;background:var(--cyan);color:#001018;display:grid;place-items:center;cursor:pointer;z-index:40;box-shadow:0 6px 18px rgba(0,0,0,.5)}
 .fab:active{transform:scale(.95)}
@@ -1477,7 +1479,7 @@ async function openAlerts() {
   });
 }
 function openMenu() {
-  sheet(`<img src="img/emblem.png" alt="" style="width:70px;margin:0 auto 8px">
+  sheet(`<div class="menu-r"><img src="img/emblem.png" alt="" style="width:70px;margin:0 auto 8px">
     <a class="menuitem" href="${DONATE_URL}" target="_blank" rel="noopener"><span class="grow">Give Back: donate to Starlight</span><span class="muted">↗</span></a>
     <a class="menuitem" href="https://forms.wix.com/r/7168473352057652079" target="_blank" rel="noopener"><span class="grow">Event request form</span><span class="muted">↗</span></a>
     <a class="menuitem" href="https://forms.wix.com/r/6936122162306613874" target="_blank" rel="noopener"><span class="grow">Recruit form</span><span class="muted">↗</span></a>
@@ -1487,7 +1489,7 @@ function openMenu() {
     ${can('crew_admin') ? `<div class="small muted" style="margin:14px 0 4px;text-transform:uppercase;letter-spacing:.08em">Admin</div>
       <a class="menuitem" id="adm-ann"><span class="grow">Post an announcement</span><span class="muted">›</span></a>
       <a class="menuitem" id="adm-log"><span class="grow">Action log</span><span class="muted">›</span></a>` : ''}
-    <p class="tiny dim" style="margin-top:14px">Busters beta for ${esc(S.crew.short)}. Ghostbusters and the No-Ghost logo are trademarks of Columbia Pictures.</p>`, s => {
+    <p class="tiny dim" style="margin-top:14px">Busters beta for ${esc(S.crew.short)}. Ghostbusters and the No-Ghost logo are trademarks of Columbia Pictures.</p></div>`, s => {
     $('#how', s).onclick = () => sheet(`<h3>How to use Busters</h3>
       <p><b>Home</b> shows what needs you now: your next event, anything you haven't answered, and announcements.</p>
       <p><b>Home</b> lists every event coming up. Tap one to open it, then answer right there or open its full brief, then answer Going, Maybe or No, with your ride and a note.</p>
