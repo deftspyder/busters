@@ -71,7 +71,7 @@
 .pk.m3 .md{color:#ff6a50;text-shadow:0 0 6px #ff3b2f}.pk.m3 .md i{background:#ff3b2f;box-shadow:0 0 10px #ff3b2f;animation-duration:.5s}
 .pk.m3 .mk:not(.oos) b{border-color:#ff5a3c;box-shadow:0 0 8px #ff3b2f;animation:pkb .7s infinite}
 .pk.m3 .map .lt.hot{fill:#ff3b2f;filter:drop-shadow(0 0 6px #ff3b2f)}.pk.m3 .map .core{fill:#ff3b2f}
-.pk.m3 .cb #b3{color:#fff;border-color:#ff5a3c;background:#3a0d06;box-shadow:0 0 10px #ff3b2f88}
+.pk.m3 .cb .fire{color:#fff;border-color:#ff5a3c;background:#3a0d06;box-shadow:0 0 10px #ff3b2f88}
 .pk .art{position:relative}
 .pk .art .tr{position:absolute;inset:0;background:var(--md);-webkit-mask-size:100% 100%;mask-size:100% 100%;filter:drop-shadow(0 0 3px var(--md));transition:opacity .5s}
 .pk.m0 .art .tr{opacity:.55}
@@ -119,7 +119,7 @@
 .pk .lg{display:none;grid-area:lg;padding:6px 8px;overflow:hidden;font-size:.8em;line-height:1.45}
 .pk .tick{grid-column:1/-1;padding:3px 10px;font-size:.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
 /* controls */
-.pk .cb{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:#010806;position:relative;z-index:6}
+.pk .cb{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:#010806;position:relative;z-index:6}
 .pk .cb button{font:inherit;font-size:.78em;letter-spacing:.06em;color:var(--ph);background:#000;border:1px solid color-mix(in srgb,var(--ph) 50%,transparent);border-radius:8px;min-height:44px;padding:2px;cursor:pointer;touch-action:manipulation}
 .pk .cb button.on{background:color-mix(in srgb,var(--ph) 22%,#000);color:#fff;border-color:var(--ph);box-shadow:0 0 10px color-mix(in srgb,var(--ph) 45%,transparent)}
 .pk .cb .fire{color:#ffb199;border-color:#ff5a3c99}
@@ -136,7 +136,7 @@
   .pk .bd{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"p1 sc p3" "p2 sc p4" "lg sc lg2" "lg os lg2"}
   .pk .lg{display:block}.pk .lg2{grid-area:lg2;display:grid;place-items:center}
   .pk .tick{display:none}
-  .pk .cb{grid-template-columns:repeat(7,minmax(0,140px));justify-content:center}
+  .pk .cb{grid-template-columns:repeat(6,minmax(0,140px));justify-content:center}
   .pk .x{display:block}
 }
 @media not ((min-aspect-ratio:1/1) and (min-width:700px)){.pk .lg2{display:none}}`;
@@ -238,7 +238,7 @@
       </div>
       <div class="tick" id="pktick"></div>
       <div class="cb">
-        <button id="b0">${mode ? 'PACK ON' : 'PACK OFF'}</button><button id="b1">IDLE</button><button id="b2">STREAM</button><button id="b3">OVERLOAD</button>
+        <button id="b0">${mode ? 'PACK ON' : 'PACK OFF'}</button><button id="b1">IDLE</button><button id="b2">STREAM</button>
         <button id="bf" class="fire">FIRE</button><button id="ba">${audio ? 'SOUND ON' : 'SOUND'}</button><button id="bm">MORE</button></div>
       <div class="more box" id="pkmore"><select id="pkwho"><option value="cycle"${who === 'cycle' ? ' selected' : ''}>Cycle through today's Busters</option>${crew.map(c => `<option value="${c.id}"${who === c.id ? ' selected' : ''}>${esc(nameOf(c))}</option>`).join('')}</select>
         <button id="pkfs">Full screen</button>${can('crew_admin') ? '<button id="pkset">Set up pack photo</button>' : ''}<button id="pkx">Exit monitor</button></div>
@@ -285,18 +285,40 @@
     function paintButtons() {
       el.className = 'pk m' + mode + (mode ? ' on' : '') + (firing ? ' fire' : '') + (edit ? ' edit' : '');
       el.style.setProperty('--ph', PH[1]); el.style.setProperty('--md', PH[mode]); // frame stays green; numbers and diagram take the mode colour
-      ['b1', 'b2', 'b3'].forEach((b, i) => { const x = $('#' + b, el); if (x) x.classList.toggle('on', mode === i + 1); });
+      ['b1', 'b2'].forEach((b, i) => { const x = $('#' + b, el); if (x) x.classList.toggle('on', mode === i + 1); });
       const b0 = $('#b0', el); if (b0) { b0.classList.toggle('on', mode > 0); b0.textContent = mode ? 'PACK ON' : 'PACK OFF'; }
-      const m = $('#pkmode', el); if (m) m.textContent = firing ? 'FIRING' : MODES[mode];
+      const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'VENTING' : 'OVERLOAD WARNING') : firing ? 'FIRING' : MODES[mode];
     }
 
     function log(t) { logLines.unshift(clock() + '  ' + t); logLines = logLines.slice(0, 14); renderLog(); }
     function renderLog() { const l = $('#pklg', el); if (l) l.innerHTML = '<div class="sub" style="margin-bottom:4px">BOOT SEQUENCE</div>' + logLines.map(x => '&gt; ' + esc(x)).join('<br>'); const t = $('#pktick', el); if (t) t.textContent = logLines[0] ? '> ' + logLines[0] : ''; }
 
     let booting = null;
+    // Firing for more than 8 seconds overheats the pack (overload). Letting go vents it, then it settles back.
+    let fireStart = 0, prevMode = 1, ventTimer = null, warned = false;
+    function startFire() {
+      if (!mode || firing) return;
+      if (ventTimer) return log('STREAM: LOCKED OUT // VENTING');
+      firing = true; fireStart = performance.now(); warned = false; log('STREAM: FIRING'); buzz(30); tone(); paintButtons();
+    }
+    function stopFire() {
+      if (!firing) return;
+      firing = false;
+      if (mode === 3) {
+        log('N-FILTER: VENTING // STREAM LOCKED'); buzz([40, 40, 40]);
+        ventTimer = setTimeout(() => { ventTimer = null; if (mode === 3) { mode = prevMode; log('VENT COMPLETE // CONTAINMENT STABLE'); tone(); paintButtons(); } }, 6000);
+      } else log('STREAM: CEASE FIRE');
+      tone(); paintButtons();
+    }
+    function heatCheck() {
+      if (!firing || mode === 3) return;
+      const held = performance.now() - fireStart;
+      if (held > 5000 && !warned) { warned = true; log('HEAT SINK: TEMPERATURE CRITICAL'); buzz(20); }
+      if (held > 8000) { prevMode = mode; mode = 3; log('WARNING: OVERLOAD // CONTAINMENT FIELD UNSTABLE'); buzz([60, 60, 60]); tone(); paintButtons(); }
+    }
     function setMode(m) {
       if (m === mode) return;
-      const was = mode; mode = m; firing = false;
+      const was = mode; mode = m; firing = false; if (ventTimer) { clearTimeout(ventTimer); ventTimer = null; }
       if (was === 0 && m > 0) { // power-up boot sequence
         clearInterval(booting); let i = 0; booting = setInterval(() => { if (i < BOOT.length) log('BOOT: ' + BOOT[i++]); else clearInterval(booting); }, 260);
         buzz([20, 40, 20]);
@@ -307,15 +329,14 @@
 
     function wire() {
       const on = (id, f) => { const b = $('#' + id, el); if (b) b.onclick = f; };
-      on('b0', () => setMode(mode ? 0 : 1)); on('b1', () => setMode(1)); on('b2', () => setMode(2)); on('b3', () => setMode(3));
+      on('b0', () => setMode(mode ? 0 : 1)); on('b1', () => setMode(1)); on('b2', () => setMode(2));
       on('ba', () => { audio ? stopAudio() : startAudio(); frame(); });
       on('bm', () => $('#pkmore', el).classList.toggle('open'));
       on('pkx', close); on('pkx2', close);
       on('pkfs', () => (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()).catch(() => toast('Full screen is not available here. On iPhone, add Busters to your home screen.')));
       on('pkset', setup); on('pkskip', advance);
       const bf = $('#bf', el);
-      const fire = v => { if (!mode) return; firing = v; if (v) { log('STREAM: FIRING'); buzz(30); } tone(); paintButtons(); };
-      bf.onpointerdown = e => { e.preventDefault(); fire(true); }; bf.onpointerup = bf.onpointerleave = bf.onpointercancel = () => firing && fire(false);
+      bf.onpointerdown = e => { e.preventDefault(); startFire(); }; bf.onpointerup = bf.onpointerleave = bf.onpointercancel = () => stopFire();
       bf.oncontextmenu = e => e.preventDefault();
       $('#pkwho', el).onchange = e => { who = e.target.value; try { localStorage.setItem('pk-who', who); } catch (x) { /* ignore */ } cur = who === 'cycle' ? nextCycle() : who; frame(); };
     }
@@ -344,8 +365,9 @@
     // live values
     const t0 = performance.now(); let step = 0;
     function tick() {
+      heatCheck();
       const t = (performance.now() - t0) / 1000, seed = hash((person() || {}).id || 'x') % 97;
-      const lvl = mode + (firing ? .6 : 0);
+      const lvl = mode === 3 && ventTimer ? 2.3 : mode + (firing ? .6 : 0); // readings ease down while venting
       Object.entries(R).forEach(([k, r], i) => {
         const mi = Math.min(3, Math.floor(lvl)), mf = r.m[mi] + (r.m[Math.min(3, mi + 1)] - r.m[mi]) * (lvl - mi);
         const target = r.i * mf + (mode ? r.w * (Math.sin(t / (1.7 + i * .3) + seed + i) * .7 + Math.sin(t * 3.1 + i) * .3) * (mode === 3 ? 2.5 : 1) : 0);
@@ -424,15 +446,15 @@
     }
     const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* ignore */ } };
 
-    function close() { timers.forEach(clearInterval); clearInterval(booting); cancelAnimationFrame(raf); stopAudio(); if (lock) lock.release().catch(() => {}); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); removeEventListener('resize', onResize); }
+    function close() { timers.forEach(clearInterval); clearTimeout(ventTimer); clearInterval(booting); cancelAnimationFrame(raf); stopAudio(); if (lock) lock.release().catch(() => {}); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); removeEventListener('resize', onResize); }
     const key = e => {
       if (e.repeat) return;
       const k = e.key.toLowerCase();
       if (k === 'escape' && !document.fullscreenElement && !edit) close();
-      else if (k === 'p') setMode(mode ? 0 : 1); else if (k === '1') setMode(1); else if (k === '2') setMode(2); else if (k === '3') setMode(3);
-      else if (k === 'f' && mode && !firing) { firing = true; log('STREAM: FIRING'); tone(); paintButtons(); }
+      else if (k === 'p') setMode(mode ? 0 : 1); else if (k === '1') setMode(1); else if (k === '2') setMode(2);
+      else if (k === 'f') startFire();
     };
-    const keyUp = e => { if (e.key.toLowerCase() === 'f' && firing) { firing = false; tone(); paintButtons(); } };
+    const keyUp = e => { if (e.key.toLowerCase() === 'f') stopFire(); };
     const onResize = () => el._fit && el._fit();
     document.addEventListener('keydown', key); document.addEventListener('keyup', keyUp); addEventListener('resize', onResize);
     if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { lock = l; }).catch(() => {});
