@@ -46,7 +46,7 @@ h2{font-size:26px}h3{font-size:20px}
 
 /* tabs */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(8,9,12,.97);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-.tabs .in{display:flex;max-width:760px;margin:0 auto}
+.tabs .tabs-in{display:flex;max-width:760px;margin:0 auto}
 .tab{flex:1;height:var(--tabh);border:0;background:none;color:var(--dim);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;cursor:pointer;position:relative}
 .tab svg{width:22px;height:22px}
 .tab.on{color:var(--cyan)}
@@ -489,7 +489,7 @@ function renderShell() {
       <button class="avatar" id="av" title="Your profile">${esc(initials(S.me.full_name))}</button>
       <button class="iconbtn" id="menu" title="Menu">${ICON.menu}</button>
     </div><div class="hz"></div></header>
-    <nav class="tabs"><div class="in" id="tabs"></div></nav>
+    <nav class="tabs"><div class="tabs-in" id="tabs"></div></nav>
     <main class="wrap" id="main"></main>`;
   $('#av').onclick = openProfile; $('#menu').onclick = openMenu;
   render();
