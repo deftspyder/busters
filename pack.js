@@ -440,7 +440,7 @@
       if (view === 'map' || !(pack().img || pack().diagram)) { el.style.setProperty('--fs', [1.6, 1.6, .9, .45][mode] / (firing ? 2 : 1) + 's'); if (mode) step += mode === 3 ? 1 : (firing ? .7 : mode === 2 ? .5 : .25); const q = Math.floor(step) % 4; for (let i = 0; i < 4; i++) { const L = $('#pkL' + i, el); if (L) L.classList.toggle('hot', !!mode && i === q); } }
       const lts = pack().lights;
       if (cl && (m || lts) && mode) { step += mode === 3 ? 1 : (firing ? .7 : mode === 2 ? .5 : .25); const q = Math.floor(step) % 4;
-        if (lts && lts[q]) { cl.style.left = lts[q][0] + '%'; cl.style.top = lts[q][1] + '%'; } else { const a = [-90, 0, 90, 180][q] * Math.PI / 180; cl.style.left = (m[0] + 7 * Math.cos(a)) + '%'; cl.style.top = (m[1] + 5 * Math.sin(a)) + '%'; } }
+        if (lts && lts[q]) { cl.style.left = lts[q][0] + '%'; cl.style.top = lts[q][1] + '%'; const hide = lts[q][2] || 0; cl.style.clipPath = hide ? `inset(${hide}% -200% -200% -200%)` : ''; } else { const a = [-90, 0, 90, 180][q] * Math.PI / 180; cl.style.left = (m[0] + 7 * Math.cos(a)) + '%'; cl.style.top = (m[1] + 5 * Math.sin(a)) + '%'; } }
       if (audio) tone();
     }
 
@@ -522,6 +522,20 @@
     setTimeout(() => setMode(1), 400); // pack starts powered on, with its boot sequence
     timers.push(setInterval(tick, 120));
     timers.push(setInterval(() => { if (who === 'cycle' && !edit) { cur = nextCycle(); frame(); } }, 20000));
-    timers.push(setInterval(() => { if (mode) log(['PING: TELEMETRY REFRESHED', 'SYS: FIELD LENS RECALIBRATED', 'N-FILTER: PARTICULATE ' + Math.round(10 + mode * 6) + ' PPM', 'ION ARM: ALIGNMENT HOLDING', 'DO NOT CROSS THE STREAMS'][Math.floor(Math.random() * 5)]); }, 5000));
+    const TECH = () => ['PING: TELEMETRY REFRESHED', 'SYS: FIELD LENS RECALIBRATED', 'N-FILTER: PARTICULATE ' + Math.round(10 + mode * 6) + ' PPM',
+      'ION ARM: ALIGNMENT HOLDING', 'PKE: BACKGROUND WITHIN LIMITS', 'BOOSTER: CAPACITOR RECHARGED', 'RIBBON CABLE: HANDSHAKE OK'];
+    const LORE = ['DO NOT CROSS THE STREAMS', 'TOTAL PROTONIC REVERSAL IS BAD', 'TRAP ARMED // DO NOT LOOK INTO THE TRAP',
+      'CONTAINMENT UNIT: DO NOT SHUT OFF', 'GATEKEEPER SCAN: NEGATIVE', 'KEYMASTER SCAN: NEGATIVE', 'CLEAR YOUR MIND',
+      'IF ASKED WHETHER YOU ARE A GOD, SAY YES', 'MOOD SLIME: KEEP IT POSITIVE',
+      'STAY FROSTY', 'CHECK THE AIR DUCTS', 'ORBITAL OPTION: NOT AUTHORIZED',
+      'THERMAL SCAN: NO CLOAKED CONTACTS', 'MUD CAMOUFLAGE: NOT REQUIRED',
+      'FLUX CAPACITOR: FLUXING', 'POWER DRAW: 1.21 GIGAWATTS', 'PERIMETER FENCE: ONLINE', 'WATER GLASS: NO RIPPLES',
+      'GROUND VIBRATION: NONE // STAY ON THE ROCKS', 'NO WATER, NO BRIGHT LIGHT, NO SNACKS AFTER MIDNIGHT', 'SHIELDS AT 100%'];
+    let lastLine = '';
+    timers.push(setInterval(() => {
+      if (!mode || failed.length || mode === 3) return;
+      let line; do { const t = TECH(); line = Math.random() < .5 ? t[Math.floor(Math.random() * t.length)] : LORE[Math.floor(Math.random() * LORE.length)]; } while (line === lastLine);
+      lastLine = line; log(line);
+    }, 5000));
   };
 })();

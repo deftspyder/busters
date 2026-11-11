@@ -153,6 +153,12 @@ input.in{min-width:0}
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 13px;white-space:nowrap;cursor:pointer;font-size:13px}
 .chip.on{background:var(--cyan-soft);border-color:var(--cyan);color:var(--cyan)}
+.sched-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0}
+.in.sm,select.in.sm{width:auto;display:inline-block;padding:4px 8px;margin:2px 0}
+.sched-row .chips{flex-wrap:wrap}
+.schedup{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
+.schedup:first-child{border-top:0}
+.schedup .swhen{flex:0 0 7.5em;color:var(--cyan);font-weight:700;font-size:13px}
 .check{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer}
 .check input{width:20px;height:20px;accent-color:var(--cyan)}
 
@@ -1177,6 +1183,40 @@ function goalCard() {
 // Add Reactions, Create Public Threads, Send Messages in Threads.
 const DC_PERMS = '309237763136';
 const dcInvite = id => `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(id)}&scope=bot%20applications.commands&permissions=${DC_PERMS}`;
+// Events team: when the Busters bot posts each event's card. Every post is a bump (fresh card at the bottom,
+// older one removed), so each event only has one card in the channel.
+function scheduleCard(box) {
+  rpc('discord_schedule', { p_crew: S.crew.id }).then(d => {
+    const hr = h => h === 0 ? '12 AM' : h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h - 12) + ' PM';
+    const hrs = sel => Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${sel === h ? 'selected' : ''}>${hr(h)}</option>`).join('');
+    const opt = (vals, cur, lab) => vals.map(v => `<option value="${v}" ${cur === v ? 'selected' : ''}>${lab(v)}</option>`).join('');
+    const rd = new Set(d.remind_days || []);
+    const whenTxt = t => { if (!t) return 'Nothing planned'; const x = new Date(t), now = new Date(); if (x <= now) return 'Next run'; const days = Math.round((new Date(x.toDateString()) - new Date(now.toDateString())) / 864e5); return (days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : x.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) + ', ' + x.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+    box.innerHTML = `<h2>Discord posting schedule</h2><div class="card">
+      ${d.connected ? `<div class="small muted">Posts go to <b>#${esc(d.channel || 'the channel')}</b>. Each event keeps <b>one card</b>: every post below is a bump that puts a fresh card at the bottom and removes the old one. Between bumps the card's Going count updates by itself.</div>`
+        : '<div class="small" style="color:var(--warn)">The Busters bot isn\'t connected yet. A crew admin can connect it under Discord posts.</div>'}
+      <label class="check"><input type="checkbox" id="ds-new" ${d.post_new ? 'checked' : ''}><span>Post an event when it's added</span></label>
+      <div class="sched-row"><span>Reminder bumps</span><span class="chips" style="padding:0">${[14, 7, 3, 1].map(n => `<button class="chip ${rd.has(n) ? 'on' : ''}" data-rd="${n}">${n === 7 ? '1 week' : n === 14 ? '2 weeks' : n === 1 ? '1 day' : n + ' days'} before</button>`).join('')}</span></div>
+      <label class="check"><input type="checkbox" id="ds-last" ${d.last_call ? 'checked' : ''}><span>Last call 48 hours before</span></label>
+      <label class="check" style="align-items:flex-start"><input type="checkbox" id="ds-short" ${d.post_short ? 'checked' : ''}><span>When an event is short on Busters, start posting
+        <select class="in sm" id="ds-sdays">${opt([1, 2, 3, 5, 7, 14], d.short_days, v => v + (v === 1 ? ' day' : ' days'))}</select> ahead, then bump
+        <select class="in sm" id="ds-every">${opt([0, 4, 6, 8, 12, 24], d.short_every, v => v ? 'every ' + v + ' hours' : 'only once')}</select> until it's covered</span></label>
+      <div class="sched-row"><span>Quiet from</span><select class="in sm" id="ds-qf">${hrs(d.quiet_from)}</select><span>to</span><select class="in sm" id="ds-qt">${hrs(d.quiet_to)}</select><span class="tiny dim">no posts in between; they wait for morning</span></div>
+      <div class="sched-row"><span>At most</span><select class="in sm" id="ds-max">${opt([3, 4, 6, 8, 10, 12, 15], d.max_posts, v => v + ' posts')}</select><span>per event</span></div>
+      <button class="btn sm primary" id="ds-save" style="margin-top:8px">Save schedule</button>
+      <div class="gc-lbl" style="margin-top:16px">Coming up</div>
+      <div id="ds-up">${(d.upcoming || []).length ? d.upcoming.map(u => `<div class="schedup"><span class="swhen">${esc(whenTxt(u.due_at))}</span><span class="grow small"><b>${esc(u.title)}</b> <span class="muted">${esc(fmtDay(u.event_date))}</span><br><span class="muted">${u.label ? esc(u.label) : 'No more posts planned'}${u.card_at ? ' · card in channel' : ''}</span></span></div>`).join('') : '<div class="small muted">No upcoming events in the next few weeks.</div>'}</div>
+    </div>`;
+    box.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => b.classList.toggle('on'));
+    $('#ds-save', box).onclick = async () => {
+      const p = { post_new: $('#ds-new', box).checked, last_call: $('#ds-last', box).checked, post_short: $('#ds-short', box).checked,
+        short_days: Number($('#ds-sdays', box).value), short_every: Number($('#ds-every', box).value),
+        quiet_from: Number($('#ds-qf', box).value), quiet_to: Number($('#ds-qt', box).value), max_posts: Number($('#ds-max', box).value),
+        remind_days: [...box.querySelectorAll('[data-rd].on')].map(b => Number(b.dataset.rd)) };
+      try { await rpc('set_discord_schedule', { p_crew: S.crew.id, p }); toast('Schedule saved'); scheduleCard(box); } catch (_) { }
+    };
+  }).catch(() => { box.innerHTML = ''; });
+}
 function discordCard(d) {
   d = d || {};
   const ok = st => st >= 200 && st < 300;
@@ -1194,10 +1234,9 @@ function discordCard(d) {
       <button class="btn sm primary" id="dc-connect" style="margin-top:10px">Connect</button><div id="dc-msg" class="small" style="margin-top:6px"></div>`;
   return `<h2>Discord posts</h2><div class="card">${head}<div id="dc-link"></div><div id="dc-recent"></div>
     <hr style="border:0;border-top:1px solid var(--line, #222);margin:14px 0">
-    <label class="check"><input type="checkbox" id="dc-short" ${d.post_short !== false ? 'checked' : ''}><span>Nudge when an event is short on Busters, <select class="in" id="dc-days" style="width:auto;display:inline-block;padding:2px 6px">${[1, 2, 3, 5, 7, 14].map(n => `<option ${(d.short_days || 3) === n ? 'selected' : ''} value="${n}">${n} ${n === 1 ? 'day' : 'days'}</option>`).join('')}</select> ahead</span></label>
     <label class="check"><input type="checkbox" id="dc-changes" ${d.post_changes !== false ? 'checked' : ''}><span>Post what changed when an upcoming event is updated (times, date, places, parking, cancelled)</span></label>
     <label class="check" style="opacity:.55"><input type="checkbox" id="dc-photos" disabled ${d.post_photos ? 'checked' : ''}><span>Ask for photos and videos the day after an event <span class="tiny dim">(coming with Jeff's Dropbox drop)</span></span></label>
-    <div class="tiny dim" style="margin-top:6px">Posts go out between 9am and 9pm, once per event, and never ping @everyone. Editors can also post any event from its page.</div>
+    <div class="tiny dim" style="margin-top:6px">When and how often the bot posts is set under <b>Discord posting schedule</b> above. Posts never ping @everyone. Editors can also post any event from its page.</div>
     <button class="btn sm" id="dc-save" style="margin-top:10px">Save post settings</button>
   </div>`;
 }
@@ -1216,7 +1255,7 @@ function wireDiscord() {
   rpc('discord_settings', { p_crew: S.crew.id }).then(d => {
     box.innerHTML = discordCard(d);
     const on = (id, f) => { const el = $(id); if (el) el.onclick = f; };
-    on('#dc-save', async () => { try { await rpc('set_discord', { p_crew: S.crew.id, p_url: null, p_short: $('#dc-short').checked, p_days: Number($('#dc-days').value), p_photos: false }); await rpc('set_discord_changes', { p_crew: S.crew.id, p_on: $('#dc-changes').checked }); toast('Saved'); } catch (_) { } });
+    on('#dc-save', async () => { try { await rpc('set_discord', { p_crew: S.crew.id, p_url: null, p_short: null, p_days: null, p_photos: false }); await rpc('set_discord_changes', { p_crew: S.crew.id, p_on: $('#dc-changes').checked }); toast('Saved'); } catch (_) { } });
     on('#dc-connect', async () => {
       const tok = $('#dc-tok').value.trim(), ch = $('#dc-ch').value.trim();
       if (!tok) return toast('Paste the bot token first.');
@@ -1271,8 +1310,10 @@ function renderTeam(m) {
   m.innerHTML = `<div class="sec"><h2>Team ${ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
     <div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div></div>
     <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>
+    ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}
     ${can('crew_admin') ? adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div><div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`;
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
+  if ($('#dcsched')) scheduleCard($('#dcsched'));
   if ($('#donatecodes')) donateCodesCard($('#donatecodes'));
   const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
     const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
@@ -1489,7 +1530,7 @@ async function readQrPicture(file) {
 async function openPack() {
   // Make the sound engine right now, inside the tap, so phones let the pack hum start straight away.
   let audioCtx = null; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume().catch(() => {}); } catch (e) { /* no sound */ }
-  try { await loadScript('pack.js?v=21'); } catch (e) { if (audioCtx) audioCtx.close().catch(() => {}); return toast('Could not load the pack monitor. Check your connection.'); }
+  try { await loadScript('pack.js?v=22'); } catch (e) { if (audioCtx) audioCtx.close().catch(() => {}); return toast('Could not load the pack monitor. Check your connection.'); }
   try { window.openPackMonitor({ S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO, audioCtx }); } catch (e) { console.error(e); toast('The pack monitor hit an error: ' + e.message); }
 }
 
