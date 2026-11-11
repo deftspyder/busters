@@ -65,6 +65,7 @@ h2{font-size:26px}h3{font-size:20px}
 .tab.on:first-child::after{left:0}
 .tab.on::after{left:-1px;z-index:1;border-left:1px solid;border-color:rgba(255,190,120,.9);box-shadow:0 0 6px #ff9a3c,0 0 14px rgba(255,140,50,.55),inset 0 8px 10px -6px rgba(255,140,50,.5);clip-path:inset(-24px -24px 0 -24px)}
 .tab.on svg{filter:drop-shadow(0 0 3px var(--cyan)) drop-shadow(0 0 8px rgba(53,178,232,.7))}
+.chip .badge{background:var(--pink);color:#fff;border-radius:9px;font-size:10px;min-width:17px;height:17px;padding:0 4px;place-items:center;font-weight:700}
 .tab .badge{position:absolute;top:8px;left:calc(50% + 6px);background:var(--pink);color:#fff;border-radius:9px;font-size:10px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;font-weight:700}
 
 /* cards and rows */
@@ -511,7 +512,7 @@ async function loadAll() {
 async function refresh() { await loadAll(); render(); }
 
 /* ---------- shell ---------- */
-const TABS = [['home', 'Home'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Team']];
+const TABS = [['home', 'Home'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Admin']];
 function renderShell() {
   $('#app').innerHTML = `
     <header class="top"><div class="bar">
@@ -899,7 +900,7 @@ function renderBrief(m, e) {
     <div class="btns" style="margin-top:12px"><button class="btn primary" id="dc-go">Post it</button><button class="btn ghost" data-close>Not now</button></div>`, sh => {
     $('#dc-go', sh).onclick = async () => {
       const st = await rpc('discord_post_event', { p_event: e.id, p_note: $('#dc-note', sh).value });
-      closeSheet(); toast(st == null ? 'Discord is not connected yet (Team tab).' : st >= 200 && st < 300 ? 'Posted to Discord' : 'Discord said no (code ' + st + ')');
+      closeSheet(); toast(st == null ? 'Discord is not connected yet (Admin, then Crew).' : st >= 200 && st < 300 ? 'Posted to Discord' : 'Discord said no (code ' + st + ')');
     };
   });
   const ca = $('#cancel'); if (ca) ca.onclick = () => cancelEvent(e);
@@ -1299,19 +1300,34 @@ function renderTeam(m) {
   const unpublished = can('crew_admin') ? S.events.filter(e => e.status !== 'cancelled' && Number(e.raised) > 0 && !e.credit_published) : [];
   const proposals = can('manage_proposals') ? S.events.filter(e => e.status === 'proposed') : [];
   const item = (tag, title, sub, attrs, action) => `<div class="row" ${attrs}><div class="grow"><div class="small" style="color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;font-size:11px">${tag}</div><div class="t">${esc(title)}</div><div class="small muted">${sub}</div></div><span class="btn sm">${action}</span></div>`;
-  const todo = [
-    ...pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')),
-    ...unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')),
-    ...proposals.map(e => item('Proposed event', e.title, fmtDay(e.event_date) + ' · suggested by ' + esc(nameOf(personById(e.proposed_by))), `data-prop="${e.id}"`, 'Review')),
-    ...short.map(e => item('Short on Busters', e.title, `${fmtDay(e.event_date)} · ${e.going} of ${e.min_busters} minimum`, `data-ev="${e.id}"`, 'Open')),
-    ...limited.map(e => item('Pick who is In', e.title, `${fmtDay(e.event_date)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')),
-    ...incomplete.map(e => item('Details coming', e.title, `${fmtDay(e.event_date)} · needs ${esc(e.missing.join(', '))}`, `data-ev="${e.id}"`, 'Finish'))
-  ];
-  m.innerHTML = `<div class="sec"><h2>Team ${ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
-    <div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div></div>
-    <div class="sec">${todo.length ? todo.join('') : '<div class="empty">All clear. Nothing needs the team right now.</div>'}</div>
-    ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}
-    ${can('crew_admin') ? adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div><div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`;
+  // Admin: one dashboard per role, each person sees only the ones they've been given.
+  const isEv = ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'take_attendance'].some(can);
+  const dash = [
+    isEv && ['events', 'Events', proposals.length + short.length + limited.length + incomplete.length],
+    (can('approve_members') || can('manage_recruits')) && ['personnel', 'Personnel', pending.length],
+    can('webmaster') && ['media', 'Media', 0],
+    (can('crew_admin') || can('view_log')) && ['crew', 'Crew', unpublished.length]
+  ].filter(Boolean);
+  if (!dash.some(d => d[0] === S.adminTab)) S.adminTab = dash.length ? dash[0][0] : 'events';
+  const at = S.adminTab, list = xs => xs.length ? xs.join('') : '<div class="empty">All clear. Nothing waiting here.</div>';
+  const body = {
+    events: () => `<div class="sec">${list([...proposals.map(e => item('Proposed event', e.title, fmtDay(e.event_date) + ' · suggested by ' + esc(nameOf(personById(e.proposed_by))), `data-prop="${e.id}"`, 'Review')),
+        ...short.map(e => item('Short on Busters', e.title, `${fmtDay(e.event_date)} · ${e.going} of ${e.min_busters} minimum`, `data-ev="${e.id}"`, 'Open')),
+        ...limited.map(e => item('Pick who is In', e.title, `${fmtDay(e.event_date)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')),
+        ...incomplete.map(e => item('Details coming', e.title, `${fmtDay(e.event_date)} · needs ${esc(e.missing.join(', '))}`, `data-ev="${e.id}"`, 'Finish'))])}</div>
+      ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}`,
+    personnel: () => `<div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}</div>
+      <div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>
+      ${can('manage_recruits') ? '<div class="small muted">Contact details, dues and rookie dates are in the Personnel roster.</div>' : ''}`,
+    media: () => `<div class="sec"><div class="empty">Event photos and videos land here once Jeff's Dropbox drop is hooked up: past events, who has sent photos, reminders, and Mark complete.</div></div>`,
+    crew: () => `<div class="btns">${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div>
+      ${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
+        + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div><div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`
+  };
+  m.innerHTML = `<div class="sec"><h2>Admin ${at === 'events' && ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
+    ${dash.length > 1 ? `<div class="chips" id="adtabs" style="margin-top:8px">${dash.map(([k, l, n]) => `<button class="chip ${k === at ? 'on' : ''}" data-ad="${k}">${l}${n ? ` <b class="badge" style="position:static;display:inline-grid;margin-left:4px">${n}</b>` : ''}</button>`).join('')}</div>` : ''}</div>
+    ${dash.length ? body[at]() : '<div class="empty">Nothing here for you yet.</div>'}`;
+  m.querySelectorAll('[data-ad]').forEach(b => b.onclick = () => { S.adminTab = b.dataset.ad; renderTeam(m); scrollTo(0, 0); });
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
   if ($('#dcsched')) scheduleCard($('#dcsched'));
   if ($('#donatecodes')) donateCodesCard($('#donatecodes'));
@@ -1467,7 +1483,7 @@ const loadScript = src => new Promise((ok, no) => { if (document.querySelector(`
 const donateCodes = () => ((S.settings || {}).donate_codes || []).filter(c => c && (c.url || c.img));
 async function openQR() {
   const codes = donateCodes();
-  if (!codes.length) return sheet(`<h3>Donate QR codes</h3><p class="muted">No donation codes are set up yet.${can('crew_admin') ? ' Add them on the Team tab, under Donate QR codes.' : ' Ask a crew admin to add them.'}</p><button class="btn block" data-close>Close</button>`);
+  if (!codes.length) return sheet(`<h3>Donate QR codes</h3><p class="muted">No donation codes are set up yet.${can('crew_admin') ? ' Add them under Admin, then Crew, then Donate QR codes.' : ' Ask a crew admin to add them.'}</p><button class="btn block" data-close>Close</button>`);
   sheet(`<div class="qrhead"><h3>Scan to donate</h3><button class="iconbtn" data-close aria-label="Close">&#10005;</button></div>
     <div class="qrtrack" id="qrt">${codes.map((c, i) => `<div class="qrcard">
       <div class="qrbox" id="qrb${i}">${c.url ? '' : `<img src="${esc(c.img)}" alt="QR code for ${esc(c.label)}">`}</div>
