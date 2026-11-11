@@ -430,12 +430,12 @@ function renderGate(step = 'email', email = '') {
     <div class="card">
       ${step === 'email' ? `
         <h2>Sign in to Busters</h2>
-        <p class="muted small">Use the email the crew has for you. We'll send a sign-in link and a 6-digit code.</p>
+        <p class="muted small">Use the email the crew has for you. We'll send a sign-in link and a sign-in code.</p>
         <form id="f"><label class="f"><span>Email</span><input class="in" type="email" name="email" required autocomplete="email" value="${esc(email)}"></label>
         <button class="btn primary block" style="margin-top:14px">Send my link</button></form>` : `
         <h2>Check your email</h2>
         <p class="muted small">We sent a link to <b>${esc(email)}</b>. Tap it on this device, or type the code from the email here.</p>
-        <form id="f"><label class="f"><span>6-digit code</span><input class="in" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\\d{6}" required></label>
+        <form id="f"><label class="f"><span>Sign-in code</span><input class="in" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\\d{6}" required></label>
         <button class="btn primary block" style="margin-top:14px">Sign in</button></form>
         <button class="btn ghost block" id="again" style="margin-top:8px">Use a different email</button>`}
     </div>
@@ -450,7 +450,7 @@ function renderGate(step = 'email', email = '') {
       if (error) { toast(error.message); btn.disabled = false; return; }
       renderGate('code', em);
     } else {
-      const { error } = await sb.auth.verifyOtp({ email, token: e.target.code.value.trim(), type: 'email' });
+      const { error } = await sb.auth.verifyOtp({ email, token: e.target.code.value.replace(/\D/g, ""), type: 'email' });
       if (error) { toast('That code did not work. Try again or use the link.'); btn.disabled = false; }
     }
   };
