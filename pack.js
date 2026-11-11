@@ -56,6 +56,7 @@
   }
   const MODES = ['OFF', 'IDLE', 'STREAM ACTIVE', 'TOTAL FAILURE'];
   // Order systems fail in once the stream has been held past 8 seconds (cyclotron last, at 18 seconds).
+  const CASCADE_AT = 5; // the cascade warning waits until several systems have failed (about 11 s of firing)
   const FAIL_ORDER = ['heat', 'rib', 'nf', 'inj', 'flow', 'boost', 'ion', 'syn', 'ppd', 'crank', 'cell', 'stab', 'rpm'];
   const PH = ['#2f7d58', '#4dff9a', '#5fe3ff', '#ff5a3c']; // phosphor colour per mode
   const BOOT = ['KERNEL LINK ESTABLISHED', 'LOS ANGELES DIVISION AUTHENTICATED', 'CARBON CELL ONLINE', 'CYCLOTRON ROTATION NOMINAL',
@@ -349,7 +350,7 @@
       const b3 = $('#pkb3', el); if (b3) b3.textContent = ventTimer ? 'EMERGENCY VENT IN PROGRESS // DO NOT APPROACH' : 'RELEASE TRIGGER TO VENT';
       const bh = $('#pkbh', el); if (bh) bh.textContent = ventTimer ? 'EMERGENCY VENT' : 'ALERT // CONTAINMENT';
       const b1 = $('#pkb1', el); if (b1) b1.innerHTML = ventTimer ? 'VENTING IN PROGRESS' : '&#9888; IMMINENT<br>PACK FAILURE';
-      const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'EMERGENCY VENT' : 'TOTAL FAILURE') : firing ? (failed.length ? 'CASCADE FAILURE' : 'FIRING') : failed.length ? 'RECOVERING' : MODES[mode];
+      const m = $('#pkmode', el); if (m) m.textContent = mode === 3 ? (ventTimer ? 'EMERGENCY VENT' : 'TOTAL FAILURE') : firing ? (failed.length >= CASCADE_AT ? 'CASCADE FAILURE' : failed.length ? 'SYSTEM FAULT' : 'FIRING') : failed.length ? 'RECOVERING' : MODES[mode];
     }
 
     function log(t) { logLines.unshift({ t: clock() + '  ' + t, c: lineClass(t) }); logLines = logLines.slice(0, 60); renderLog(); }
@@ -379,7 +380,7 @@
         log('EMERGENCY VENT // STREAM LOCKED'); buzz([40, 40, 40]);
         ventEnd = performance.now() + 9000;
         ventTimer = setTimeout(() => { ventTimer = null; if (mode === 3) { mode = prevMode; log('VENT COMPLETE // CONTAINMENT STABLE'); log('OK: SAFE TO RETURN TO PACK'); tone(); paintButtons(); } }, 9000);
-      } else log(failed.length ? 'STREAM: CEASE FIRE // CASCADE HALTED' : 'STREAM: CEASE FIRE');
+      } else log(failed.length >= CASCADE_AT ? 'STREAM: CEASE FIRE // CASCADE HALTED' : failed.length ? 'STREAM: CEASE FIRE // FAULTS CLEARING' : 'STREAM: CEASE FIRE');
       lastRestore = performance.now(); tone(); paintButtons();
     }
     function heatCheck() {
@@ -388,7 +389,7 @@
         const held = now - fireStart;
         if (held > 8000) {
           const want = Math.min(FAIL_ORDER.length, 1 + Math.floor((held - 8000) / (10000 / FAIL_ORDER.length)));
-          while (failed.length < want) { const k = FAIL_ORDER[failed.length]; failed.push(k); log('FAILURE: ' + exName(k)); buzz(25); if (failed.length === 1) log('WARNING: CASCADE FAILURE IN PROGRESS'); paintButtons(); }
+          while (failed.length < want) { const k = FAIL_ORDER[failed.length]; failed.push(k); log('FAILURE: ' + exName(k)); buzz(25); if (failed.length === CASCADE_AT) log('WARNING: CASCADE FAILURE IN PROGRESS'); paintButtons(); }
         }
         if (held > 18000) { prevMode = mode; mode = 3; log('CRITICAL: TOTAL PACK FAILURE IMMINENT'); log('EMERGENCY PROCEDURE: STAND BACK 3 MILES UPWIND FROM PACK'); buzz([200, 80, 200, 80, 200]); tone(); paintButtons(); }
       }
