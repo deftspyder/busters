@@ -116,6 +116,11 @@
 .pk .boom .b1{color:#ffb199;font-size:clamp(14px,2.4vh,26px);letter-spacing:.14em}
 .pk .boom .b2{color:#fff;font-weight:700;font-size:clamp(34px,7vh,90px);line-height:1.05;letter-spacing:.06em;margin:1.2vh 0;text-shadow:0 0 12px #ff3b2f,0 0 30px #ff2a1a}
 .pk .boom .b4{color:#fff;font-weight:700;font-size:clamp(16px,3vh,36px);letter-spacing:.12em;margin:-.4vh 0 1.4vh;text-shadow:0 0 10px #ff3b2f}
+.pk .boom .b5{display:none;color:#ffcf66;font-size:clamp(12px,1.8vh,20px);letter-spacing:.2em;margin:.4vh 0 1.4vh}
+.pk.vent .boom .b5{display:block}
+.pk .boom .b5 b{display:block;color:#fff;font-weight:700;font-size:clamp(40px,8vh,100px);letter-spacing:.08em;line-height:1.1;text-shadow:0 0 12px #ffb000,0 0 28px #ff9a00}
+.pk .boom .b5 i{display:block;height:8px;border:1px solid #ffb000;border-radius:5px;margin-top:.8vh;overflow:hidden}
+.pk .boom .b5 u{display:block;height:100%;background:linear-gradient(90deg,#ff9a00,#ffd27a);box-shadow:0 0 10px #ffb000}
 .pk .boom .b3{color:#ffcf66;font-size:clamp(12px,1.8vh,20px);letter-spacing:.16em}
 .pk.vent .boom .b1{color:#ffcf66}.pk.vent .boom .bx{border-color:#ffb000;box-shadow:0 0 24px #ff9a00}
 .pk.crit .cb,.pk.vent .cb{position:relative;z-index:10}
@@ -251,7 +256,7 @@
         <div class="pn box" id="pk4"><h4>THROWER</h4>${rw('Heat Sink', 'heat', '\u00b0C')}${rw('Sync Gen', 'syn', 'MeV')}${rw('Ribbon', 'rib', 'Gb/s')}${rw('Containment', 'cont')}</div>
         <div class="lg box" id="pklg"></div><div class="lg2 box" id="pklg2"></div>
       </div>
-      <div class="boom"><div class="bx"><div class="b1">&#9888; IMMINENT PACK FAILURE &#9888;</div><div class="b2">STAND BACK<br>3 MILES</div><div class="b4">UPWIND FROM PACK</div><div class="b3" id="pkb3">RELEASE TRIGGER TO VENT</div></div></div>
+      <div class="boom"><div class="bx"><div class="b1">&#9888; IMMINENT PACK FAILURE &#9888;</div><div class="b2">STAND BACK<br>3 MILES</div><div class="b4">UPWIND FROM PACK</div><div class="b5" id="pkvc"></div><div class="b3" id="pkb3">RELEASE TRIGGER TO VENT</div></div></div>
       <div class="cb">
         <button id="b0">${mode ? 'PACK ON' : 'PACK OFF'}</button><button id="b1">IDLE</button><button id="b2">STREAM</button>
         <button id="bf" class="fire">FIRE</button><button id="ba">${audio ? 'SOUND ON' : 'SOUND'}</button><button id="bm">MORE</button></div>
@@ -313,7 +318,7 @@
     // Firing for more than 8 seconds overheats the pack (overload). Letting go vents it, then it settles back.
     // Firing: heat warning at 5 s, systems fail one after another from 8 s, total failure at 18 s.
     // Letting go stops the cascade; failed systems come back one by one (after a vent if it reached total failure).
-    let fireStart = 0, prevMode = 1, ventTimer = null, warned = false, failed = [], lastRestore = 0;
+    let fireStart = 0, prevMode = 1, ventTimer = null, ventEnd = 0, warned = false, failed = [], lastRestore = 0;
     const exName = k => (EX.find(x => x[0] === k) || [, , , k.toUpperCase()])[3];
     function startFire() {
       if (!mode || firing) return;
@@ -326,6 +331,7 @@
       firing = false;
       if (mode === 3) {
         log('EMERGENCY VENT // STREAM LOCKED'); buzz([40, 40, 40]);
+        ventEnd = performance.now() + 9000;
         ventTimer = setTimeout(() => { ventTimer = null; if (mode === 3) { mode = prevMode; log('VENT COMPLETE // CONTAINMENT STABLE'); tone(); paintButtons(); } }, 9000);
       } else log(failed.length ? 'STREAM: CEASE FIRE // CASCADE HALTED' : 'STREAM: CEASE FIRE');
       lastRestore = performance.now(); tone(); paintButtons();
@@ -394,6 +400,9 @@
     const t0 = performance.now(); let step = 0;
     function tick() {
       heatCheck();
+      const vc = $('#pkvc', el);
+      if (vc && ventTimer) { const left = Math.max(0, ventEnd - performance.now()), sec = Math.ceil(left / 1000);
+        vc.innerHTML = `VENT COMPLETE IN<b>00:${String(sec).padStart(2, '0')}</b><i><u style="width:${(100 * (1 - left / 9000)).toFixed(1)}%"></u></i>`; }
       const t = (performance.now() - t0) / 1000, seed = hash((person() || {}).id || 'x') % 97;
       const lvl = mode === 3 && ventTimer ? 2.3 : mode + (firing ? .6 : 0); // readings ease down while venting
       Object.entries(R).forEach(([k, r], i) => {
