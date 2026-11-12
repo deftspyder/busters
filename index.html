@@ -339,11 +339,15 @@ input.in{min-width:0}
 .adtabs{position:sticky;top:calc(66px + env(safe-area-inset-top));z-index:6;background:var(--bg);margin:0 calc(-1 * var(--pad));padding:8px var(--pad);border-bottom:1px solid var(--line)}
 /* personnel list */
 .prow{border:1px solid var(--line);background:var(--panel);border-radius:12px;margin-bottom:8px}
-.pline{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 6px}.pline>.grow{flex:1}
-.pdues{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);white-space:nowrap}
+.pgrid{display:grid;grid-template-columns:20px minmax(0,1fr) 72px 66px 36px;align-items:center;gap:6px;padding:8px 10px 8px 4px}
+.pgrid .ptags.pc-roles,.phead .pc-roles{display:none}.pgrid .pname{font-weight:600;overflow-wrap:anywhere;line-height:1.25}.pgrid .pill{font-size:11px;padding:1px 8px}
+.phead{padding:0 10px 4px 4px;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.pc-roles-m{margin-top:3px}
+@media (min-width:640px){.pgrid{grid-template-columns:28px minmax(0,1.3fr) 96px minmax(0,1.4fr) 96px 36px}.pgrid .ptags.pc-roles,.phead .pc-roles{display:flex}.pgrid .ptags.pc-roles-m{display:none}}
+.pill.na{color:var(--dim);border-color:var(--line)}
 .pexp{width:30px;height:30px;flex:0 0 30px;border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer;transition:transform .15s}.prow.open .pexp{transform:rotate(90deg);color:var(--cyan)}
 .ptags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:4px}.ptags .pill{font-size:11px;padding:1px 8px}
-.rtag{font-size:11px;border-radius:999px;padding:1px 8px;background:rgba(53,178,232,.12);color:var(--cyan)}.rtag.adm{background:rgba(255,140,120,.14);color:#ff8c78}
+.rtag{white-space:nowrap;font-size:11px;border-radius:999px;padding:1px 8px;background:rgba(53,178,232,.12);color:var(--cyan)}.rtag.adm{background:rgba(255,140,120,.14);color:#ff8c78}
 .pdet{border-top:1px solid var(--line);padding:10px 14px 12px;display:grid;gap:12px}
 @media (min-width:700px){.pdet{grid-template-columns:1fr 1fr 1fr}}
 .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0}.kv span{color:var(--muted);flex:0 0 auto}.kv b{font-weight:500;text-align:right;overflow-wrap:anywhere}
@@ -1130,7 +1134,7 @@ function renderMine(m) {
     <div class="sec">${myStats(past, hosp)}</div>
     <p class="tiny dim">Counts start from Busters sign-ups. Check-in attendance arrives in a later update.</p>
     <div class="sec"><h2>Coming up</h2>${mineUp.length ? mineUp.map(eventRow).join('') : '<div class="empty">Nothing yet. Answer Going on an event and it shows here.</div>'}</div>
-    <div class="sec"><h2>Dues</h2><div class="card">${Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span><span class="pill ${/paid|exempt/i.test(s) ? 'good' : 'warn'}">${esc(s)}</span></div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
+    <div class="sec"><h2>Dues</h2><div class="card">${Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span>${duesPill(s)}</div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
     <div class="sec"><h2>My details</h2><div class="card">
       <p class="muted small" style="margin-top:0">Only you, Personnel and the crew admin see these.</p>
       <form id="mf">
@@ -1727,7 +1731,11 @@ const hasRole = (p, r) => r[3].some(a => (p.abilities || []).includes(a));
 const fullRole = (p, r) => r[3].every(a => (p.abilities || []).includes(a));
 const roleTags = p => (p.abilities || []).includes('crew_admin') ? '<span class="rtag adm">Crew admin</span>'
   : ROLES.filter(r => r[0] !== 'admin' && fullRole(p, r)).map(r => `<span class="rtag">${r[1]}</span>`).join('');
-const duesPill = s => s ? `<span class="pill ${/^paid$|exempt/i.test(s) ? 'good' : /paid/i.test(s) ? 'cyan' : 'warn'}">${esc(s)}</span>` : '<span class="dim">none</span>';
+// Dues: N/A (nothing on record), Paid, Not paid, Grace (given a pass). Older saved values map in: "PAID in 2024" is
+// Paid; Exempt and Extension are Grace.
+const DUES = [['', 'N/A', ''], ['PAID', 'Paid', 'good'], ['UNPAID', 'Not paid', 'warn'], ['GRACE', 'Grace', 'cyan']];
+const duesKey = s => !s ? '' : /^paid/i.test(s) ? 'PAID' : /exempt|extension|grace/i.test(s) ? 'GRACE' : /unpaid|not paid/i.test(s) ? 'UNPAID' : s;
+const duesPill = s => { const k = duesKey(s), d = DUES.find(x => x[0] === k) || [k, s, '']; return k ? `<span class="pill ${d[2]}">${esc(d[1])}</span>` : '<span class="pill na">N/A</span>'; };
 
 async function personnelList(box) {
   try { rosterData = await rpc('personnel_roster', { p_crew: S.crew.id }); } catch (e) { box.innerHTML = '<div class="empty">The Personnel list could not load right now.</div>'; return; }
@@ -1754,10 +1762,13 @@ async function personnelList(box) {
     const q = rosterQ.toLowerCase();
     const rows = rosterData.filter(p => (rosterF === 'all' || (rosterF === 'current' ? ['active', 'rookie', 'pending'].includes(p.status) : p.status === rosterF)) &&
       (!q || [p.full_name, p.callsign, p.title, p.email, p.login_email, p.discord, p.phone, ...(p.aliases || [])].join(' ').toLowerCase().includes(q)));
-    $('#pl').innerHTML = rows.map(p => `<div class="prow${rosterOpen.has(p.id) ? ' open' : ''}" data-pr="${p.id}">
-        <div class="pline"><button class="pexp" data-px="${p.id}" aria-expanded="${rosterOpen.has(p.id)}" aria-label="Show details for ${esc(p.full_name)}">›</button>
-          <div class="grow" data-px="${p.id}" style="cursor:pointer;min-width:0"><div class="t ell">${esc(p.full_name)}</div>
-            <div class="ptags">${statusPill(p.status)}${roleTags(p)}<span class="pdues">${yr} dues ${duesPill(p.dues[yr])}</span></div></div>
+    $('#pl').innerHTML = (rows.length ? `<div class="pgrid phead"><span></span><span>Name</span><span>Status</span><span class="pc-roles">Roles</span><span>Dues ${yr}</span><span></span></div>` : '')
+      + rows.map(p => `<div class="prow${rosterOpen.has(p.id) ? ' open' : ''}" data-pr="${p.id}">
+        <div class="pgrid"><button class="pexp" data-px="${p.id}" aria-expanded="${rosterOpen.has(p.id)}" aria-label="Show details for ${esc(p.full_name)}">›</button>
+          <div data-px="${p.id}" style="cursor:pointer;min-width:0"><div class="pname">${esc(p.full_name)}</div>${roleTags(p) ? `<div class="ptags pc-roles-m">${roleTags(p)}</div>` : ''}</div>
+          <div>${statusPill(p.status)}</div>
+          <div class="ptags pc-roles">${roleTags(p) || '<span class="dim tiny">None</span>'}</div>
+          <div>${duesPill(p.dues[yr])}</div>
           <button class="xedit" data-pe="${p.id}" title="Edit" aria-label="Edit ${esc(p.full_name)}">${PEN}</button></div>
         ${rosterOpen.has(p.id) ? detail(p) : ''}</div>`).join('') || '<div class="empty">Nobody matches.</div>';
     $('#pcnt').textContent = rows.length + ' shown';
@@ -1800,7 +1811,7 @@ function editPerson(p, after) {
       <label class="f"><span>Role in crew</span><input class="in" name="title" value="${v('title')}" placeholder="Buster, Quartermaster..."></label>
       <div class="grid2"><label class="f"><span>Member since</span><input class="in" type="date" name="member_since" value="${v('member_since')}"></label><label class="f"><span>Rookie since</span><input class="in" type="date" name="rookie_since" value="${v('rookie_since')}"></label></div>
       <label class="f"><span>Member eligible</span><input class="in" type="date" name="eligible_date" value="${v('eligible_date')}"></label>
-      ${isNew ? '' : `<div class="gc-lbl" style="margin-top:14px">Dues</div><div class="grid2">${[yr - 1, yr].map(y => `<label class="f"><span>${y}</span><select class="in" data-dues="${y}">${['', 'PAID', 'EXEMPT', 'EXTENSION', 'UNPAID'].concat(p.dues[y] && !['PAID', 'EXEMPT', 'EXTENSION', 'UNPAID'].includes(p.dues[y]) ? [p.dues[y]] : []).map(o => `<option value="${o}" ${(p.dues[y] || '') === o ? 'selected' : ''}>${o || 'Not set'}</option>`).join('')}</select></label>`).join('')}</div>`}
+      ${isNew ? '' : `<div class="gc-lbl" style="margin-top:14px">Dues <span class="tiny dim" style="text-transform:none;letter-spacing:0">Grace: given a pass</span></div><div class="grid2">${[yr - 1, yr].map(y => `<label class="f"><span>${y}</span><select class="in" data-dues="${y}">${DUES.map(([k, l]) => `<option value="${k}" ${duesKey(p.dues[y]) === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div>`}
       <div class="btns" style="margin-top:16px"><button class="btn primary">Save</button><button type="button" class="btn ghost" data-close>Cancel</button></div>
     </form>`, s => {
     let st = p.status;
@@ -1838,7 +1849,7 @@ function editPerson(p, after) {
 async function exportRoster() {
   const yr = +todayISO().slice(0, 4);
   const cols = ['Name', 'Callsign', 'Role in crew', 'Status', 'Roles', 'Member since', 'Email', 'Sign-in email', 'Phone', 'Discord', 'Nicknames', 'Instagram', 'Birthday', `${yr - 1} dues`, `${yr} dues`, `Events in ${yr}`, 'Rookie since', 'Eligible date'];
-  const rows = rosterData.map(p => [p.full_name, p.callsign, p.title, (STATUS.find(t => t[0] === p.status) || [0, p.status])[1], (p.abilities || []).includes('crew_admin') ? 'Crew admin' : ROLES.filter(r => r[0] !== 'admin' && fullRole(p, r)).map(r => r[1]).join(', '), p.member_since, p.email, p.login_email, p.phone, p.discord, (p.aliases || []).join(', '), p.instagram, p.birthday, p.dues[yr - 1], p.dues[yr], p.events_year, p.rookie_since, p.eligible_date]);
+  const rows = rosterData.map(p => [p.full_name, p.callsign, p.title, (STATUS.find(t => t[0] === p.status) || [0, p.status])[1], (p.abilities || []).includes('crew_admin') ? 'Crew admin' : ROLES.filter(r => r[0] !== 'admin' && fullRole(p, r)).map(r => r[1]).join(', '), p.member_since, p.email, p.login_email, p.phone, p.discord, (p.aliases || []).join(', '), p.instagram, p.birthday, ...[yr - 1, yr].map(y => (DUES.find(d => d[0] === duesKey(p.dues[y])) || [0, p.dues[y]])[1]), p.events_year, p.rookie_since, p.eligible_date]);
   const cell = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) || /^[=+\-@]/.test(s) ? '"' + (/^[=+\-@]/.test(s) ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
   const csv = [cols, ...rows].map(r => r.map(cell).join(',')).join('\r\n');
   await rpc('log_export', { p_crew: S.crew.id, p_what: 'the Personnel roster (' + rows.length + ' people)' });
