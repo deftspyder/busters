@@ -324,6 +324,10 @@ input.in{min-width:0}
 .menuitem{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink);text-decoration:none}
 .menuitem:last-child{border-bottom:0}
 .menuitem .grow{flex:1}
+.scrim.drop{align-items:flex-start;justify-content:flex-end;padding:calc(env(safe-area-inset-top) + 62px) 8px 8px;background:rgba(0,0,0,.45)}
+.scrim.drop .sheet{width:min(360px,100%);max-height:calc(100dvh - 80px);border-radius:16px;padding:14px var(--pad);box-shadow:0 14px 40px rgba(0,0,0,.6);animation:dropIn .14s ease-out;transform-origin:top right}
+@media (min-width:776px){.scrim.drop{padding-right:calc((100vw - 760px) / 2 + 8px)}}
+@keyframes dropIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
 .menu-r{text-align:right}
 .menu-r .menuitem .grow{text-align:right}
 
@@ -1661,7 +1665,7 @@ async function openPack() {
 
 /* ---------- profile and menu ---------- */
 function openProfile() {
-  sheet(`<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:48px;height:48px;cursor:default">${esc(initials(S.me.full_name))}</div><div><b>${esc(S.me.full_name)}</b><div class="small muted">${esc((S.session.user || {}).email || '')}</div></div></div>
+  dropdown(`<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:48px;height:48px;cursor:default">${esc(initials(S.me.full_name))}</div><div><b>${esc(S.me.full_name)}</b><div class="small muted">${esc((S.session.user || {}).email || '')}</div></div></div>
     <a class="menuitem" id="pm-me"><span class="grow">My Busters<div class="small muted">Your events, stats, dues and details</div></span><span class="muted">›</span></a>
     <div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>
     <a class="menuitem" id="pm-alerts"><span class="grow">Alerts<div class="small muted">Short-staffed events and last calls</div></span><span class="muted">›</span></a>
@@ -1744,7 +1748,7 @@ async function openAlerts() {
   });
 }
 function openMenu() {
-  sheet(`<div class="menu-r"><img src="img/emblem.png" alt="" style="width:70px;margin:0 auto 8px">
+  dropdown(`<div class="menu-r"><img src="img/emblem.png" alt="" style="width:70px;margin:0 auto 8px">
     <a class="menuitem" href="https://www.losangelesgb.com/" target="_blank" rel="noopener"><span class="grow">About LAGB</span><span class="muted">↗</span></a>
     <a class="menuitem" id="pp"><span class="grow">Proton pack monitor<div class="small muted">In-world pack diagnostics, assigned to a Buster</div></span><span class="muted">›</span></a>
     <a class="menuitem" id="how"><span class="grow">How to use Busters</span><span class="muted">›</span></a>
@@ -1770,15 +1774,17 @@ function openMenu() {
 
 /* ---------- sheets ---------- */
 let onSheetClose = null;
-function sheet(html, wire, onClose) {
+function sheet(html, wire, onClose, drop) {
   onSheetClose = onClose || null;
-  $('#layer').innerHTML = `<div class="scrim"><div class="sheet" role="dialog"><div class="grab"></div>${html}</div></div>`;
+  $('#layer').innerHTML = `<div class="scrim${drop ? ' drop' : ''}"><div class="sheet" role="dialog">${drop ? '' : '<div class="grab"></div>'}${html}</div></div>`;
   const s = $('#layer .sheet');
   $('#layer .scrim').onclick = e => { if (e.target.classList.contains('scrim')) closeSheet(); };
   s.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheet);
   if (wire) wire(s);
 }
 function closeSheet() { $('#layer').innerHTML = ''; const f = onSheetClose; onSheetClose = null; if (f) f(); }
+// Header menus (profile, main menu) drop down from the top right instead of rising from the bottom.
+const dropdown = (html, wire) => sheet(html, wire, null, true);
 const confirmBox = msg => window.confirm(msg);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
