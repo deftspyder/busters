@@ -1519,7 +1519,8 @@ function scheduleCard(box) {
       <div class="sched-row"><span>Quiet from</span><select class="in sm" id="ds-qf">${hrs(d.quiet_from)}</select><span>to</span><select class="in sm" id="ds-qt">${hrs(d.quiet_to)}</select><span class="tiny dim">no posts in between; they wait for morning</span></div>
       <div class="sched-row"><span>At most</span><select class="in sm" id="ds-max">${opt([3, 4, 6, 8, 10, 12, 15], d.max_posts, v => v + ' posts')}</select><span>per event</span></div>
       <button class="btn sm primary" id="ds-save" style="margin-top:8px">Save schedule</button>
-      <div class="gc-lbl" style="margin-top:16px">Coming up</div>
+      <div class="gc-lbl" style="margin-top:16px">Next Discord posts</div>
+      <div class="tiny dim" style="margin:2px 0 4px">When the next card for each event goes out. The event's own date is next to its name.</div>
       <div id="ds-up">${(d.upcoming || []).length ? d.upcoming.map(u => `<div class="schedup"><span class="swhen">${esc(whenTxt(u.due_at))}</span><span class="grow small"><b>${esc(u.title)}</b> <span class="muted">${esc(fmtDay(u.event_date))}</span><br><span class="muted">${u.label ? esc(u.label) : 'No more posts planned'}${u.card_at ? ' · card in channel' : ''}</span></span></div>`).join('') : '<div class="small muted">No upcoming events in the next few weeks.</div>'}</div>
     </div>`;
     box.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => b.classList.toggle('on'));
