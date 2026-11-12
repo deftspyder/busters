@@ -1147,7 +1147,7 @@ function editEvent(e, propose = false) {
   show(m => {
     m.innerHTML = `<button class="back" id="bk">${ICON.back} ${isNew ? 'Events' : 'Back to brief'}</button>
       <h2 style="font-size:30px">${propose ? 'Suggest an event' : isNew ? 'New event' : 'Edit event'}</h2>
-      <p class="muted small eintro">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, start and wrap times, minimum and goal are in.'}</p>
+      <p class="muted small eintro">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, and start and wrap times are in.'}</p>
       ${(() => { const gaps = (e.missing_all || e.missing || []).filter(x => x !== 'Date');
         return !isNew && !propose && gaps.length ? `<label class="check okbox eintro"><input type="checkbox" id="eok" ${e.details_ok ? 'checked' : ''}><span><b>Approve without the rest</b><br><span class="small muted">This event doesn't need ${esc(gaps.join(', '))}. It stops showing as needing details.${e.date_tbd ? ' The date is still needed.' : ''}</span></span></label>` : ''; })()}
       <form id="ef" class="eform"><div class="ecol">
