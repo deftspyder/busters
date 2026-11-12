@@ -1632,10 +1632,10 @@ function renderTeam(m) {
       ${can('manage_recruits') ? '<div class="small muted">Contact details, dues and rookie dates are in the Personnel roster.</div>' : ''}`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
     // App admin only: how Busters itself is wired up (accounts and keys), not day-to-day crew work.
-    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div>`,
+    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
     crew: () => `<div class="btns">${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div>
       ${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
-        + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div><div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`
+        + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div>' : ''}`
   };
   m.innerHTML = `<div class="sec"><h2>Admin ${at === 'events' && ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
     ${dash.length > 1 ? `<div class="chips" id="adtabs" style="margin-top:8px">${dash.map(([k, l, n]) => `<button class="chip ${k === at ? 'on' : ''}" data-ad="${k}">${l}${n ? ` <b class="badge" style="position:static;display:inline-grid;margin-left:4px">${n}</b>` : ''}</button>`).join('')}</div>` : ''}</div>
@@ -1653,13 +1653,13 @@ function renderTeam(m) {
     await rpc('set_giveback_goal', { p_crew: S.crew.id, p_goal: goal, p_last_total: last, p_ends: $('#gb-ends').value || null });
     await refresh(); toast('Goal saved');
   };
-  if (can('crew_admin')) rpc('bridge_status', { p_crew: S.crew.id }).then(b => {
+  if ($('#bridge')) rpc('bridge_status', { p_crew: S.crew.id }).then(b => {
     if (!b || !$('#bridge')) return;
     const ago = x => x ? Math.round((Date.now() - new Date(x.at)) / 60000) : null;
     const line = (label, x, okMin) => `<div>${label}: ${x ? `<span class="${ago(x) > okMin ? 'muted' : ''}">${ago(x) < 60 ? ago(x) + ' min ago' : Math.round(ago(x) / 60) + ' h ago'}</span> <span class="dim">(${esc(x.summary)})</span>` : '<span class="muted">not connected yet</span>'}</div>`;
-    $('#bridge').innerHTML = line('Google Calendar sync', b.calendar, 20) + line('Sheet sync', b.sheet, 130);
+    $('#bridge').innerHTML = '<h2>Google bridge</h2>' + line('Google Calendar sync', b.calendar, 20) + line('Sheet sync', b.sheet, 130);
   }).catch(() => {});
-  if (can('crew_admin')) wireDiscord();
+  wireDiscord();
   const ro = $('#roster'); if (ro) ro.onclick = () => show(renderRoster);
   const lg = $('#log'); if (lg) lg.onclick = () => show(renderLog);
   wireRows(m);
