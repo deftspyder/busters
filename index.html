@@ -365,8 +365,9 @@ input.in{min-width:0}
 .rchip button{width:20px;height:20px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:11px}.rchip button:hover{color:var(--bad)}
 /* date TBD and month dividers */
 .datebox.tbd .d{font-size:20px;letter-spacing:.04em;color:var(--warn)}.datebox.tbd .w{opacity:.7}
-.mdiv{display:flex;align-items:center;gap:10px;margin:14px 0 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
-.mdiv::after{content:'';flex:1;height:1px;background:var(--line)}
+.mdiv{display:flex;align-items:center;gap:12px;margin:16px 0 8px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+.mdiv::before,.mdiv::after{content:'';flex:1;height:1px;background:var(--line)}
+.prow+.mdiv,.row+.mdiv,.xrow+.mdiv{margin-top:16px}.mdiv+.row,.mdiv+.xrow,.mdiv+.prow{margin-top:0}
 .mdiv:first-child{margin-top:2px}
 .tbdck{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px;font-weight:400;text-transform:none;letter-spacing:0}
 /* chat */
@@ -734,6 +735,14 @@ const isWaiting = e => e.status === 'scheduled' && (e.end_date || e.event_date) 
 const dateBox = (e, cls = '') => e.date_tbd
   ? `<div class="datebox tbd ${cls}"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">TBD</div><div class="w">date</div></div>`
   : `<div class="datebox ${cls}"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${parseDay(e.event_date).getDate()}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>`;
+// Any dated list gets a month divider line (──── DECEMBER ────) where the month changes, so date-TBD events sit
+// under their month and long lists have some shape. dateOf returns a YYYY-MM-DD date (or nothing for no divider).
+function byMonth(items, dateOf, render) {
+  let mon = '';
+  return items.map(x => { const d = dateOf(x) || ''; const k = d.slice(0, 7); let div = '';
+    if (k && k !== mon) { div = `<div class="mdiv"><span>${fmtDay(k + '-01', { month: 'long' })}${k.slice(0, 4) !== todayISO().slice(0, 4) ? ' ' + k.slice(0, 4) : ''}</span></div>`; mon = k; }
+    return div + render(x); }).join('');
+}
 const whenText = e => e.date_tbd ? fmtDay(e.event_date, { month: 'long', year: 'numeric' }) + ', date TBD' : fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric' });
 function eventRow(e) {
   const pls = placesFor(e.id); const p1 = pls[0]; const where = p1 ? p1.place.name : '';
@@ -889,9 +898,7 @@ function fillList() {
   const box = $('#list'); if (!box) return;
   if (S.evMode === 'cal') return renderCal(box);
   const list = filtered();
-  // Month divider lines between months, so date-TBD events sit under their month.
-  let mon = '';
-  box.innerHTML = list.length ? list.map(e => { const k = e.event_date.slice(0, 7); const div = k !== mon ? `<div class="mdiv"><span>${fmtDay(k + '-01', { month: 'long' })}${k.slice(0, 4) !== todayISO().slice(0, 4) ? ' ' + k.slice(0, 4) : ''}</span></div>` : ''; mon = k; return div + eventRow(e); }).join('') : '<div class="empty">No events here.</div>';
+  box.innerHTML = list.length ? byMonth(list, e => e.event_date, eventRow) : '<div class="empty">No events here.</div>';
   wireRows(box);
 }
 function renderCal(box) {
@@ -1203,7 +1210,7 @@ function renderMine(m) {
       ${me.callsign || me.title ? `<div class="muted small">${esc([me.callsign, me.title].filter(Boolean).join(' · '))}</div>` : ''}</div>
     <div class="sec">${myStats(past, hosp)}</div>
     <p class="tiny dim">Counts start from Busters sign-ups. Check-in attendance arrives in a later update.</p>
-    <div class="sec"><h2>Coming up</h2>${mineUp.length ? mineUp.map(eventRow).join('') : '<div class="empty">Nothing yet. Answer Going on an event and it shows here.</div>'}</div>
+    <div class="sec"><h2>Coming up</h2>${mineUp.length ? byMonth(mineUp, e => e.event_date, eventRow) : '<div class="empty">Nothing yet. Answer Going on an event and it shows here.</div>'}</div>
     <div class="sec"><h2>Dues</h2><div class="card">${Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span>${duesPill(s)}</div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
     <div class="sec"><h2>My details</h2><div class="card">
       <p class="muted small" style="margin-top:0">Only you, Personnel and the crew admin see these.</p>
@@ -1294,8 +1301,8 @@ function renderChat(m) {
   const { up, past } = chatEventList();
   m.innerHTML = `<div class="sec"><h2>Chat</h2><p class="small muted" style="margin:2px 0 12px">The same conversations as the ${esc(S.crew.short)} Discord. Write here or there and everyone sees it.</p>
     ${S.chat.err && !L.length ? `<div class="card small">Chat couldn't load: ${esc(S.chat.err)}</div>` : row(byCh.get('crew'), null)}
-    ${up.length ? `<div class="chlbl">Your events</div>${up.map(e => row(byCh.get(e.id), e)).join('')}` : ''}
-    ${past.length ? `<div class="chlbl">Recent</div>${past.map(e => row(byCh.get(e.id), e)).join('')}` : ''}
+    ${up.length ? `<div class="chlbl">Your events</div>${byMonth(up, e => e.event_date, e => row(byCh.get(e.id), e))}` : ''}
+    ${past.length ? `<div class="chlbl">Recent</div>${byMonth(past, e => e.event_date, e => row(byCh.get(e.id), e))}` : ''}
     ${!up.length && !past.length ? '<p class="small muted" style="margin-top:14px">Say Going or Maybe on an event and its chat shows up here.</p>' : ''}</div><div style="height:30px"></div>`;
   m.querySelectorAll('[data-chat]').forEach(a => a.onclick = ev => { ev.preventDefault(); openChat(a.dataset.chat || null); });
   chatRefresh();
@@ -1544,7 +1551,7 @@ function scheduleCard(box) {
         : '<div class="small" style="color:var(--warn)">The Busters bot isn\'t connected yet. A crew admin can connect it under Discord posts.</div>'}
       <h2 style="margin-top:18px">Next Discord posts</h2>
       <div class="tiny dim" style="margin:-4px 0 8px">The date box is the day the post goes out.</div>
-      ${(d.upcoming || []).length ? d.upcoming.map(tile).join('') : '<div class="empty">No upcoming events in the next few weeks.</div>'}`;
+      ${(d.upcoming || []).length ? byMonth(d.upcoming, u => u.due_at && new Date(u.due_at).toLocaleDateString('en-CA'), tile) : '<div class="empty">No upcoming events in the next few weeks.</div>'}`;
     $('#ds-gear', box).onclick = () => sheet(`<h2>Posting settings</h2>
       <label class="check"><input type="checkbox" id="ds-new" ${d.post_new ? 'checked' : ''}><span>Post an event when it's added</span></label>
       <div class="sched-row"><span>Reminder bumps</span><span class="chips" style="padding:0">${[14, 7, 3, 1].map(n => `<button class="chip ${rd.has(n) ? 'on' : ''}" data-rd="${n}">${n === 7 ? '1 week' : n === 14 ? '2 weeks' : n === 1 ? '1 day' : n + ' days'} before</button>`).join('')}</span></div>
@@ -1685,20 +1692,20 @@ function mediaCard(box, part = 'events') {
     // Upcoming: when each event's thread (and Drive folder) will be made. Threads come with the first Discord card.
     const what = g.connected ? 'Thread and folder' : 'Thread';
     const when = t => new Date(t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const up = (d.upcoming || []).map(e => {
+    const up = byMonth(d.upcoming || [], e => e.event_date, e => {
       const st = e.has_thread && (e.has_folder || !g.connected) ? `✅ ${what} ready`
         : e.has_thread ? 'Thread ready, folder within 15 minutes'
         : e.date_tbd ? `${what} once the date is set`
         : e.thread_due ? `${what} about ${when(e.thread_due)}`
         : `${what} with its first Discord post`;
       return `<div class="prow"><div class="pgrid mgrid up"><span></span><div style="min-width:0"><div class="pname">${esc(e.title)}</div><div class="tiny muted">${e.date_tbd ? esc(whenText(e)) : day(e.event_date)}</div></div><div class="small muted">${st}</div></div></div>`;
-    }).join('');
+    });
     box.innerHTML = part === 'setup'
       ? `<h2>Photo storage</h2>${conn}${keys}${gdrive}${gkeys}`
       : `<h2>Media collection management</h2>
          <div class="small muted" style="margin-bottom:8px">${d.connected ? 'The morning after an event, Busters posts a photo call in its Discord thread. Tap an event to see who has sent photos and to manage it.' : 'Photo calls start once photo storage is set up.'}</div>
-         <h3 class="msub">Collecting now</h3>${open.length ? head + open.map(row).join('') : '<div class="empty">No photo collections open right now.</div>'}
-         ${done.length ? `<button class="btn sm ghost" id="m-done" style="margin:4px 0 0">${mediaShowDone ? 'Hide' : 'Show'} completed (${done.length})</button>${mediaShowDone ? '<div style="margin-top:8px">' + head + done.map(row).join('') + '</div>' : ''}` : ''}
+         <h3 class="msub">Collecting now</h3>${open.length ? head + byMonth(open, e => e.event_date, row) : '<div class="empty">No photo collections open right now.</div>'}
+         ${done.length ? `<button class="btn sm ghost" id="m-done" style="margin:4px 0 0">${mediaShowDone ? 'Hide' : 'Show'} completed (${done.length})</button>${mediaShowDone ? '<div style="margin-top:8px">' + head + byMonth(done, e => e.event_date, row) + '</div>' : ''}` : ''}
          <h3 class="msub">Upcoming</h3>${up || '<div class="empty">No upcoming events.</div>'}`;
     const gs = $('#gk-save'); if (gs) gs.onclick = async () => { await rpc('media_set_google_app', { p_crew: S.crew.id, p_id: $('#gk-id').value, p_secret: $('#gk-sec').value }); toast('Google keys saved'); mediaCard(box, part); };
     const gl = $('#g-link'); if (gl) gl.onclick = async () => { const url = await rpc('media_google_link', { p_crew: S.crew.id }); try { await navigator.clipboard.writeText(url); toast('Connect link copied. It works once, for 7 days.'); } catch (e) { prompt('Connect link', url); } mediaCard(box, part); };
