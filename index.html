@@ -335,6 +335,9 @@ input.in{min-width:0}
 .fab:active{transform:scale(.95)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom));background:var(--ink);color:#000;padding:10px 16px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw}
 
+/* roles */
+.rchips{display:flex;flex-wrap:wrap;gap:6px}.rchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:3px 4px 3px 10px;font-size:13px}
+.rchip button{width:20px;height:20px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:11px}.rchip button:hover{color:var(--bad)}
 /* chat */
 .chlbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
 .chrow .chav,.chav{width:52px;height:52px;flex:0 0 52px;border-radius:10px;background:var(--panel2);display:grid;place-items:center}.chav img{width:40px}
@@ -1640,7 +1643,7 @@ function renderTeam(m) {
       ${can('manage_recruits') ? '<div class="small muted">Contact details, dues and rookie dates are in the Personnel roster.</div>' : ''}`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
     // App admin only: how Busters itself is wired up (accounts and keys), not day-to-day crew work.
-    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
+    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="sec" id="roles"></div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
     crew: () => `<div class="btns">${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div>
       ${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
         + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div>' : ''}`
@@ -1653,6 +1656,7 @@ function renderTeam(m) {
   if ($('#dcsched')) scheduleCard($('#dcsched'));
   if ($('#mediabox')) mediaCard($('#mediabox'));
   if ($('#mediasetup')) mediaCard($('#mediasetup'), 'setup');
+  if ($('#roles')) rolesCard($('#roles'));
   if ($('#donatecodes')) donateCodesCard($('#donatecodes'));
   const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
     const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
@@ -1673,6 +1677,38 @@ function renderTeam(m) {
   wireRows(m);
   m.querySelectorAll('[data-join]').forEach(r => r.onclick = () => reviewJoin(personById(r.dataset.join)));
   m.querySelectorAll('[data-prop]').forEach(r => r.onclick = () => reviewProposal(S.events.find(e => e.id === r.dataset.prop)));
+}
+// App admin: who holds each role. A role is a bundle of abilities that opens one Admin section; fine-tune single
+// abilities from a Buster's profile (pencil).
+const ROLES = [
+  ['events', 'Events team', 'Admin, then Events: add and edit events, proposals, picking who is In, attendance, point of contact', ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'poc', 'take_attendance']],
+  ['personnel', 'Personnel', 'Admin, then Personnel: approve new members, roster, contact details, dues and rookies', ['approve_members', 'manage_recruits']],
+  ['media', 'Media', 'Admin, then Media: the event photo tracker', ['webmaster']],
+  ['log', 'Action log', 'See who did what', ['view_log']],
+  ['abilities', 'Manage abilities', "Change other Busters' abilities from their profile", ['manage_abilities']],
+  ['admin', 'Crew admin', 'Everything, including Fundraising and announcements', ['crew_admin']]
+];
+function rolesCard(box) {
+  const members = S.people.filter(p => ['active', 'rookie'].includes(p.status)).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+  const has = (p, r) => r[3].some(a => (p.abilities || []).includes(a));
+  const full = (p, r) => r[3].every(a => (p.abilities || []).includes(a));
+  box.innerHTML = `<h2>Roles</h2><div class="small muted" style="margin:-2px 0 8px">Who can open each Admin section. Fine-tune single abilities from a Buster's profile.</div>
+    ${ROLES.map(r => { const who = members.filter(p => has(p, r)); return `<div class="card" style="margin-top:8px">
+      <div style="display:flex;align-items:baseline;gap:8px"><b>${r[1]}</b><span class="tiny dim">${who.length}</span></div>
+      <div class="tiny muted" style="margin:2px 0 8px">${esc(r[2])}</div>
+      <div class="rchips">${who.map(p => `<span class="rchip">${esc(nameOf(p))}${full(p, r) ? '' : ' <span class="dim" title="Has only some of these abilities">(some)</span>'}<button data-rrm="${r[0]}" data-p="${p.id}" aria-label="Remove ${esc(nameOf(p))} from ${r[1]}">✕</button></span>`).join('') || '<span class="tiny dim">Nobody yet</span>'}</div>
+      <select class="in" data-radd="${r[0]}" style="margin-top:8px"><option value="">+ Add someone</option>${members.filter(p => !full(p, r)).map(p => `<option value="${p.id}">${esc(nameOf(p))}</option>`).join('')}</select></div>`; }).join('')}`;
+  const save = async (p, list, msg) => { try { await rpc('set_abilities', { p_person: p.id, p_abilities: list }); } catch (e) { return; } p.abilities = list; toast(msg); rolesCard(box); };
+  box.querySelectorAll('[data-radd]').forEach(sel => sel.onchange = () => {
+    const r = ROLES.find(x => x[0] === sel.dataset.radd), p = personById(sel.value); if (!p) return;
+    save(p, [...new Set([...(p.abilities || []), ...r[3]])], `${nameOf(p)} added to ${r[1]}`);
+  });
+  box.querySelectorAll('[data-rrm]').forEach(b => b.onclick = () => {
+    const r = ROLES.find(x => x[0] === b.dataset.rrm), p = personById(b.dataset.p);
+    if (p.id === S.me.id && r[0] === 'admin' && !confirmBox('Remove your own crew admin? You stay an app admin, so you keep access.')) return;
+    if (!confirmBox(`Remove ${nameOf(p)} from ${r[1]}?`)) return;
+    save(p, (p.abilities || []).filter(a => !r[3].includes(a)), `${nameOf(p)} removed from ${r[1]}`);
+  });
 }
 function reviewJoin(p) {
   sheet(`<h3>${esc(p.full_name)} wants to join</h3><p class="muted small">Approve with a starting preset. You can fine-tune abilities later from Crew.</p>
