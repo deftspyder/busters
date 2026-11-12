@@ -34,3 +34,36 @@ begin
   return n;
 end $$;
 revoke all on function public.dc_thread_sync() from public, anon, authenticated;
+
+-- Thread intro: just the title, date and main place (no details card).
+create or replace function public.dc_ensure_thread(p_event uuid) returns text
+language plpgsql security definer set search_path = '' as $$
+declare e public.events; d public.crew_discord; t text; r jsonb; who text; ids jsonb; place text;
+begin
+  select thread_id into t from public.discord_threads where event_id = p_event;
+  if t is not null then return t; end if;
+  select * into e from public.events where id = p_event;
+  select * into d from public.crew_discord where crew_id = e.crew_id;
+  if e.id is null or not coalesce(d.post_threads, true) or d.bot_token is null or d.channel_id is null then return null; end if;
+  r := public.dc_http_json(e.crew_id, 'POST', '/channels/' || d.channel_id || '/threads', jsonb_build_object(
+    'name', left(e.title, 80) || ' · ' || to_char(e.event_date, 'FMDy Mon FMDD'), 'type', 11, 'auto_archive_duration', 10080));
+  if (r->>'status')::int not between 200 and 299 then return null; end if;
+  t := r->'body'->>'id';
+  insert into public.discord_threads (event_id, crew_id, thread_id) values (p_event, e.crew_id, t) on conflict (event_id) do nothing;
+  select coalesce(nullif(pl.name, ''), pl.address) into place
+    from public.event_places ep join public.places pl on pl.id = ep.place_id where ep.event_id = p_event order by ep.sort limit 1;
+  select string_agg('<@' || pp.discord_user_id || '>', ' '), coalesce(jsonb_agg(pp.discord_user_id), '[]')
+    into who, ids
+    from public.event_workers(p_event) w join public.people_private pp on pp.person_id = w
+    where pp.discord_user_id is not null;
+  perform public.dc_http(e.crew_id, 'POST', '/channels/' || t || '/messages', jsonb_build_object(
+    'content', 'This is the event thread for **' || e.title || '**' || E'\n'
+      || '📅 ' || public.dc_day(e.event_date) || coalesce(E'\n' || '📍 ' || place, '') || E'\n\n'
+      || 'Use it to ask questions and coordinate, and post your photos here after the event to be automatically uploaded to LAGB Media Ops.'
+      || case when who is not null then E'\n\n' || 'Signed up: ' || who else '' end,
+    'allowed_mentions', jsonb_build_object('parse', jsonb_build_array(), 'users', ids)));
+  insert into public.discord_thread_members (event_id, discord_user_id)
+    select p_event, x from jsonb_array_elements_text(ids) x on conflict do nothing;
+  return t;
+end $$;
+revoke all on function public.dc_ensure_thread(uuid) from public, anon, authenticated;
