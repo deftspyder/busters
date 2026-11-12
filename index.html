@@ -450,7 +450,6 @@ const ABILITIES = [
   ['webmaster', 'Webmaster', 'Pick event photos for the website'],
   ['manage_abilities', 'Manage abilities', 'Change what others can do'],
   ['inbox_alerts', 'Inbox alerts', 'Get alerts for group email'],
-  ['view_log', 'View action log', 'See who did what'],
   ['crew_admin', 'Crew admin', 'Everything above, plus announcements']
 ];
 const PRESETS = ['Member', 'Events team', 'Personnel', 'Admin'];
@@ -461,7 +460,7 @@ const S = { session: null, crew: null, me: null, priv: null, dues: {}, profile: 
   events: [], places: [], people: [], rsvps: [], eplaces: [], announcements: [],
   tab: 'home', view: null, evFilter: 'upcoming', evMode: 'list', evSearch: '', calMonth: null, calSel: null };
 const can = a => S.appAdmin || (S.me && (S.me.abilities.includes(a) || S.me.abilities.includes('crew_admin')));
-const teamAbilities = ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'take_attendance', 'approve_members', 'manage_recruits', 'webmaster', 'view_log', 'crew_admin'];
+const teamAbilities = ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'take_attendance', 'approve_members', 'manage_recruits', 'webmaster', 'crew_admin'];
 const onTeam = () => teamAbilities.some(can);
 const personById = id => S.people.find(p => p.id === id);
 const myRsvp = eid => S.rsvps.find(r => r.event_id === eid && S.me && r.person_id === S.me.id);
@@ -1629,7 +1628,7 @@ function renderTeam(m) {
     isEv && ['events', 'Events', proposals.length + short.length + limited.length + incomplete.length],
     (can('approve_members') || can('manage_recruits')) && ['personnel', 'Personnel', pending.length],
     can('webmaster') && ['media', 'Media', 0],
-    (can('crew_admin') || can('view_log')) && ['crew', 'Fundraising', unpublished.length],
+    can('crew_admin') && ['crew', 'Fundraising', unpublished.length],
     S.appAdmin && ['app', 'App', 0]
   ].filter(Boolean);
   if (!dash.some(d => d[0] === S.adminTab)) S.adminTab = dash.length ? dash[0][0] : 'events';
@@ -1645,9 +1644,8 @@ function renderTeam(m) {
       ${can('manage_recruits') ? '<div class="small muted">Contact details, dues and rookie dates are in the Personnel roster.</div>' : ''}`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
     // App admin only: how Busters itself is wired up (accounts and keys), not day-to-day crew work.
-    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="sec" id="roles"></div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
-    crew: () => `<div class="btns">${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div>
-      ${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
+    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="btns"><button class="btn sm" id="log">Action log</button></div><div class="sec" id="roles"></div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
+    crew: () => `${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
         + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div>' : ''}`
   };
   m.innerHTML = `<div class="sec"><h2>Admin ${at === 'events' && ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
@@ -1687,7 +1685,6 @@ const ROLES = [
   ['events', 'Events team', 'Admin, then Events: add and edit events, proposals, picking who is In, attendance, point of contact', ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'poc', 'take_attendance']],
   ['personnel', 'Personnel', 'Admin, then Personnel: approve new members, roster, contact details, dues and rookies', ['approve_members', 'manage_recruits']],
   ['media', 'Media', 'Admin, then Media: the event photo tracker', ['webmaster']],
-  ['log', 'Action log', 'See who did what', ['view_log']],
   ['abilities', 'Manage abilities', "Change other Busters' abilities from their profile", ['manage_abilities']],
   ['admin', 'Crew admin', 'Everything, including Fundraising and announcements', ['crew_admin']]
 ];
