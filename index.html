@@ -1408,7 +1408,7 @@ function openPerson(id) {
     ${up.length ? `<div class="sec"><div class="gc-lbl" style="margin-bottom:4px">Going to</div>${up.slice(0, 6).map(e => `<a href="#" class="prow2" data-ev2="${e.id}"><span>${fmtDay(e.event_date, { month: 'short', day: 'numeric' })}</span>${esc(e.title)}</a>`).join('')}</div>` : ''}
     ${can('manage_abilities') ? `<div class="sec pab" id="pab" hidden><div><b>Abilities</b> <span class="muted small">${esc(role)}</span></div>
       <p class="muted small" style="margin:6px 0">Changes are saved right away and logged.</p>
-      <div class="btns" style="margin-bottom:8px">${PRESETS.map(x => `<button class="btn sm" data-preset="${x}">${x}</button>`).join('')}</div>
+      <div class="btns" style="margin-bottom:8px">${PRESETS.map(x => `<button class="btn sm" data-preset="${x}">${x === 'Events team' ? 'Events' : x}</button>`).join('')}</div>
       ${ABILITIES.map(([k, l, d]) => `<label class="check"><input type="checkbox" data-ab="${k}" ${p.abilities.includes(k) ? 'checked' : ''}><span><b>${l}</b><br><span class="tiny muted">${d}</span></span></label>`).join('')}</div>` : ''}
     <div class="btns" style="margin-top:12px"><button class="btn" data-close>Close</button></div>`, s => {
     s.querySelectorAll('[data-copy]').forEach(c => c.onclick = async ev => { ev.preventDefault(); try { await navigator.clipboard.writeText(c.dataset.copy); toast('Copied'); } catch (err) { toast(c.dataset.copy); } });
@@ -1454,7 +1454,7 @@ function goalCard() {
 // Add Reactions, Create Public Threads, Send Messages in Threads, Create Events (Events list sync), Pin Messages (photo calls).
 const DC_PERMS = '2269701237492800';
 const dcInvite = id => `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(id)}&scope=bot%20applications.commands&permissions=${DC_PERMS}`;
-// Events team: when the Busters bot posts each event's card. Every post is a bump (fresh card at the bottom,
+// Events: when the Busters bot posts each event's card. Every post is a bump (fresh card at the bottom,
 // older one removed), so each event only has one card in the channel.
 function scheduleCard(box) {
   rpc('discord_schedule', { p_crew: S.crew.id }).then(d => {
@@ -1697,14 +1697,14 @@ function renderTeam(m) {
 }
 // Roles: bundles of abilities, each opening one Admin section. Personnel sets them from Edit on the Personnel list.
 const ROLES = [
-  ['events', 'Events team', 'Admin, then Events: add and edit events, proposals, picking who is In, attendance, point of contact', ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'poc', 'take_attendance']],
+  ['events', 'Events', 'Admin, then Events: add and edit events, proposals, picking who is In, attendance, point of contact', ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'poc', 'take_attendance']],
   ['personnel', 'Personnel', 'Admin, then Personnel: this list, statuses, roles, dues and approvals', ['approve_members', 'manage_recruits']],
   ['media', 'Media', 'Admin, then Media: the event photo tracker', ['webmaster']],
   ['admin', 'Crew admin', 'Everything for the crew, including Fundraising and announcements', ['crew_admin']]
 ];
 function reviewJoin(p) {
   sheet(`<h3>${esc(p.full_name)} wants to join</h3><p class="muted small">Approve with a starting preset. You can fine-tune abilities later from Crew.</p>
-    <div class="seg" id="ps">${PRESETS.map((x, i) => `<button class="${i === 0 ? 'on' : ''}" data-v="${x}">${x}</button>`).join('')}</div>
+    <div class="seg" id="ps">${PRESETS.map((x, i) => `<button class="${i === 0 ? 'on' : ''}" data-v="${x}">${x === 'Events team' ? 'Events' : x}</button>`).join('')}</div>
     <div class="btns" style="margin-top:14px"><button class="btn primary" id="ok">Approve</button><button class="btn danger" id="no">Decline</button><button class="btn ghost" data-close>Later</button></div>`, s => {
     let preset = 'Member';
     s.querySelectorAll('#ps button').forEach(b => b.onclick = () => { preset = b.dataset.v; s.querySelectorAll('#ps button').forEach(x => x.classList.toggle('on', x === b)); });
