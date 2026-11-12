@@ -588,13 +588,12 @@ function renderShell() {
       <div class="sp"></div>
       <button class="iconbtn cyc" id="pk" title="Proton pack monitor" aria-label="Proton pack monitor">${ICON.pack}</button>
       <button class="iconbtn" id="qr" title="Donate QR codes" aria-label="Donate QR codes">${ICON.qr}</button>
-      <button class="avatar" id="av" title="Your profile">${esc(initials(S.me.full_name))}</button>
       <button class="iconbtn" id="menu" title="Menu">${ICON.menu}</button>
     </div><div class="hz"></div></header>
     <nav class="tabs"><div class="tabs-in" id="tabs"></div></nav>
     <main class="wrap" id="main"></main>`;
   $('#brand').onclick = () => { S.tab = 'home'; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); };
-  $('#av').onclick = openProfile; $('#menu').onclick = openMenu; $('#qr').onclick = openQR; $('#pk').onclick = openPack;
+  $('#menu').onclick = openMenu; $('#qr').onclick = openQR; $('#pk').onclick = openPack;
   render();
 }
 function teamCount() {
@@ -1081,7 +1080,7 @@ function editEvent(e, propose = false) {
   });
 }
 
-/* ---------- My Busters ---------- */
+/* ---------- Me tab (your record, details and settings) ---------- */
 // Personal stats list for the Me tab: this year against the yearly minimum, lifetime counts, money raised, and the crew's Give Back standing.
 function myStats(past, hosp) {
   const yr = todayISO().slice(0, 4);
@@ -1127,7 +1126,16 @@ function renderMine(m) {
         <div class="tiny dim" style="margin:-4px 0 8px 30px">Only your city shows, at the city's center. New cities appear within about 10 minutes.</div>
         <div class="small muted">Sign-in email: ${esc(S.priv.email || (S.session.user && S.session.user.email) || '')}</div>
         <button class="btn primary" style="margin-top:12px">Save my details</button>
-      </form></div></div><div style="height:30px"></div>`;
+      </form></div></div>
+    <div class="sec"><h2>Settings</h2><div class="card" style="padding:4px 14px">
+      <a class="menuitem" id="pm-alerts"><span class="grow">Alerts<div class="small muted">Short-staffed events and last calls</div></span><span class="muted">›</span></a>
+      ${isIOS() ? `<div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button type="button" class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>` : ''}
+      <div class="menuitem" style="display:block"><div class="small muted">Signed in as ${esc((S.session.user || {}).email || '')}</div></div>
+      <a class="menuitem" id="out"><span class="grow" style="color:var(--bad)">Sign out</span></a></div></div>
+    <div style="height:30px"></div>`;
+  $('#pm-alerts', m).onclick = openAlerts;
+  m.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => { await rpc('set_maps_app', { p_app: b.dataset.m }); S.profile.maps_app = b.dataset.m; m.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); toast('Saved'); });
+  $('#out', m).onclick = () => sb.auth.signOut({ scope: 'local' });
   wireRows(m);
   if (!asTab) $('#bk').onclick = () => { S.view = null; render(); scrollTo(0, 0); };
   $('#myraised').onclick = ev => { ev.preventDefault(); openBoard(); };
@@ -1866,19 +1874,6 @@ async function openPack() {
 }
 
 /* ---------- profile and menu ---------- */
-function openProfile() {
-  dropdown(`<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:48px;height:48px;cursor:default">${esc(initials(S.me.full_name))}</div><div><b>${esc(S.me.full_name)}</b><div class="small muted">${esc((S.session.user || {}).email || '')}</div></div></div>
-    <a class="menuitem" id="pm-me"><span class="grow">My Busters<div class="small muted">Your events, stats, dues and details</div></span><span class="muted">›</span></a>
-    <div class="small muted" style="margin:14px 0 4px;text-transform:uppercase;letter-spacing:.08em">Settings</div>
-    <a class="menuitem" id="pm-alerts"><span class="grow">Alerts<div class="small muted">Short-staffed events and last calls</div></span><span class="muted">›</span></a>
-    ${isIOS() ? `<div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>` : ''}
-    <a class="menuitem" id="out"><span class="grow" style="color:var(--bad)">Sign out</span></a>`, s => {
-    $('#pm-me', s).onclick = () => { closeSheet(); S.tab = 'me'; S.view = null; render(); scrollTo(0, 0); };
-    $('#pm-alerts', s).onclick = () => { closeSheet(); openAlerts(); };
-    s.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => { await rpc('set_maps_app', { p_app: b.dataset.m }); S.profile.maps_app = b.dataset.m; s.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); toast('Saved'); });
-    $('#out', s).onclick = () => { closeSheet(); sb.auth.signOut({ scope: 'local' }); };
-  });
-}
 /* ---------- alerts ---------- */
 const pushOK = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1956,22 +1951,18 @@ function openMenu() {
     <a class="menuitem" id="pp"><span class="grow">Proton pack monitor<div class="small muted">In-world diagnostics for your pack</div></span><span class="muted">›</span></a>
     <a class="menuitem" id="how"><span class="grow">How to use Busters</span><span class="muted">›</span></a>
     <a class="menuitem" href="mailto:hello@busters.app?subject=Busters%20feedback"><span class="grow">Send feedback</span><span class="muted">↗</span></a>
-    ${can('crew_admin') ? `<div class="small muted" style="margin:14px 0 4px;text-transform:uppercase;letter-spacing:.08em">Admin</div>
-      <a class="menuitem" id="adm-ann"><span class="grow">Post an announcement</span><span class="muted">›</span></a>
-      <a class="menuitem" id="adm-log"><span class="grow">Action log</span><span class="muted">›</span></a>` : ''}
     <p class="tiny dim" style="margin-top:14px">Busters beta for ${esc(S.crew.short)}. Ghostbusters and the No-Ghost logo are trademarks of Columbia Pictures.</p></div>`, s => {
     s.parentNode.classList.add('right');
     $('#pp', s).onclick = () => { closeSheet(); openPack(); };
     $('#how', s).onclick = () => sheet(`<h3>How to use Busters</h3>
-      <p><b>Home</b> shows what needs you now: your next event, anything you haven't answered, and announcements.</p>
-      <p><b>Home</b> lists every event coming up. Tap one to open it, then answer right there or open its full brief, then answer Going, Maybe or No, with your ride and a note.</p>
-      <p><b>Navigate</b> buttons open your maps app. Pick Google Maps, Apple Maps or Waze from your profile picture.</p>
-      <p><b>Alerts</b>: turn them on from your profile picture to hear when an event is short on Busters.</p>
-      <p><b>My Busters</b> is your own record and your contact details. Tap your initials at the top to open it.</p>
-      <p><b>Add to your home screen</b> so Busters opens like an app: on iPhone tap Share then "Add to Home Screen"; on Android tap the ⋮ menu then "Install app".</p>
+      <p><b>Home</b>: what needs your answer, every event coming up, and announcements. Tap an event to answer Going, Maybe or No, or open its full brief.</p>
+      <p><b>Chat</b>: the same conversations as the ${esc(S.crew.short)} Discord, #rookies and each event's thread. Write here or there and everyone sees it.</p>
+      <p><b>Crew</b>: everyone in ${esc(S.crew.short)}, with search and the member map. Tap a Buster to see their profile.</p>
+      <p><b>Me</b>: your stats, dues and details, plus Settings (alerts, maps app) and Sign out.</p>
+      ${onTeam() ? '<p><b>Admin</b>: the dashboards for the jobs you have, like events, personnel or media.</p>' : ''}
+      <p>Top bar: the <b>cyclotron</b> opens your proton pack monitor, and the <b>QR</b> button shows donate codes to scan at events.</p>
+      <p><b>Add to your home screen</b> so Busters opens like an app: on iPhone tap Share, then "Add to Home Screen"; on Android tap the ⋮ menu, then "Install app".</p>
       <button class="btn" data-close>Got it</button>`);
-    const a1 = $('#adm-ann', s); if (a1) a1.onclick = postAnnouncement;
-    const a2 = $('#adm-log', s); if (a2) a2.onclick = () => { closeSheet(); show(renderLog); };
   });
 }
 
