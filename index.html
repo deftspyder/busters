@@ -337,6 +337,19 @@ input.in{min-width:0}
 
 /* Admin section chips stay under the header while scrolling */
 .adtabs{position:sticky;top:calc(66px + env(safe-area-inset-top));z-index:6;background:var(--bg);margin:0 calc(-1 * var(--pad));padding:8px var(--pad);border-bottom:1px solid var(--line)}
+/* personnel list */
+.prow{border:1px solid var(--line);background:var(--panel);border-radius:12px;margin-bottom:8px}
+.pline{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 6px}.pline>.grow{flex:1}
+.pdues{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);white-space:nowrap}
+.pexp{width:30px;height:30px;flex:0 0 30px;border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer;transition:transform .15s}.prow.open .pexp{transform:rotate(90deg);color:var(--cyan)}
+.ptags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:4px}.ptags .pill{font-size:11px;padding:1px 8px}
+.rtag{font-size:11px;border-radius:999px;padding:1px 8px;background:rgba(53,178,232,.12);color:var(--cyan)}.rtag.adm{background:rgba(255,140,120,.14);color:#ff8c78}
+.pdet{border-top:1px solid var(--line);padding:10px 14px 12px;display:grid;gap:12px}
+@media (min-width:700px){.pdet{grid-template-columns:1fr 1fr 1fr}}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0}.kv span{color:var(--muted);flex:0 0 auto}.kv b{font-weight:500;text-align:right;overflow-wrap:anywhere}
+.rsws{display:grid;gap:6px}.rsw{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
+.rsw input{margin-top:3px;accent-color:var(--cyan);width:18px;height:18px;flex:0 0 auto}.rsw span{display:flex;flex-direction:column;gap:1px}
+.pill.bad{color:var(--bad);border-color:rgba(248,113,113,.4)}
 /* roles */
 .rchips{display:flex;flex-wrap:wrap;gap:6px}.rchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:3px 4px 3px 10px;font-size:13px}
 .rchip button{width:20px;height:20px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:11px}.rchip button:hover{color:var(--bad)}
@@ -462,6 +475,7 @@ const S = { session: null, crew: null, me: null, priv: null, dues: {}, profile: 
 const can = a => S.appAdmin || (S.me && (S.me.abilities.includes(a) || S.me.abilities.includes('crew_admin')));
 const teamAbilities = ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'take_attendance', 'approve_members', 'manage_recruits', 'webmaster', 'crew_admin'];
 const onTeam = () => teamAbilities.some(can);
+const PEN = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const personById = id => S.people.find(p => p.id === id);
 const myRsvp = eid => S.rsvps.find(r => r.event_id === eid && S.me && r.person_id === S.me.id);
 const nameOf = p => p ? (p.callsign ? `${p.full_name} (${p.callsign})` : p.full_name) : 'Someone';
@@ -1639,12 +1653,11 @@ function renderTeam(m) {
         ...limited.map(e => item('Pick who is In', e.title, `${fmtDay(e.event_date)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')),
         ...incomplete.map(e => item('Details coming', e.title, `${fmtDay(e.event_date)} · needs ${esc(e.missing.join(', '))}`, `data-ev="${e.id}"`, 'Finish'))])}</div>
       ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}`,
-    personnel: () => `<div class="btns">${can('manage_recruits') ? '<button class="btn sm" id="roster">Personnel roster</button>' : ''}</div>
-      <div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>
-      ${can('manage_recruits') ? '<div class="small muted">Contact details, dues and rookie dates are in the Personnel roster.</div>' : ''}`,
+    personnel: () => can('manage_recruits') ? `<div class="sec" id="plist"><div class="empty">Loading...</div></div>`
+      : `<div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
     // App admin only: how Busters itself is wired up (accounts and keys), not day-to-day crew work.
-    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="btns"><button class="btn sm" id="log">Action log</button></div><div class="sec" id="roles"></div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
+    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="btns"><button class="btn sm" id="log">Action log</button></div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
     crew: () => `${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
         + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div>' : ''}`
   };
@@ -1656,8 +1669,8 @@ function renderTeam(m) {
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
   if ($('#dcsched')) scheduleCard($('#dcsched'));
   if ($('#mediabox')) mediaCard($('#mediabox'));
+  if ($('#plist')) personnelList($('#plist'));
   if ($('#mediasetup')) mediaCard($('#mediasetup'), 'setup');
-  if ($('#roles')) rolesCard($('#roles'));
   if ($('#donatecodes')) donateCodesCard($('#donatecodes'));
   const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
     const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
@@ -1673,43 +1686,18 @@ function renderTeam(m) {
     $('#bridge').innerHTML = '<h2>Google bridge</h2>' + line('Google Calendar sync', b.calendar, 20) + line('Sheet sync', b.sheet, 130);
   }).catch(() => {});
   wireDiscord();
-  const ro = $('#roster'); if (ro) ro.onclick = () => show(renderRoster);
   const lg = $('#log'); if (lg) lg.onclick = () => show(renderLog);
   wireRows(m);
   m.querySelectorAll('[data-join]').forEach(r => r.onclick = () => reviewJoin(personById(r.dataset.join)));
   m.querySelectorAll('[data-prop]').forEach(r => r.onclick = () => reviewProposal(S.events.find(e => e.id === r.dataset.prop)));
 }
-// App admin: who holds each role. A role is a bundle of abilities that opens one Admin section; fine-tune single
-// abilities from a Buster's profile (pencil).
+// Roles: bundles of abilities, each opening one Admin section. Personnel sets them from Edit on the Personnel list.
 const ROLES = [
   ['events', 'Events team', 'Admin, then Events: add and edit events, proposals, picking who is In, attendance, point of contact', ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'poc', 'take_attendance']],
-  ['personnel', 'Personnel', 'Admin, then Personnel: approve new members, roster, contact details, dues and rookies', ['approve_members', 'manage_recruits']],
+  ['personnel', 'Personnel', 'Admin, then Personnel: this list, statuses, roles, dues and approvals', ['approve_members', 'manage_recruits']],
   ['media', 'Media', 'Admin, then Media: the event photo tracker', ['webmaster']],
-  ['abilities', 'Manage abilities', "Change other Busters' abilities from their profile", ['manage_abilities']],
-  ['admin', 'Crew admin', 'Everything, including Fundraising and announcements', ['crew_admin']]
+  ['admin', 'Crew admin', 'Everything for the crew, including Fundraising and announcements', ['crew_admin']]
 ];
-function rolesCard(box) {
-  const members = S.people.filter(p => ['active', 'rookie'].includes(p.status)).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
-  const has = (p, r) => r[3].some(a => (p.abilities || []).includes(a));
-  const full = (p, r) => r[3].every(a => (p.abilities || []).includes(a));
-  box.innerHTML = `<h2>Roles</h2><div class="small muted" style="margin:-2px 0 8px">Who can open each Admin section. Fine-tune single abilities from a Buster's profile.</div>
-    ${ROLES.map(r => { const who = members.filter(p => has(p, r)); return `<div class="card" style="margin-top:8px">
-      <div style="display:flex;align-items:baseline;gap:8px"><b>${r[1]}</b><span class="tiny dim">${who.length}</span></div>
-      <div class="tiny muted" style="margin:2px 0 8px">${esc(r[2])}</div>
-      <div class="rchips">${who.map(p => `<span class="rchip">${esc(nameOf(p))}${full(p, r) ? '' : ' <span class="dim" title="Has only some of these abilities">(some)</span>'}<button data-rrm="${r[0]}" data-p="${p.id}" aria-label="Remove ${esc(nameOf(p))} from ${r[1]}">✕</button></span>`).join('') || '<span class="tiny dim">Nobody yet</span>'}</div>
-      <select class="in" data-radd="${r[0]}" style="margin-top:8px"><option value="">+ Add someone</option>${members.filter(p => !full(p, r)).map(p => `<option value="${p.id}">${esc(nameOf(p))}</option>`).join('')}</select></div>`; }).join('')}`;
-  const save = async (p, list, msg) => { try { await rpc('set_abilities', { p_person: p.id, p_abilities: list }); } catch (e) { return; } p.abilities = list; toast(msg); rolesCard(box); };
-  box.querySelectorAll('[data-radd]').forEach(sel => sel.onchange = () => {
-    const r = ROLES.find(x => x[0] === sel.dataset.radd), p = personById(sel.value); if (!p) return;
-    save(p, [...new Set([...(p.abilities || []), ...r[3]])], `${nameOf(p)} added to ${r[1]}`);
-  });
-  box.querySelectorAll('[data-rrm]').forEach(b => b.onclick = () => {
-    const r = ROLES.find(x => x[0] === b.dataset.rrm), p = personById(b.dataset.p);
-    if (p.id === S.me.id && r[0] === 'admin' && !confirmBox('Remove your own crew admin? You stay an app admin, so you keep access.')) return;
-    if (!confirmBox(`Remove ${nameOf(p)} from ${r[1]}?`)) return;
-    save(p, (p.abilities || []).filter(a => !r[3].includes(a)), `${nameOf(p)} removed from ${r[1]}`);
-  });
-}
 function reviewJoin(p) {
   sheet(`<h3>${esc(p.full_name)} wants to join</h3><p class="muted small">Approve with a starting preset. You can fine-tune abilities later from Crew.</p>
     <div class="seg" id="ps">${PRESETS.map((x, i) => `<button class="${i === 0 ? 'on' : ''}" data-v="${x}">${x}</button>`).join('')}</div>
@@ -1729,87 +1717,128 @@ function reviewProposal(e) {
   });
 }
 
-/* ---------- Personnel roster ---------- */
-let rosterData = [], rosterQ = '', rosterF = 'current';
-async function renderRoster(m) {
-  m.innerHTML = '<p class="muted">Loading roster...</p>';
-  rosterData = await rpc('personnel_roster', { p_crew: S.crew.id });
+/* ---------- Personnel ---------- */
+/* ---------- Personnel: one list of everyone, with Expand and Edit ---------- */
+// Status is where someone is in membership; roles are what they can do. Both are set from Edit.
+let rosterData = [], rosterQ = '', rosterF = 'current', rosterOpen = new Set();
+const STATUS = [['pending', 'Waiting', 'cyan'], ['rookie', 'Rookie', 'cream'], ['active', 'Member', 'good'], ['retired', 'Retired', ''], ['removed', 'Removed', 'bad']];
+const statusPill = s => { const x = STATUS.find(t => t[0] === s) || [s, s, '']; return `<span class="pill ${x[2]}">${esc(x[1])}</span>`; };
+const hasRole = (p, r) => r[3].some(a => (p.abilities || []).includes(a));
+const fullRole = (p, r) => r[3].every(a => (p.abilities || []).includes(a));
+const roleTags = p => (p.abilities || []).includes('crew_admin') ? '<span class="rtag adm">Crew admin</span>'
+  : ROLES.filter(r => r[0] !== 'admin' && fullRole(p, r)).map(r => `<span class="rtag">${r[1]}</span>`).join('');
+const duesPill = s => s ? `<span class="pill ${/^paid$|exempt/i.test(s) ? 'good' : /paid/i.test(s) ? 'cyan' : 'warn'}">${esc(s)}</span>` : '<span class="dim">none</span>';
+
+async function personnelList(box) {
+  try { rosterData = await rpc('personnel_roster', { p_crew: S.crew.id }); } catch (e) { box.innerHTML = '<div class="empty">The Personnel list could not load right now.</div>'; return; }
   const yr = +todayISO().slice(0, 4);
+  const bday = b => b ? fmtDay('2000-' + b, { month: 'short', day: 'numeric' }) : '';
+  const line = (k, v) => v ? `<div class="kv"><span>${k}</span><b>${v}</b></div>` : '';
+  const detail = p => `<div class="pdet">
+      <div class="pgrp"><div class="gc-lbl">Names and accounts</div>
+        ${line('Real name', esc(p.full_name))}${line('Callsign', esc(p.callsign || ''))}
+        ${line('Discord', p.discord ? esc(p.discord) + (p.discord_linked ? ' <span class="tiny" style="color:var(--good)">linked</span>' : ' <span class="tiny dim">not linked</span>') : '<span class="dim">none</span>')}
+        ${line('Sign-in email', p.login_email ? esc(p.login_email) : '<span class="dim">hasn\'t signed in to Busters</span>')}
+        ${p.email && p.email !== p.login_email ? line('Roster email', esc(p.email)) : ''}
+        ${line('Nicknames', (p.aliases || []).length ? p.aliases.map(esc).join(', ') : '<span class="dim">none</span>')}</div>
+      <div class="pgrp"><div class="gc-lbl">Contact</div>
+        ${line('Phone', p.phone ? `<a href="${tel(p.phone)}">${esc(p.phone)}</a>` : '')}${line('Instagram', esc(p.instagram || ''))}${line('Birthday', bday(p.birthday))}${line('City', esc(p.city || ''))}
+        ${!p.phone && !p.instagram && !p.birthday && !p.city ? '<div class="tiny dim">Nothing on file.</div>' : ''}</div>
+      <div class="pgrp"><div class="gc-lbl">Membership</div>
+        ${line('Role in crew', esc(p.title || ''))}${line('Member since', p.member_since ? esc(fmtDay(p.member_since, { month: 'short', year: 'numeric' })) : '')}
+        ${p.status === 'rookie' ? line('Rookie', `${(p.rookie_events_before || 0) + p.events_done} of 4 events${p.eligible_date ? ', eligible ' + esc(p.eligible_date) : ''}`) : line('Rookie since', esc(p.rookie_since || ''))}
+        ${line(`Events in ${yr}`, String(p.events_year || 0))}
+        <div class="kv"><span>Dues</span><b>${yr - 1} ${duesPill(p.dues[yr - 1])} &nbsp; ${yr} ${duesPill(p.dues[yr])}</b></div></div>
+    </div>`;
   const draw = () => {
     const q = rosterQ.toLowerCase();
     const rows = rosterData.filter(p => (rosterF === 'all' || (rosterF === 'current' ? ['active', 'rookie', 'pending'].includes(p.status) : p.status === rosterF)) &&
-      (!q || [p.full_name, p.callsign, p.title, p.email, p.discord, p.phone].join(' ').toLowerCase().includes(q)));
-    if (innerWidth < 700) {
-      $('#rt').innerHTML = rows.map(p => `<div class="row" data-p="${p.id}" style="align-items:flex-start"><div class="grow">
-        <div class="t">${esc(p.full_name)}${p.callsign ? ` <span class="muted">"${esc(p.callsign)}"</span>` : ''}</div>
-        <div class="small muted">${esc(p.title || '')}${p.member_since ? ' · since ' + esc(p.member_since.slice(0, 4)) : ''}</div>
-        <div class="small" style="margin-top:4px">${p.email ? esc(p.email) : '<span class="pill warn">no email</span>'}${p.phone ? ' · ' + esc(p.phone) : ''}</div>
-        ${p.discord || p.birthday ? `<div class="small muted">${esc([p.discord && 'Discord ' + p.discord, p.birthday && 'Birthday ' + fmtDay('2000-' + p.birthday, { month: 'short', day: 'numeric' })].filter(Boolean).join(' · '))}</div>` : ''}
-        <div class="pills">${p.status !== 'active' ? `<span class="pill ${p.status === 'rookie' ? 'cream' : p.status === 'pending' ? 'cyan' : ''}">${esc(p.status)}</span>` : ''}<span class="tiny muted" style="align-self:center">${yr - 1}</span>${duesPill(p.dues[yr - 1])}<span class="tiny muted" style="align-self:center">${yr}</span>${duesPill(p.dues[yr])}${p.status === 'rookie' ? `<span class="pill cream">${(p.rookie_events_before || 0) + p.events_done} of 4 events${p.eligible_date ? ', eligible ' + esc(p.eligible_date) : ''}</span>` : ''}${!p.signed_in && p.status !== 'retired' ? '<span class="pill">not signed in yet</span>' : ''}</div>
-      </div></div>`).join('') || '<div class="empty">Nobody matches.</div>';
-      $('#rt').querySelectorAll('[data-p]').forEach(r => r.onclick = () => editPerson(rosterData.find(x => x.id === r.dataset.p)));
-      $('#cnt').textContent = rows.length + ' shown';
-      return;
-    }
-    $('#rt').innerHTML = `<table class="ptable"><thead><tr><th>Name</th><th>Role</th><th>Contact</th><th>Discord</th><th>Birthday</th><th>${yr - 1} dues</th><th>${yr} dues</th><th>Rookie</th></tr></thead><tbody>
-      ${rows.map(p => `<tr data-p="${p.id}"><td><b>${esc(p.full_name)}</b>${p.callsign ? `<div class="tiny muted">"${esc(p.callsign)}"</div>` : ''}${p.status !== 'active' ? `<div><span class="pill ${p.status === 'rookie' ? 'cream' : p.status === 'pending' ? 'cyan' : ''}" style="margin-top:4px">${esc(p.status)}</span></div>` : ''}${!p.signed_in && p.status !== 'retired' ? '<div class="tiny dim">not signed in yet</div>' : ''}</td>
-        <td>${esc(p.title || '')}${p.member_since ? `<div class="tiny muted">since ${esc(p.member_since)}</div>` : ''}</td>
-        <td>${p.email ? `<a href="mailto:${esc(p.email)}" onclick="event.stopPropagation()">${esc(p.email)}</a>` : '<span class="pill warn">no email</span>'}${p.phone ? `<div><a href="${tel(p.phone)}" onclick="event.stopPropagation()">${esc(p.phone)}</a></div>` : ''}</td>
-        <td>${esc(p.discord || '')}${p.instagram ? `<div class="tiny muted">${esc(p.instagram)}</div>` : ''}</td>
-        <td>${esc(p.birthday ? fmtDay('2000-' + p.birthday, { month: 'short', day: 'numeric' }) : '')}</td>
-        <td>${duesPill(p.dues[yr - 1])}</td><td>${duesPill(p.dues[yr])}</td>
-        <td>${p.status === 'rookie' ? `${(p.rookie_events_before || 0) + p.events_done} of 4 events${p.eligible_date ? `<div class="tiny muted">eligible ${esc(p.eligible_date)}</div>` : ''}` : ''}</td></tr>`).join('')}
-      </tbody></table>${rows.length ? '' : '<div class="empty">Nobody matches.</div>'}`;
-    $('#rt').querySelectorAll('[data-p]').forEach(r => r.onclick = () => editPerson(rosterData.find(x => x.id === r.dataset.p)));
-    $('#cnt').textContent = rows.length + ' shown';
+      (!q || [p.full_name, p.callsign, p.title, p.email, p.login_email, p.discord, p.phone, ...(p.aliases || [])].join(' ').toLowerCase().includes(q)));
+    $('#pl').innerHTML = rows.map(p => `<div class="prow${rosterOpen.has(p.id) ? ' open' : ''}" data-pr="${p.id}">
+        <div class="pline"><button class="pexp" data-px="${p.id}" aria-expanded="${rosterOpen.has(p.id)}" aria-label="Show details for ${esc(p.full_name)}">›</button>
+          <div class="grow" data-px="${p.id}" style="cursor:pointer;min-width:0"><div class="t ell">${esc(p.full_name)}</div>
+            <div class="ptags">${statusPill(p.status)}${roleTags(p)}<span class="pdues">${yr} dues ${duesPill(p.dues[yr])}</span></div></div>
+          <button class="xedit" data-pe="${p.id}" title="Edit" aria-label="Edit ${esc(p.full_name)}">${PEN}</button></div>
+        ${rosterOpen.has(p.id) ? detail(p) : ''}</div>`).join('') || '<div class="empty">Nobody matches.</div>';
+    $('#pcnt').textContent = rows.length + ' shown';
+    box.querySelectorAll('[data-px]').forEach(b => b.onclick = () => { const id = b.dataset.px; rosterOpen.has(id) ? rosterOpen.delete(id) : rosterOpen.add(id); draw(); });
+    box.querySelectorAll('[data-pe]').forEach(b => b.onclick = () => editPerson(rosterData.find(x => x.id === b.dataset.pe), () => personnelList(box)));
   };
-  m.innerHTML = `<button class="back" id="bk">${ICON.back} Team</button>
-    <h2 style="font-size:30px">Personnel roster</h2>
-    <p class="muted small">Only Personnel and the crew admin see this screen. Tap a row to edit. Every download is logged.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><input class="in" id="rq" placeholder="Search" style="flex:1;min-width:180px" value="${esc(rosterQ)}"><button class="btn sm primary" id="add">+ Add person</button><button class="btn sm" id="exp">Download spreadsheet</button></div>
-    <div class="chips">${[['current', 'Current'], ['active', 'Members'], ['rookie', 'Rookies'], ['pending', 'Waiting'], ['retired', 'Retired'], ['all', 'Everyone']].map(([k, l]) => `<button class="chip ${rosterF === k ? 'on' : ''}" data-rf="${k}">${l}</button>`).join('')}<span class="small muted" id="cnt" style="align-self:center;margin-left:6px"></span></div>
-    <div class="scrollx" id="rt" style="margin-top:10px"></div><div style="height:40px"></div>`;
-  $('#bk').onclick = () => { S.view = null; render(); };
-  $('#rq').oninput = e => { rosterQ = e.target.value; draw(); };
-  m.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => { rosterF = b.dataset.rf; m.querySelectorAll('[data-rf]').forEach(x => x.classList.toggle('on', x === b)); draw(); });
-  $('#add').onclick = () => editPerson(null);
-  $('#exp').onclick = exportRoster;
+  const waiting = rosterData.filter(p => p.status === 'pending').length;
+  box.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px"><input class="in" id="rq" placeholder="Search names, Discord, email, nicknames" style="flex:1;min-width:180px" value="${esc(rosterQ)}"><button class="btn sm primary" id="padd">+ Add person</button><button class="btn sm" id="pexp">Download</button></div>
+    <div class="chips">${[['current', 'Current'], ['active', 'Members'], ['rookie', 'Rookies'], ['pending', 'Waiting' + (waiting ? ` (${waiting})` : '')], ['retired', 'Retired'], ['all', 'Everyone']].map(([k, l]) => `<button class="chip ${rosterF === k ? 'on' : ''}" data-rf="${k}">${l}</button>`).join('')}<span class="small muted" id="pcnt" style="align-self:center;margin-left:6px"></span></div>
+    <div id="pl" style="margin-top:8px"></div>
+    <p class="tiny dim" style="margin-top:10px">Only Personnel and crew admins see this list. Every change and download is logged.</p>`;
+  $('#rq', box).oninput = e => { rosterQ = e.target.value; draw(); };
+  box.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => { rosterF = b.dataset.rf; box.querySelectorAll('[data-rf]').forEach(x => x.classList.toggle('on', x === b)); draw(); });
+  $('#padd', box).onclick = () => editPerson(null, () => personnelList(box));
+  $('#pexp', box).onclick = exportRoster;
   draw();
 }
-const duesPill = s => s ? `<span class="pill ${/^paid$|exempt/i.test(s) ? 'good' : /paid/i.test(s) ? 'cyan' : 'warn'}">${esc(s)}</span>` : '<span class="dim">none</span>';
-function editPerson(p) {
-  const isNew = !p; p = p || { status: 'active', dues: {} };
+
+function editPerson(p, after) {
+  const isNew = !p; p = p || { status: 'active', dues: {}, abilities: [], aliases: [] };
   const yr = +todayISO().slice(0, 4);
   const v = k => esc(p[k] == null ? '' : p[k]);
-  sheet(`<h3>${isNew ? 'Add to roster' : esc(p.full_name)}</h3>
-    <p class="muted small">${isNew ? 'Adding someone with an email pre-approves them: they get straight in the first time they sign in.' : 'Changes are saved to the database and logged.'}</p>
+  const statuses = STATUS.filter(([k]) => k === p.status || k !== 'pending');
+  const roleOpts = ROLES.map(r => `<label class="rsw"><input type="checkbox" data-role="${r[0]}" ${fullRole(p, r) ? 'checked' : ''}><span><b>${r[1]}</b>${!fullRole(p, r) && hasRole(p, r) ? ' <span class="dim">(some)</span>' : ''}<span class="tiny muted">${esc(r[2])}</span></span></label>`).join('');
+  sheet(`<h3>${isNew ? 'Add a person' : esc(p.full_name)}</h3>
+    <p class="muted small">${isNew ? 'Adding someone with an email pre-approves them: they get straight in the first time they sign in.' : 'Changes are saved and logged.'}</p>
     <form id="pf">
-      <div class="grid2"><label class="f"><span>Full name</span><input class="in" name="full_name" required value="${v('full_name')}"></label><label class="f"><span>Callsign</span><input class="in" name="callsign" value="${v('callsign')}"></label></div>
-      <div class="grid2"><label class="f"><span>Crew role</span><input class="in" name="title" value="${v('title')}" placeholder="Buster, Quartermaster..."></label>
-        <label class="f"><span>Status</span><select class="in" name="status">${['active', 'rookie', 'retired'].concat(p.status === 'pending' ? ['pending'] : []).map(s => `<option ${p.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label></div>
-      <div class="grid2"><label class="f"><span>Email</span><input class="in" type="email" name="email" value="${v('email')}"></label><label class="f"><span>Phone</span><input class="in" type="tel" name="phone" value="${v('phone')}"></label></div>
-      <div class="grid2"><label class="f"><span>Discord</span><input class="in" name="discord" value="${v('discord')}"></label><label class="f"><span>Instagram</span><input class="in" name="instagram" value="${v('instagram')}"></label></div>
-      <div class="grid2"><label class="f"><span>Birthday (MM-DD)</span><input class="in" name="birthday" pattern="\\d{2}-\\d{2}" value="${v('birthday')}"></label><label class="f"><span>Member since</span><input class="in" type="date" name="member_since" value="${v('member_since')}"></label></div>
-      <div class="grid2"><label class="f"><span>Rookie since</span><input class="in" type="date" name="rookie_since" value="${v('rookie_since')}"></label><label class="f"><span>Member eligible</span><input class="in" type="date" name="eligible_date" value="${v('eligible_date')}"></label></div>
-      ${isNew ? '' : `<h3 style="margin-top:16px">Dues</h3><div class="grid2">${[yr - 1, yr, yr + 1].slice(0, 2).map(y => `<label class="f"><span>${y}</span><select class="in" data-dues="${y}">${['', 'PAID', 'EXEMPT', 'EXTENSION', 'UNPAID'].concat(p.dues[y] && !['PAID', 'EXEMPT', 'EXTENSION', 'UNPAID'].includes(p.dues[y]) ? [p.dues[y]] : []).map(o => `<option value="${esc(o)}" ${(p.dues[y] || '') === o ? 'selected' : ''}>${o || 'None'}</option>`).join('')}</select></label>`).join('')}</div>`}
+      <div class="gc-lbl" style="margin-top:6px">Status</div>
+      <div class="seg" id="pst">${statuses.map(([k, l]) => `<button type="button" class="${p.status === k ? 'on' : ''}" data-st="${k}">${l}</button>`).join('')}</div>
+      <div class="gc-lbl" style="margin-top:14px">Roles</div><div class="rsws">${roleOpts}</div>
+      <div class="gc-lbl" style="margin-top:14px">Names and accounts</div>
+      <div class="grid2"><label class="f"><span>Real name</span><input class="in" name="full_name" required value="${v('full_name')}"></label><label class="f"><span>Callsign</span><input class="in" name="callsign" value="${v('callsign')}"></label></div>
+      <div class="grid2"><label class="f"><span>Discord name</span><input class="in" name="discord" value="${v('discord')}"></label><label class="f"><span>Email</span><input class="in" type="email" name="email" value="${v('email')}"></label></div>
+      <label class="f"><span>Nicknames (comma separated)</span><input class="in" id="pal" value="${esc((p.aliases || []).join(', '))}" placeholder="JP, Jaypea"></label>
+      <div class="tiny dim">How they show up on the sheet or in Discord, so Busters can match them.</div>
+      <div class="gc-lbl" style="margin-top:14px">Contact</div>
+      <div class="grid2"><label class="f"><span>Phone</span><input class="in" type="tel" name="phone" value="${v('phone')}"></label><label class="f"><span>Instagram</span><input class="in" name="instagram" value="${v('instagram')}"></label></div>
+      <label class="f"><span>Birthday (MM-DD)</span><input class="in" name="birthday" pattern="\\d{2}-\\d{2}" value="${v('birthday')}"></label>
+      <div class="gc-lbl" style="margin-top:14px">Membership</div>
+      <label class="f"><span>Role in crew</span><input class="in" name="title" value="${v('title')}" placeholder="Buster, Quartermaster..."></label>
+      <div class="grid2"><label class="f"><span>Member since</span><input class="in" type="date" name="member_since" value="${v('member_since')}"></label><label class="f"><span>Rookie since</span><input class="in" type="date" name="rookie_since" value="${v('rookie_since')}"></label></div>
+      <label class="f"><span>Member eligible</span><input class="in" type="date" name="eligible_date" value="${v('eligible_date')}"></label>
+      ${isNew ? '' : `<div class="gc-lbl" style="margin-top:14px">Dues</div><div class="grid2">${[yr - 1, yr].map(y => `<label class="f"><span>${y}</span><select class="in" data-dues="${y}">${['', 'PAID', 'EXEMPT', 'EXTENSION', 'UNPAID'].concat(p.dues[y] && !['PAID', 'EXEMPT', 'EXTENSION', 'UNPAID'].includes(p.dues[y]) ? [p.dues[y]] : []).map(o => `<option value="${o}" ${(p.dues[y] || '') === o ? 'selected' : ''}>${o || 'Not set'}</option>`).join('')}</select></label>`).join('')}</div>`}
       <div class="btns" style="margin-top:16px"><button class="btn primary">Save</button><button type="button" class="btn ghost" data-close>Cancel</button></div>
     </form>`, s => {
+    let st = p.status;
+    s.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { st = b.dataset.st; s.querySelectorAll('[data-st]').forEach(x => x.classList.toggle('on', x === b)); });
     s.querySelectorAll('[data-dues]').forEach(sel => sel.onchange = async () => { await rpc('set_dues', { p_person: p.id, p_year: +sel.dataset.dues, p_status: sel.value }); p.dues[sel.dataset.dues] = sel.value; toast('Dues saved'); });
     $('#pf', s).onsubmit = async ev => {
       ev.preventDefault();
       const fd = new FormData(ev.target); const body = {}; for (const [k, val] of fd.entries()) body[k] = String(val).trim();
-      if (!isNew) body.id = p.id;
-      if (p.status === 'pending' && body.status === 'pending') delete body.status;
-      await rpc('save_person', { p_crew: S.crew.id, p: body });
-      if (!isNew && body.status && body.status !== p.status && p.status !== 'pending') await rpc('set_status', { p_person: p.id, p_status: body.status });
-      closeSheet(); toast('Saved'); await refresh(); show(renderRoster);
+      // Roles: checked bundles on, unchecked bundles off; abilities outside the four roles are kept.
+      const inRoles = ROLES.flatMap(r => r[3]);
+      let abil = (p.abilities || []).filter(a => !inRoles.includes(a));
+      s.querySelectorAll('[data-role]').forEach(c => { const r = ROLES.find(x => x[0] === c.dataset.role); if (c.checked) abil.push(...r[3]); else if (!fullRole(p, r) && hasRole(p, r)) abil.push(...r[3].filter(a => (p.abilities || []).includes(a))); });
+      abil = [...new Set(abil)].sort();
+      if (p.id === S.me.id && (p.abilities || []).includes('crew_admin') && !abil.includes('crew_admin') && !S.appAdmin && !confirmBox('Remove your own crew admin role?')) return;
+      if (st === 'removed' && p.status !== 'removed' && !confirmBox(`Mark ${body.full_name} as removed? They lose access to Busters.`)) return;
+      const aliases = $('#pal', s).value.split(',').map(x => x.trim()).filter(Boolean);
+      try {
+        if (isNew) body.status = st === 'rookie' ? 'rookie' : 'active'; else body.id = p.id;
+        const id = await rpc('save_person', { p_crew: S.crew.id, p: body });
+        const pid = p.id || id;
+        if (!isNew && st !== p.status) {
+          if (p.status === 'pending') {
+            if (st === 'removed') await rpc('decide_member', { p_person: pid, p_approve: false, p_preset: null });
+            else { await rpc('decide_member', { p_person: pid, p_approve: true, p_preset: 'member' }); if (st !== 'active') await rpc('set_status', { p_person: pid, p_status: st }); }
+          } else await rpc('set_status', { p_person: pid, p_status: st });
+        }
+        if (pid && abil.join() !== [...(p.abilities || [])].sort().join()) await rpc('set_abilities', { p_person: pid, p_abilities: abil });
+        if (pid && aliases.join('|') !== (p.aliases || []).join('|')) await rpc('set_aliases', { p_person: pid, p_aliases: aliases });
+      } catch (e) { return; }
+      closeSheet(); toast('Saved'); await refresh(); if (after) after();
     };
   });
 }
+
 async function exportRoster() {
   const yr = +todayISO().slice(0, 4);
-  const cols = ['Name', 'Callsign', 'Role', 'Status', 'Member since', 'Email', 'Phone', 'Discord', 'Instagram', 'Birthday', `${yr - 1} dues`, `${yr} dues`, 'Rookie since', 'Eligible date', 'Signed in to Busters'];
-  const rows = rosterData.map(p => [p.full_name, p.callsign, p.title, p.status, p.member_since, p.email, p.phone, p.discord, p.instagram, p.birthday, p.dues[yr - 1], p.dues[yr], p.rookie_since, p.eligible_date, p.signed_in ? 'yes' : 'no']);
+  const cols = ['Name', 'Callsign', 'Role in crew', 'Status', 'Roles', 'Member since', 'Email', 'Sign-in email', 'Phone', 'Discord', 'Nicknames', 'Instagram', 'Birthday', `${yr - 1} dues`, `${yr} dues`, `Events in ${yr}`, 'Rookie since', 'Eligible date'];
+  const rows = rosterData.map(p => [p.full_name, p.callsign, p.title, (STATUS.find(t => t[0] === p.status) || [0, p.status])[1], (p.abilities || []).includes('crew_admin') ? 'Crew admin' : ROLES.filter(r => r[0] !== 'admin' && fullRole(p, r)).map(r => r[1]).join(', '), p.member_since, p.email, p.login_email, p.phone, p.discord, (p.aliases || []).join(', '), p.instagram, p.birthday, p.dues[yr - 1], p.dues[yr], p.events_year, p.rookie_since, p.eligible_date]);
   const cell = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) || /^[=+\-@]/.test(s) ? '"' + (/^[=+\-@]/.test(s) ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
   const csv = [cols, ...rows].map(r => r.map(cell).join(',')).join('\r\n');
   await rpc('log_export', { p_crew: S.crew.id, p_what: 'the Personnel roster (' + rows.length + ' people)' });
