@@ -1155,9 +1155,11 @@ async function chatCall(body, form) {
 // Events whose chat shows in the list: your upcoming ones (Going or Maybe), then ones you went to in the last 2 weeks.
 function chatEventList() {
   const t = todayISO(), ago = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+  // Webmasters and crew admins are in every event thread on Discord, so they see every event chat here too.
+  const all = can('webmaster') || can('crew_admin');
   const ans = e => (myRsvp(e.id) || {}).answer;
-  const up = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) >= t && e.status !== 'proposed' && ['going', 'maybe'].includes(ans(e)));
-  const past = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) < t && e.event_date >= ago && ans(e) === 'going').reverse();
+  const up = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) >= t && e.status !== 'proposed' && (all || ['going', 'maybe'].includes(ans(e))));
+  const past = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) < t && e.event_date >= ago && (all || ans(e) === 'going')).reverse();
   return { up, past };
 }
 async function chatRefresh(force) {
