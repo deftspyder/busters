@@ -376,6 +376,8 @@ input.in{min-width:0}
 .att img{width:100%;height:100%;object-fit:cover;display:block}.att.doc b{font-size:15px;color:var(--cyan)}.att.doc small{font-size:11px;color:var(--muted);max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .attflag{position:absolute;left:4px;bottom:4px;font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;background:rgba(0,0,0,.7);color:var(--cyan)}
 .attrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.attrow img,.attrow .attic{width:48px;height:48px;border-radius:8px;object-fit:cover;flex:0 0 48px;background:var(--panel2);display:grid;place-items:center;font-size:11px;color:var(--cyan);font-weight:600}
+.tgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}@media (max-width:420px){.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tlbl{display:flex;align-items:center;justify-content:space-between;gap:6px}.trm{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:0 2px}
 .okbox{align-items:flex-start;margin:8px 0 14px;padding:12px 14px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:var(--panel)}.okbox input{margin-top:3px}
 .tbdck{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px;font-weight:400;text-transform:none;letter-spacing:0}
 /* chat */
@@ -1010,6 +1012,7 @@ function renderBrief(m, e) {
       return `<div class="gc-title"><span class="gc-sq" style="background:${e.status === 'cancelled' ? 'var(--bad)' : 'var(--cyan)'}"></span><div style="flex:1;min-width:0"><h1>${esc(e.title)}</h1>
       <div class="gc-when">${esc(whenText(e))}${e.end_date && !e.date_tbd ? ' to ' + fmtDay(e.end_date, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}${e.start_time ? ' · ' + esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) : '') : ''}${durText(e) ? ` <span class="muted" style="white-space:nowrap">(${esc(durText(e))})</span>` : ''}</div>
       ${e.call_time || (!e.call_time && !e.start_time) || e.status === 'cancelled' ? `<div class="gc-sub">${[e.call_time && '<b>Call ' + esc(fmtTime(e.call_time)) + '</b>', !e.call_time && !e.start_time && 'Times coming', e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>'].filter(Boolean).join(' · ')}</div>` : ''}
+      ${(e.extra_times || []).length ? `<div class="gc-sub small">${[e.call_time && ['Call', e.call_time], e.start_time && ['Start', e.start_time], e.wrap_time && ['Wrap', e.wrap_time], ...e.extra_times.map(x => [x.label, x.time])].filter(Boolean).sort((a, b) => a[1] < b[1] ? -1 : 1).map(([l, tm]) => `<span style="white-space:nowrap">${esc(l)} <b>${esc(fmtTime(tm))}</b></span>`).join(' · ')}</div>` : ''}
       <div class="gc-place">${top ? `${GI.pin}<div style="flex:1;min-width:0">${top.label && top.label !== 'Event' ? `<div class="gc-lbl">${esc(top.label)}</div>` : ''}<b>${esc(top.place.name)}</b>${top.place.address ? `<div class="muted small">${esc(top.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(top.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(top.place.name)}">${ICON.nav}</a>` : `${GI.pin}<span class="muted">Address coming</span>`}</div>
       </div></div>
       ${rest.map(x => `<div class="gc-row">${GI.pin}<div class="gc-body"><div class="gc-lbl">${esc(x.label)}</div><b>${esc(x.place.name)}</b>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(x.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(x.place.name)}">${ICON.nav}</a></div>`).join('')}`; })()}
@@ -1122,7 +1125,7 @@ function pickSpots(e, going) {
 
 /* ---------- Event editor ---------- */
 // Finish (Admin, then Events): open the editor with the still-missing details outlined, scrolled to the first one.
-const MISSING_FIELD = { 'Date': 'event_date', 'Point of contact': 'poc_id', 'Event contact': 'contact_name', 'Call time': 'call_time', 'Start time': 'start_time', 'Wrap time': 'wrap_time', 'Minimum Busters': 'min_busters', 'Goal': 'goal_busters' };
+const MISSING_FIELD = { 'Date': 'event_date', 'Point of contact': 'poc_id', 'Event contact': 'contact_name', 'Start time': 'start_time', 'Wrap time': 'wrap_time', 'Minimum Busters': 'min_busters', 'Goal': 'goal_busters' };
 function finishEvent(id) {
   const e = S.events.find(x => x.id === id); if (!e) return;
   editEvent(e);
@@ -1144,14 +1147,14 @@ function editEvent(e, propose = false) {
   show(m => {
     m.innerHTML = `<button class="back" id="bk">${ICON.back} ${isNew ? 'Events' : 'Back to brief'}</button>
       <h2 style="font-size:30px">${propose ? 'Suggest an event' : isNew ? 'New event' : 'Edit event'}</h2>
-      <p class="muted small eintro">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, times, minimum and goal are in.'}</p>
+      <p class="muted small eintro">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, start and wrap times, minimum and goal are in.'}</p>
       ${(() => { const gaps = (e.missing_all || e.missing || []).filter(x => x !== 'Date');
         return !isNew && !propose && gaps.length ? `<label class="check okbox eintro"><input type="checkbox" id="eok" ${e.details_ok ? 'checked' : ''}><span><b>Approve without the rest</b><br><span class="small muted">This event doesn't need ${esc(gaps.join(', '))}. It stops showing as needing details.${e.date_tbd ? ' The date is still needed.' : ''}</span></span></label>` : ''; })()}
       <form id="ef" class="eform"><div class="ecol">
         <label class="f"><span>Event name</span><input class="in" name="title" required value="${v('title')}"></label>
         <div class="grid2"><label class="f"><span>Date</span><input class="in" type="date" name="event_date" required value="${v('event_date')}"><span class="tbdck"><input type="checkbox" id="etbd" ${e.date_tbd ? 'checked' : ''}> Day not set yet (date TBD)</span></label><label class="f"><span>Ends (multi-day only)</span><input class="in" type="date" name="end_date" value="${v('end_date')}"></label></div>
         <label class="f"><span>Category</span><select class="in" name="category"><option value="">Choose</option>${CATEGORIES.map(c => `<option ${e.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
-        <div class="grid3"><label class="f"><span>Call</span><input class="in" type="time" name="call_time" value="${t('call_time')}"></label><label class="f"><span>Start</span><input class="in" type="time" name="start_time" value="${t('start_time')}"></label><label class="f"><span>Wrap</span><input class="in" type="time" name="wrap_time" value="${t('wrap_time')}"></label></div>
+        <div class="gc-lbl" style="margin-top:12px">Times</div><div id="times"></div>
         <h3 style="margin-top:20px">Places</h3><p class="muted small" style="margin:2px 0 0">Each place gets its own Navigate button. Pick a saved place or type a new one; new ones are saved for next time.</p>
         <div id="pls"></div><button type="button" class="btn sm" id="addpl" style="margin-top:8px">+ Add a place</button>
         ${propose ? '' : `<h3 class="ehd">Attachments</h3><p class="muted small" style="margin:2px 0 0">Flyers, maps and PDFs, shown on the event page. The flyer also shows on the event's Discord cards.</p>
@@ -1192,12 +1195,33 @@ function editEvent(e, propose = false) {
       $('#pls').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { pls.splice(+b.dataset.rm, 1); drawPls(); });
     };
     drawPls();
+    // Times: Start and Wrap always; Call and other times only when added. Listed in time order once set.
+    let times = [...(e.call_time ? [{ k: 'call', label: 'Call', t: t('call_time') }] : []), { k: 'start', label: 'Start', t: t('start_time') }, { k: 'wrap', label: 'Wrap', t: t('wrap_time') },
+      ...(e.extra_times || []).map(x => ({ k: 'x', label: x.label, t: (x.time || '').slice(0, 5) }))];
+    const order = () => { const idx = times.map((x, i) => x.t ? i : -1).filter(i => i >= 0); const vals = idx.map(i => times[i]).sort((a, b) => a.t < b.t ? -1 : a.t > b.t ? 1 : 0); idx.forEach((i, n) => { times[i] = vals[n]; }); };
+    const TIME_TYPES = ['Call', 'Meet-up', 'Photo op', 'Break', 'Other'];
+    let picking = false;
+    const drawTimes = () => { const box = $('#times'); order();
+      const nm = { call: 'call_time', start: 'start_time', wrap: 'wrap_time' };
+      box.innerHTML = `<div class="tgrid">${times.map((x, i) => `<label class="f" style="margin:0"><span class="tlbl">${esc(x.label)}${x.k === 'start' || x.k === 'wrap' ? '' : `<button type="button" class="trm" data-trm="${i}" aria-label="Remove ${esc(x.label)}">&#10005;</button>`}</span>
+          <input class="in" type="time" ${nm[x.k] ? `name="${nm[x.k]}"` : ''} data-ti="${i}" value="${esc(x.t || '')}"></label>`).join('')}</div>
+        ${picking ? `<div class="chips" style="padding:8px 0 0;flex-wrap:wrap;overflow:visible">${TIME_TYPES.filter(l => l !== 'Call' || !times.some(x => x.k === 'call')).map(l => `<button type="button" class="chip" data-tadd="${l}">${l}</button>`).join('')}<button type="button" class="chip" data-tadd="">Cancel</button></div>`
+          : `<button type="button" class="btn sm" id="addtime" style="margin-top:8px">+ Add a time</button>`}`;
+      box.querySelectorAll('[data-ti]').forEach(inp => inp.onchange = () => { times[+inp.dataset.ti].t = inp.value; drawTimes(); });
+      box.querySelectorAll('[data-trm]').forEach(b => b.onclick = ev => { ev.preventDefault(); times.splice(+b.dataset.trm, 1); drawTimes(); });
+      const at = $('#addtime', box); if (at) at.onclick = () => { picking = true; drawTimes(); };
+      box.querySelectorAll('[data-tadd]').forEach(b => b.onclick = () => { picking = false; let l = b.dataset.tadd;
+        if (l === 'Other') l = (prompt('Name this time (for example Parade step-off)') || '').trim().slice(0, 40);
+        if (l) times.push(l === 'Call' ? { k: 'call', label: 'Call', t: '' } : { k: 'x', label: l, t: '' });
+        drawTimes(); const last = box.querySelector(`[data-ti="${times.length - 1}"]`); if (l && last) last.focus(); });
+    };
+    drawTimes();
     const drawAtts = () => { const box = $('#atts'); if (!box) return; const fs = filesFor(e.id);
       box.innerHTML = fs.map(f => `<div class="attrow">${isImg(f) ? `<img src="${fileUrl(f)}" alt="">` : `<span class="attic">${esc(fileKind(f))}</span>`}
         <div class="grow" style="min-width:0"><div class="ell">${esc(f.name)}</div><div class="tiny muted">${f.is_flyer ? '<span style="color:var(--cyan)">Flyer, shows on Discord cards</span>' : fileKind(f) + (f.size ? ' · ' + (f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB') : '')}</div></div>
         ${isImg(f) && !f.is_flyer ? `<button type="button" class="btn sm ghost" data-fly="${f.id}">Use as flyer</button>` : ''}<button type="button" class="btn sm ghost" data-rmf="${f.id}">Remove</button></div>`).join('') || '<div class="small dim" style="margin-top:8px">No attachments yet.</div>';
-      box.querySelectorAll('[data-fly]').forEach(b => b.onclick = async () => { await rpc('set_event_flyer', { p_id: b.dataset.fly }); await reloadFiles(); drawAtts(); toast('Flyer set'); });
-      box.querySelectorAll('[data-rmf]').forEach(b => b.onclick = async () => { if (!confirmBox('Remove this attachment?')) return; const path = await rpc('remove_event_file', { p_id: b.dataset.rmf }); if (path) await sb.storage.from('event-files').remove([path]); await reloadFiles(); drawAtts(); toast('Removed'); });
+      box.querySelectorAll('[data-fly]').forEach(b => b.onclick = async () => { await rpc('set_event_flyer', { p_id: b.dataset.fly }); await reloadFiles(); drawAtts(); sb.rpc('refresh_event_card', { p_event: e.id }).then(() => {}); toast('Flyer set'); });
+      box.querySelectorAll('[data-rmf]').forEach(b => b.onclick = async () => { if (!confirmBox('Remove this attachment?')) return; const path = await rpc('remove_event_file', { p_id: b.dataset.rmf }); if (path) await sb.storage.from('event-files').remove([path]); await reloadFiles(); drawAtts(); sb.rpc('refresh_event_card', { p_event: e.id }).then(() => {}); toast('Removed'); });
     };
     drawAtts();
     const ain = $('#attin'); if (ain) ain.onchange = async () => {
@@ -1211,7 +1235,7 @@ function editEvent(e, propose = false) {
         if (error) { toast('Could not upload ' + file.name + ': ' + error.message); continue; }
         try { await rpc('add_event_file', { p_event: e.id, p_path: path, p_name: file.name, p_mime: file.type || '', p_size: file.size }); } catch (_) { await sb.storage.from('event-files').remove([path]); }
       }
-      await reloadFiles(); drawAtts(); if (files.length) toast('Added');
+      await reloadFiles(); drawAtts(); if (files.length) { sb.rpc('refresh_event_card', { p_event: e.id }).then(() => {}); toast('Added'); }
     };
     $('#addpl').onclick = () => { pls.push({ label: 'Parking', name: '', address: '' }); drawPls(); };
     const leave = () => isNew ? (S.view = null, render()) : openEvent(e.id);
@@ -1226,6 +1250,8 @@ function editEvent(e, propose = false) {
       if (propose) p.status = 'proposed';
       p.date_tbd = !!$('#etbd').checked;
       if ($('#eok')) p.details_ok = $('#eok').checked;
+      if (!times.some(x => x.k === 'call')) p.call_time = '';
+      p.extra_times = times.filter(x => x.k === 'x' && x.t).map(x => ({ label: x.label, time: x.t }));
       if (p.date_tbd && p.event_date) p.event_date = p.event_date.slice(0, 8) + '01';
       ev.target.querySelector('button.primary').disabled = true;
       try {
@@ -1233,7 +1259,7 @@ function editEvent(e, propose = false) {
         if (!propose || pls.some(x => x.name || x.address)) await rpc('set_event_places', { p_event: id, p_places: pls.filter(x => x.name || x.address || x.place_id) });
         await refresh();
         if (propose) { S.view = null; render(); toast('Thanks! The events team will take a look.'); }
-        else { openEvent(id); toast('Saved'); }
+        else { sb.rpc('refresh_event_card', { p_event: id }).then(() => {}); openEvent(id); toast('Saved'); }
       } catch (err) { ev.target.querySelector('button.primary').disabled = false; }
     };
   }, null, true);
