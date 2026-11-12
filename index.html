@@ -1775,9 +1775,9 @@ function renderTeam(m) {
       : `<div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
     // App admin only: how Busters itself is wired up (accounts and keys), not day-to-day crew work.
-    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="btns"><button class="btn sm" id="log">Action log</button></div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
+    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div>${adoptionCard()}<div class="btns"><button class="btn sm" id="log">Action log</button></div><div class="sec" id="discord"></div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div><div class="sec small" id="bridge"></div>`,
     crew: () => `${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
-        + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div>' : ''}`
+        + goalCard() + '<div class="sec" id="donatecodes"></div>' : ''}`
   };
   m.innerHTML = `<div class="sec"><h2>Admin ${at === 'events' && ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
 </div>
