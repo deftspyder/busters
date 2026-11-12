@@ -588,10 +588,14 @@ function show(fn) { S.view = () => fn($('#main')); render(); scrollTo(0, 0); }
 const upcoming = () => S.events.filter(e => (e.end_date || e.event_date) >= todayISO() && e.status !== 'proposed');
 const isShort = e => e.min_busters != null && e.going < e.min_busters;
 const placesFor = eid => S.eplaces.filter(x => x.event_id === eid).map(x => ({ ...x, place: S.places.find(p => p.id === x.place_id) })).filter(x => x.place);
+// Navigate links. Android opens the phone's default maps app (geo: link). iPhone has no default maps
+// setting, so it uses the member's pick from Settings. Computers open Google Maps on the web.
+const isAndroid = () => /android/i.test(navigator.userAgent);
 function mapsUrl(pl) {
-  const app = S.profile.maps_app || 'google';
   const q = pl.address || (pl.lat != null ? `${pl.lat},${pl.lng}` : pl.name);
   const ll = pl.lat != null ? `${pl.lat},${pl.lng}` : null;
+  if (isAndroid()) return ll && !pl.address ? `geo:${ll}?q=${ll}(${encodeURIComponent(pl.name || 'Event')})` : 'geo:0,0?q=' + encodeURIComponent(q);
+  const app = isIOS() ? (S.profile.maps_app || 'google') : 'google';
   if (app === 'apple') return 'https://maps.apple.com/?daddr=' + encodeURIComponent(q);
   if (app === 'waze') return ll && !pl.address ? `https://waze.com/ul?ll=${ll}&navigate=yes` : 'https://waze.com/ul?q=' + encodeURIComponent(q) + '&navigate=yes';
   return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(q);
@@ -1667,8 +1671,9 @@ async function openPack() {
 function openProfile() {
   dropdown(`<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="avatar" style="width:48px;height:48px;cursor:default">${esc(initials(S.me.full_name))}</div><div><b>${esc(S.me.full_name)}</b><div class="small muted">${esc((S.session.user || {}).email || '')}</div></div></div>
     <a class="menuitem" id="pm-me"><span class="grow">My Busters<div class="small muted">Your events, stats, dues and details</div></span><span class="muted">›</span></a>
-    <div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>
+    <div class="small muted" style="margin:14px 0 4px;text-transform:uppercase;letter-spacing:.08em">Settings</div>
     <a class="menuitem" id="pm-alerts"><span class="grow">Alerts<div class="small muted">Short-staffed events and last calls</div></span><span class="muted">›</span></a>
+    ${isIOS() ? `<div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>` : ''}
     <a class="menuitem" id="out"><span class="grow" style="color:var(--bad)">Sign out</span></a>`, s => {
     $('#pm-me', s).onclick = () => { closeSheet(); S.tab = 'me'; S.view = null; render(); scrollTo(0, 0); };
     $('#pm-alerts', s).onclick = () => { closeSheet(); openAlerts(); };
