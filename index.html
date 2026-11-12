@@ -162,11 +162,12 @@ input.in{min-width:0}
 .sched-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0}
 .in.sm,select.in.sm{width:auto;display:inline-block;padding:4px 8px;margin:2px 0}
 .sched-row .chips{flex-wrap:wrap}
+.sechd{display:flex;align-items:center;justify-content:space-between;gap:10px}.sechd h2{margin:0}
 .schedup{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line)}
 .schedup:first-child{border-top:0}
 .schedup .swhen{flex:0 0 7.5em;color:var(--cyan);font-weight:700;font-size:13px}
 .check{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer}
-.check input{width:20px;height:20px;accent-color:var(--cyan)}
+.check input{width:20px;height:20px;flex:0 0 20px;margin:0;accent-color:var(--cyan)}
 
 /* home */
 .hello{display:flex;align-items:center;gap:8px}
@@ -462,7 +463,8 @@ const ICON = {
   qr: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>',
   menu: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   nav: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
-  back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>'
+  back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
 };
 
 const ABILITIES = [
@@ -1530,9 +1532,19 @@ function scheduleCard(box) {
     const opt = (vals, cur, lab) => vals.map(v => `<option value="${v}" ${cur === v ? 'selected' : ''}>${lab(v)}</option>`).join('');
     const rd = new Set(d.remind_days || []);
     const whenTxt = t => { if (!t) return 'Nothing planned'; const x = new Date(t), now = new Date(); if (x <= now) return 'Next run'; const days = Math.round((new Date(x.toDateString()) - new Date(now.toDateString())) / 864e5); return (days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : x.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) + ', ' + x.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
-    box.innerHTML = `<h2>Discord posting schedule</h2><div class="card">
-      ${d.connected ? `<div class="small muted">Posts go to <b>#${esc(d.channel || 'the channel')}</b>. Each event keeps <b>one card</b>: every post below is a bump that puts a fresh card at the bottom and removes the old one. Between bumps the card's Going count updates by itself.</div>`
+    // The list shows each event's next Discord post as a tile; the date box is the day it posts.
+    const tile = u => { const t = u.due_at ? new Date(u.due_at) : null;
+      const box1 = t ? `<div class="datebox"><div class="m">${t.toLocaleDateString('en-US', { month: 'short' })}</div><div class="d">${t.getDate()}</div><div class="w">${t.toLocaleDateString('en-US', { weekday: 'short' })}</div></div>` : '<div class="datebox tbd"><div class="m">No</div><div class="d">-</div><div class="w">post</div></div>';
+      return `<div class="row" style="cursor:default">${box1}<div class="grow"><div class="t">${esc(u.title)}</div>
+        <div class="small" style="color:var(--cyan)">${t ? esc((t <= new Date() ? 'Next run' : t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))) + ' · ' : ''}${u.label ? esc(u.label) : 'No more posts planned'}</div>
+        <div class="tiny muted">Event ${esc(fmtDay(u.event_date))}${u.card_at ? ' · card in channel' : ''}</div></div></div>`; };
+    box.innerHTML = `<div class="sechd"><h2>Discord posting schedule</h2><button class="iconbtn" id="ds-gear" title="Posting settings" aria-label="Posting settings">${ICON.gear}</button></div>
+      ${d.connected ? `<div class="small muted">Posts go to <b>#${esc(d.channel || 'the channel')}</b>. Each event keeps one card, and each post is a bump that puts a fresh card at the bottom. Tap the gear to change when the bot posts.</div>`
         : '<div class="small" style="color:var(--warn)">The Busters bot isn\'t connected yet. A crew admin can connect it under Discord posts.</div>'}
+      <h2 style="margin-top:18px">Next Discord posts</h2>
+      <div class="tiny dim" style="margin:-4px 0 8px">The date box is the day the post goes out.</div>
+      ${(d.upcoming || []).length ? d.upcoming.map(tile).join('') : '<div class="empty">No upcoming events in the next few weeks.</div>'}`;
+    $('#ds-gear', box).onclick = () => sheet(`<h2>Posting settings</h2>
       <label class="check"><input type="checkbox" id="ds-new" ${d.post_new ? 'checked' : ''}><span>Post an event when it's added</span></label>
       <div class="sched-row"><span>Reminder bumps</span><span class="chips" style="padding:0">${[14, 7, 3, 1].map(n => `<button class="chip ${rd.has(n) ? 'on' : ''}" data-rd="${n}">${n === 7 ? '1 week' : n === 14 ? '2 weeks' : n === 1 ? '1 day' : n + ' days'} before</button>`).join('')}</span></div>
       <label class="check"><input type="checkbox" id="ds-last" ${d.last_call ? 'checked' : ''}><span>Last call 48 hours before</span></label>
@@ -1546,19 +1558,16 @@ function scheduleCard(box) {
         <select class="in sm" id="ds-every">${opt([0, 4, 6, 8, 12, 24], d.short_every, v => v ? 'every ' + v + ' hours' : 'only once')}</select> until it's covered</span></label>
       <div class="sched-row"><span>Quiet from</span><select class="in sm" id="ds-qf">${hrs(d.quiet_from)}</select><span>to</span><select class="in sm" id="ds-qt">${hrs(d.quiet_to)}</select><span class="tiny dim">no posts in between; they wait for morning</span></div>
       <div class="sched-row"><span>At most</span><select class="in sm" id="ds-max">${opt([3, 4, 6, 8, 10, 12, 15], d.max_posts, v => v + ' posts')}</select><span>per event</span></div>
-      <button class="btn sm primary" id="ds-save" style="margin-top:8px">Save schedule</button>
-      <h3 class="msub" style="margin-top:20px;padding-top:14px;border-top:1px solid var(--line)">Next Discord posts</h3>
-      <div class="tiny dim" style="margin:-2px 0 6px">When the next card for each event goes out. The event's own date is next to its name.</div>
-      <div id="ds-up">${(d.upcoming || []).length ? d.upcoming.map(u => `<div class="schedup"><span class="swhen">${esc(whenTxt(u.due_at))}</span><span class="grow small"><b>${esc(u.title)}</b> <span class="muted">${esc(fmtDay(u.event_date))}</span><br><span class="muted">${u.label ? esc(u.label) : 'No more posts planned'}${u.card_at ? ' · card in channel' : ''}</span></span></div>`).join('') : '<div class="small muted">No upcoming events in the next few weeks.</div>'}</div>
-    </div>`;
-    box.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => b.classList.toggle('on'));
-    $('#ds-save', box).onclick = async () => {
-      const p = { post_new: $('#ds-new', box).checked, last_call: $('#ds-last', box).checked, post_threads: $('#ds-thr', box).checked, post_events: $('#ds-ev', box).checked, dm_interested: $('#ds-dm', box).checked, post_milestones: $('#ds-gbm', box).checked, post_giveback_updates: $('#ds-gbu', box).checked, post_short: $('#ds-short', box).checked,
-        short_days: Number($('#ds-sdays', box).value), short_every: Number($('#ds-every', box).value),
-        quiet_from: Number($('#ds-qf', box).value), quiet_to: Number($('#ds-qt', box).value), max_posts: Number($('#ds-max', box).value),
-        remind_days: [...box.querySelectorAll('[data-rd].on')].map(b => Number(b.dataset.rd)) };
-      try { await rpc('set_discord_schedule', { p_crew: S.crew.id, p }); toast('Schedule saved'); scheduleCard(box); } catch (_) { }
-    };
+      <div class="btns" style="margin-top:14px"><button class="btn primary" id="ds-save">Save</button><button class="btn ghost" data-close>Cancel</button></div>`, sh => {
+      sh.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => b.classList.toggle('on'));
+      $('#ds-save', sh).onclick = async () => {
+        const p = { post_new: $('#ds-new', sh).checked, last_call: $('#ds-last', sh).checked, post_threads: $('#ds-thr', sh).checked, post_events: $('#ds-ev', sh).checked, dm_interested: $('#ds-dm', sh).checked, post_milestones: $('#ds-gbm', sh).checked, post_giveback_updates: $('#ds-gbu', sh).checked, post_short: $('#ds-short', sh).checked,
+          short_days: Number($('#ds-sdays', sh).value), short_every: Number($('#ds-every', sh).value),
+          quiet_from: Number($('#ds-qf', sh).value), quiet_to: Number($('#ds-qt', sh).value), max_posts: Number($('#ds-max', sh).value),
+          remind_days: [...sh.querySelectorAll('[data-rd].on')].map(b => Number(b.dataset.rd)) };
+        try { await rpc('set_discord_schedule', { p_crew: S.crew.id, p }); toast('Settings saved'); closeSheet(); scheduleCard(box); } catch (_) { }
+      };
+    });
   }).catch(() => { box.innerHTML = ''; });
 }
 function discordCard(d) {
@@ -1580,7 +1589,7 @@ function discordCard(d) {
     <hr style="border:0;border-top:1px solid var(--line, #222);margin:14px 0">
     <label class="check"><input type="checkbox" id="dc-changes" ${d.post_changes !== false ? 'checked' : ''}><span>Post what changed when an upcoming event is updated (times, date, places, parking, cancelled)</span></label>
     <label class="check" style="opacity:.55"><input type="checkbox" id="dc-photos" disabled ${d.post_photos ? 'checked' : ''}><span>Ask for photos and videos the day after an event <span class="tiny dim">(coming with Jeff's Dropbox drop)</span></span></label>
-    <div class="tiny dim" style="margin-top:6px">When and how often the bot posts is set under <b>Discord posting schedule</b> above. Posts never ping @everyone. Editors can also post any event from its page.</div>
+    <div class="tiny dim" style="margin-top:6px">When and how often the bot posts is set with the gear next to <b>Discord posting schedule</b> above. Posts never ping @everyone. Editors can also post any event from its page.</div>
     <button class="btn sm" id="dc-save" style="margin-top:10px">Save post settings</button>
   </div>`;
 }
