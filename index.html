@@ -378,6 +378,7 @@ input.in{min-width:0}
 .attrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.attrow img,.attrow .attic{width:48px;height:48px;border-radius:8px;object-fit:cover;flex:0 0 48px;background:var(--panel2);display:grid;place-items:center;font-size:11px;color:var(--cyan);font-weight:600}
 .tgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}@media (max-width:420px){.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .tlbl{display:flex;align-items:center;justify-content:space-between;gap:6px}.trm{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:0 2px}
+.regbox{margin:10px 14px 0;padding:12px 14px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:var(--panel2)}
 .okbox{align-items:flex-start;margin:8px 0 14px;padding:12px 14px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:var(--panel)}.okbox input{margin-top:3px}
 .tbdck{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px;font-weight:400;text-transform:none;letter-spacing:0}
 /* chat */
@@ -1954,12 +1955,23 @@ const DUES = [['', 'Not set', ''], ['PAID', 'Paid', 'good'], ['UNPAID', 'Not pai
 const duesKey = s => !s ? '' : /^paid/i.test(s) ? 'PAID' : /exempt|^n\/?a$/i.test(s) ? 'EXEMPT' : /extension|grace/i.test(s) ? 'EXTENSION' : /unpaid|not paid/i.test(s) ? 'UNPAID' : s;
 const duesPill = s => { const k = duesKey(s), d = DUES.find(x => x[0] === k) || [k, s, '']; return k ? `<span class="pill ${d[2]}">${esc(d[1])}</span>` : '<span class="pill na">Not set</span>'; };
 
+let regChecks = {};
 async function personnelList(box) {
   try { rosterData = await rpc('personnel_roster', { p_crew: S.crew.id }); } catch (e) { box.innerHTML = '<div class="empty">The Personnel list could not load right now.</div>'; return; }
+  // Registry checks for applicants (Waiting). Only the outcome, who and when are kept, never what was found.
+  const { data: rc } = await sb.rpc('registry_checks_for', { p_crew: S.crew.id }); regChecks = Object.fromEntries((rc || []).map(r => [r.person_id, r]));
   const yr = +todayISO().slice(0, 4);
   const bday = b => b ? fmtDay('2000-' + b, { month: 'short', day: 'numeric' }) : '';
   const line = (k, v) => v ? `<div class="kv"><span>${k}</span><b>${v}</b></div>` : '';
-  const detail = p => `<div class="pdet">
+  const regBox = p => { const r = regChecks[p.id];
+    const st = !r ? '<span style="color:var(--warn)">Not checked yet</span>' : r.outcome === 'clear' ? `<span style="color:var(--good)">Clear</span> <span class="tiny muted">· ${esc(new Date(r.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }))} by ${esc(r.checked_by || 'Personnel')}</span>` : `<span style="color:var(--bad)">Needs a closer look</span> <span class="tiny muted">· ${esc(new Date(r.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))} by ${esc(r.checked_by || 'Personnel')}</span>`;
+    return `<div class="regbox"><div class="gc-lbl">Registry check</div><div class="small" style="margin:2px 0 8px">${st}</div>
+      <div class="btns"><button type="button" class="btn sm" data-rcopy="${esc(p.full_name)}">Copy name</button>
+        <a class="btn sm" href="https://meganslaw.ca.gov/" target="_blank" rel="noopener">California Megan's Law ↗</a>
+        <a class="btn sm" href="https://www.nsopw.gov/" target="_blank" rel="noopener">National (NSOPW) ↗</a></div>
+      <div class="btns" style="margin-top:8px"><button type="button" class="btn sm primary" data-rset="${p.id}:clear">Mark clear</button><button type="button" class="btn sm" data-rset="${p.id}:review">Needs a closer look</button>${r ? `<button type="button" class="btn sm ghost" data-rset="${p.id}:">Undo</button>` : ''}</div>
+      <div class="tiny dim" style="margin-top:6px">Busters keeps only the outcome, who checked and when. Look up both sites, and use the city and age to rule out someone with the same name.</div></div>`; };
+  const detail = p => `${p.status === 'pending' ? regBox(p) : ''}<div class="pdet">
       <div class="pgrp"><div class="gc-lbl">Names and accounts</div>
         ${line('Real name', esc(p.full_name))}${line('Callsign', esc(p.callsign || ''))}
         ${line('Discord', p.discord ? esc(p.discord) + (p.discord_linked ? ' <span class="tiny" style="color:var(--good)">linked</span>' : ' <span class="tiny dim">not linked</span>') : '<span class="dim">none</span>')}
@@ -1984,7 +1996,7 @@ async function personnelList(box) {
       + rows.map(p => `<div class="prow${rosterOpen.has(p.id) ? ' open' : ''}" data-pr="${p.id}">
         <div class="pgrid"><button class="pexp" data-px="${p.id}" aria-expanded="${rosterOpen.has(p.id)}" aria-label="Show details for ${esc(p.full_name)}">›</button>
           <div data-px="${p.id}" style="cursor:pointer;min-width:0"><div class="pname">${esc(p.full_name)}</div>${roleTags(p) ? `<div class="ptags pc-roles-m">${roleTags(p)}</div>` : ''}</div>
-          <div>${statusPill(p.status)}</div>
+          <div>${statusPill(p.status)}${p.status === 'pending' ? (regChecks[p.id] ? (regChecks[p.id].outcome === 'clear' ? '<div class="tiny" style="color:var(--good);margin-top:3px">Check clear</div>' : '<div class="tiny" style="color:var(--bad);margin-top:3px">Check: look closer</div>') : '<div class="tiny" style="color:var(--warn);margin-top:3px">Check needed</div>') : ''}</div>
           <div class="ptags pc-roles">${roleTags(p) || '<span class="dim tiny">None</span>'}</div>
           <div>${duesPill(p.dues[yr])}</div>
           <button class="xedit" data-pe="${p.id}" title="Edit" aria-label="Edit ${esc(p.full_name)}">${PEN}</button></div>
@@ -1992,6 +2004,11 @@ async function personnelList(box) {
     $('#pcnt').textContent = rows.length + ' shown';
     box.querySelectorAll('[data-px]').forEach(b => b.onclick = () => { const id = b.dataset.px; rosterOpen.has(id) ? rosterOpen.delete(id) : rosterOpen.add(id); draw(); });
     box.querySelectorAll('[data-pe]').forEach(b => b.onclick = () => editPerson(rosterData.find(x => x.id === b.dataset.pe), () => personnelList(box)));
+    box.querySelectorAll('[data-rcopy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.rcopy); toast('Name copied'); } catch (e) { toast(b.dataset.rcopy); } });
+    box.querySelectorAll('[data-rset]').forEach(b => b.onclick = async () => { const [id, out] = b.dataset.rset.split(':');
+      await rpc('set_registry_check', { p_person: id, p_outcome: out || null });
+      if (out) regChecks[id] = { person_id: id, outcome: out, checked_at: new Date().toISOString(), checked_by: nameOf(S.me) }; else delete regChecks[id];
+      toast(out === 'clear' ? 'Marked clear' : out ? 'Marked for a closer look' : 'Check record removed'); draw(); });
   };
   const waiting = rosterData.filter(p => p.status === 'pending').length;
   box.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px"><input class="in" id="rq" placeholder="Search names, Discord, email, nicknames" style="flex:1;min-width:180px" value="${esc(rosterQ)}"><button class="btn sm primary" id="padd">+ Add person</button><button class="btn sm" id="pexp">Download</button></div>
@@ -2044,6 +2061,8 @@ function editPerson(p, after) {
       s.querySelectorAll('[data-role]').forEach(c => { const r = ROLES.find(x => x[0] === c.dataset.role); if (c.checked) abil.push(...r[3]); else if (!fullRole(p, r) && hasRole(p, r)) abil.push(...r[3].filter(a => (p.abilities || []).includes(a))); });
       abil = [...new Set(abil)].sort();
       if (p.id === S.me.id && (p.abilities || []).includes('crew_admin') && !abil.includes('crew_admin') && !S.appAdmin && !confirmBox('Remove your own crew admin role?')) return;
+      if (p.status === 'pending' && ['active', 'rookie'].includes(st) && (regChecks[p.id] || {}).outcome !== 'clear'
+          && !confirmBox(regChecks[p.id] ? `${p.full_name}'s registry check is marked "Needs a closer look". Approve anyway?` : `No registry check is recorded for ${p.full_name}. Approve anyway?`)) return;
       if (st === 'removed' && p.status !== 'removed' && !confirmBox(`Mark ${body.full_name} as removed? They lose access to Busters.`)) return;
       const aliases = $('#pal', s).value.split(',').map(x => x.trim()).filter(Boolean);
       try {
