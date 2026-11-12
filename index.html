@@ -1900,7 +1900,8 @@ function donateCodesCard(box) {
   box.innerHTML = `<h2>Donate QR codes</h2><div class="card">
     <div class="small muted">Shown big when anyone taps the QR button at the top, stacked on one screen. Up to 4 (two fit best on a phone).</div>
     ${DC.map(row).join('')}
-    <div style="display:flex;gap:8px;margin-top:12px">${DC.length < 4 ? '<button class="btn sm" id="dc-add">+ Add a code</button>' : ''}<button class="btn sm primary" id="dc-save" style="margin-left:auto">Save codes</button></div>
+    ${DC.length < 4 ? '<button class="btn sm" id="dc-add" style="margin-top:12px">+ Add a code</button>' : ''}
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px;display:flex;align-items:center;gap:10px"><span class="tiny muted" style="flex:1">Saves every code above.</span><button class="btn sm primary" id="dc-save">Save</button></div>
     <div class="tiny dim" style="margin-top:8px">Zelle: in the Chase app open Pay &amp; transfer, Zelle, then your QR code, save it as a picture and use "Use a QR picture". Busters reads the link out of it so the code stays sharp.</div>
   </div>`;
   box.querySelectorAll('.dcode').forEach(el => {
