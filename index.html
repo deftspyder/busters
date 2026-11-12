@@ -634,7 +634,7 @@ function renderShell() {
     <header class="top"><div class="bar">
       <button class="brand" id="brand" title="Busters home" aria-label="Busters home"><img class="bmk" src="icons/icon-192.png?v=4" alt=""><span class="bdiv"></span><img class="logo" src="img/wordmark-wide.png" alt="The Los Angeles Ghostbusters"></button>
       <div class="sp"></div>
-      <button class="iconbtn cyc" id="pk" title="Proton pack monitor" aria-label="Proton pack monitor">${ICON.pack}</button>
+      <button class="iconbtn cyc" id="pk" title="Proton Pack Diagnostics" aria-label="Proton Pack Diagnostics">${ICON.pack}</button>
       <button class="iconbtn" id="qr" title="Donate QR codes" aria-label="Donate QR codes">${ICON.qr}</button>
       <button class="iconbtn" id="menu" title="Menu">${ICON.menu}</button>
     </div><div class="hz"></div></header>
@@ -2243,19 +2243,25 @@ async function openAlerts() {
 function openMenu() {
   dropdown(`<div class="menu-r"><img src="img/emblem.png" alt="" style="width:70px;margin:0 auto 8px">
     <a class="menuitem" href="https://www.losangelesgb.com/" target="_blank" rel="noopener"><span class="grow">About LAGB</span><span class="muted">↗</span></a>
-    <a class="menuitem" id="pp"><span class="grow">Proton pack monitor<div class="small muted">In-world diagnostics for your pack</div></span><span class="muted">›</span></a>
+    <a class="menuitem" id="pp"><span class="grow">Proton Pack Diagnostics<div class="small muted">In-world diagnostics for your pack</div></span><span class="muted">›</span></a>
     <a class="menuitem" id="how"><span class="grow">How to use Busters</span><span class="muted">›</span></a>
+    <a class="menuitem" id="shareapp"><span class="grow">Share Busters<div class="small muted">Send someone the app link</div></span><span class="muted">↗</span></a>
     <a class="menuitem" href="mailto:hello@busters.app?subject=Busters%20feedback"><span class="grow">Send feedback</span><span class="muted">↗</span></a>
     <p class="tiny dim" style="margin-top:14px">Busters beta for ${esc(S.crew.short)}. Ghostbusters and the No-Ghost logo are trademarks of Columbia Pictures.</p></div>`, s => {
     s.parentNode.classList.add('right');
     $('#pp', s).onclick = () => { closeSheet(); openPack(); };
+    $('#shareapp', s).onclick = async () => {
+      const url = 'https://busters.app/', text = 'Busters is an app for events, sign-ups, chat and more.';
+      try { if (navigator.share) { await navigator.share({ title: 'Busters', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.clipboard.writeText(url); toast('Link copied: busters.app'); } catch (e) { toast('busters.app'); }
+    };
     $('#how', s).onclick = () => sheet(`<h3>How to use Busters</h3>
       <p><b>Home</b>: what needs your answer, every event coming up, and announcements. Tap an event to answer Going, Maybe or No, or open its full brief.</p>
       <p><b>Chat</b>: the same conversations as the ${esc(S.crew.short)} Discord, #rookies and each event's thread. Write here or there and everyone sees it.</p>
       <p><b>Crew</b>: everyone in ${esc(S.crew.short)}, with search and the member map. Tap a Buster to see their profile.</p>
       <p><b>Me</b>: your stats, dues and details, plus Settings (alerts, maps app) and Sign out.</p>
       ${onTeam() ? '<p><b>Admin</b>: the dashboards for the jobs you have, like events, personnel or media.</p>' : ''}
-      <p>Top bar: the <b>cyclotron</b> opens your proton pack monitor, and the <b>QR</b> button shows donate codes to scan at events.</p>
+      <p>Top bar: the <b>cyclotron</b> opens Proton Pack Diagnostics, and the <b>QR</b> button shows donate codes to scan at events.</p>
       <p><b>Add to your home screen</b> so Busters opens like an app: on iPhone tap Share, then "Add to Home Screen"; on Android tap the ⋮ menu, then "Install app".</p>
       <button class="btn" data-close>Got it</button>`);
   });
