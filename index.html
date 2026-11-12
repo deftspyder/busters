@@ -1663,7 +1663,7 @@ async function readQrPicture(file) {
 async function openPack() {
   // Make the sound engine right now, inside the tap, so phones let the pack hum start straight away.
   let audioCtx = null; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume().catch(() => {}); } catch (e) { /* no sound */ }
-  try { await loadScript('pack.js?v=36'); } catch (e) { if (audioCtx) audioCtx.close().catch(() => {}); return toast('Could not load the pack monitor. Check your connection.'); }
+  try { await loadScript('pack.js?v=37'); } catch (e) { if (audioCtx) audioCtx.close().catch(() => {}); return toast('Could not load the pack monitor. Check your connection.'); }
   try { window.openPackMonitor({ S, $, esc, toast, rpc, can, nameOf, upcoming, todayISO, audioCtx }); } catch (e) { console.error(e); toast('The pack monitor hit an error: ' + e.message); }
 }
 
@@ -1755,7 +1755,7 @@ async function openAlerts() {
 function openMenu() {
   dropdown(`<div class="menu-r"><img src="img/emblem.png" alt="" style="width:70px;margin:0 auto 8px">
     <a class="menuitem" href="https://www.losangelesgb.com/" target="_blank" rel="noopener"><span class="grow">About LAGB</span><span class="muted">↗</span></a>
-    <a class="menuitem" id="pp"><span class="grow">Proton pack monitor<div class="small muted">In-world pack diagnostics, assigned to a Buster</div></span><span class="muted">›</span></a>
+    <a class="menuitem" id="pp"><span class="grow">Proton pack monitor<div class="small muted">In-world diagnostics for your pack</div></span><span class="muted">›</span></a>
     <a class="menuitem" id="how"><span class="grow">How to use Busters</span><span class="muted">›</span></a>
     <a class="menuitem" href="mailto:hello@busters.app?subject=Busters%20feedback"><span class="grow">Send feedback</span><span class="muted">↗</span></a>
     ${can('crew_admin') ? `<div class="small muted" style="margin:14px 0 4px;text-transform:uppercase;letter-spacing:.08em">Admin</div>

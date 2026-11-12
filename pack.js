@@ -270,12 +270,11 @@
     if (!document.getElementById('pk-font')) { const l = document.createElement('link'); l.id = 'pk-font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'; document.head.appendChild(l); }
     const pack = () => (S.settings && S.settings.pack_monitor) || {};
     const crew = S.people.filter(p => ['active', 'rookie'].includes(p.status));
-    const todays = () => { const t = todayISO(); const e = upcoming().find(x => x.event_date <= t && (x.end_date || x.event_date) >= t && x.status === 'scheduled'); return e ? S.rsvps.filter(r => r.event_id === e.id && r.answer === 'going').map(r => r.person_id) : []; };
-    let saved = null; try { saved = localStorage.getItem('pk-who'); } catch (e) { /* no storage */ }
-    let who = saved && (saved === 'cycle' || crew.some(p => p.id === saved)) ? saved : (S.me ? S.me.id : (crew[0] || {}).id);
+    // The pack is always the signed-in Buster's own pack.
+    const who = S.me ? S.me.id : (crew[0] || {}).id;
     let view = 'pack'; try { view = localStorage.getItem('pk-view') || 'pack'; } catch (e) { /* ignore */ }
     const oos = {};
-    let cur = who, cycleIdx = -1, edit = null, timers = [], lock = null, mode = 0, firing = false, audio = null, logLines = [];
+    let cur = who, edit = null, timers = [], lock = null, mode = 0, firing = false, audio = null, logLines = [];
     const V = {}; Object.keys(R).forEach(k => { V[k] = 0; });
 
     const el = document.createElement('div'); el.className = 'pk m0'; document.body.appendChild(el);
@@ -303,7 +302,7 @@
       <div class="cb">
         <button id="b0">${mode ? 'PACK ON' : 'PACK OFF'}</button><button id="b1">IDLE</button><button id="b2">STREAM</button>
         <button id="bf" class="fire">FIRE</button><button id="ba">${audio ? 'SOUND ON' : 'SOUND'}</button><button id="bm">MORE</button></div>
-      <div class="more box" id="pkmore"><select id="pkwho"><option value="cycle"${who === 'cycle' ? ' selected' : ''}>Cycle through today's Busters</option>${crew.map(c => `<option value="${c.id}"${who === c.id ? ' selected' : ''}>${esc(nameOf(c))}</option>`).join('')}</select>
+      <div class="more box" id="pkmore">
         <button id="pkfs">Full screen</button>${can('crew_admin') ? '<button id="pkset">Set up pack photo</button>' : ''}<button id="pkx">Exit monitor</button></div>
       ${edit ? `<div class="tip">${edit.i < MARKS.length ? `Tap the ${MARKS[edit.i][1]} (${edit.i + 1} of ${MARKS.length}) &nbsp;<u id="pkskip">Skip</u>` : 'Saving...'}</div>` : ''}`;
       makeEmblem(u => { const e = $('#pkemb', el); if (e && u) e.src = u; const l2 = $('#pklg2', el); if (l2 && u) l2.innerHTML = `<div style="text-align:center"><img src="${u}" style="width:min(70%,18vh);image-rendering:pixelated;filter:drop-shadow(0 0 6px var(--ph))" alt=""><div class="sub" style="margin-top:6px">LOS ANGELES GHOSTBUSTERS</div></div>`; });
@@ -422,7 +421,6 @@
       const bf = $('#bf', el);
       bf.onpointerdown = e => { e.preventDefault(); startFire(); }; bf.onpointerup = bf.onpointerleave = bf.onpointercancel = () => stopFire();
       bf.oncontextmenu = e => e.preventDefault();
-      $('#pkwho', el).onchange = e => { who = e.target.value; try { localStorage.setItem('pk-who', who); } catch (x) { /* ignore */ } cur = who === 'cycle' ? nextCycle() : who; frame(); };
     }
 
     function setup() {
@@ -444,7 +442,6 @@
       try { await rpc('set_pack_monitor', { p_crew: S.crew.id, p_pack: pk }); S.settings.pack_monitor = pk; toast('Pack saved'); } catch (e) { /* rpc shows the error */ }
       frame();
     }
-    function nextCycle() { const ids = todays(); const list = ids.length ? ids : crew.map(c => c.id); if (!list.length) return null; cycleIdx = (cycleIdx + 1) % list.length; return list[cycleIdx]; }
 
     // live values
     const t0 = performance.now(); let step = 0;
@@ -558,7 +555,6 @@
     if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { lock = l; }).catch(() => {});
 
     window.__pkClose = close;
-    if (who === 'cycle') cur = nextCycle();
     log('LINK: LOS ANGELES DIVISION');
     frame(); loop();
     // Sound is on by default (unless this person turned it off before). Phones only allow sound after a tap,
@@ -573,7 +569,6 @@
     }
     setTimeout(() => setMode(1), 400); // pack starts powered on, with its boot sequence
     timers.push(setInterval(tick, 120));
-    timers.push(setInterval(() => { if (who === 'cycle' && !edit) { cur = nextCycle(); frame(); } }, 20000));
     const TECH = () => ['PING: TELEMETRY REFRESHED', 'SYS: FIELD LENS RECALIBRATED', 'N-FILTER: PARTICULATE ' + Math.round(10 + mode * 6) + ' PPM',
       'ION ARM: ALIGNMENT HOLDING', 'PKE: BACKGROUND WITHIN LIMITS', 'BOOSTER: CAPACITOR RECHARGED', 'RIBBON CABLE: HANDSHAKE OK'];
     let lastLine = '', lastEgg = performance.now(), eggs = [];
