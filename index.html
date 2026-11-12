@@ -615,13 +615,13 @@ async function loadAll() {
     sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10),
     sb.rpc('giveback_for_crew', { p_crew: c }),
     sb.rpc('fundraising_board', { p_crew: c, p_year: Number(todayISO().slice(0, 4)) }),
-    sb.rpc('shared_phones', { p_crew: c }),
+    sb.rpc('crew_contacts', { p_crew: c }).then(r => r.error ? sb.rpc('shared_phones', { p_crew: c }) : r),
     sb.rpc('crew_settings', { p_crew: c }),
     sb.from('event_files').select('*').eq('crew_id', c).order('created_at')
   ]);
   S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
   if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
-  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.files = (ef && ef.data) || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.settings = (cs && cs.data) || {}; S.phones = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x.phone]));
+  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.files = (ef && ef.data) || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.settings = (cs && cs.data) || {}; S.contacts = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x])); S.phones = Object.fromEntries(Object.values(S.contacts).filter(x => x.phone).map(x => [x.person_id, x.phone]));
 }
 async function refresh() { await loadAll(); render(); }
 
@@ -1277,8 +1277,11 @@ function renderMine(m) {
         <label class="f"><span>Callsign</span><input class="in" name="callsign" value="${esc(me.callsign || '')}"></label>
         <div class="grid2"><label class="f"><span>Phone</span><input class="in" type="tel" name="phone" value="${esc(S.priv.phone || '')}"></label><label class="f"><span>Discord name</span><input class="in" name="discord" value="${esc(S.priv.discord || '')}"></label></div>
         <div class="grid2"><label class="f"><span>Instagram</span><input class="in" name="instagram" value="${esc(S.priv.instagram || '')}"></label><label class="f"><span>Birthday (month and day)</span><input class="in" name="birthday" placeholder="MM-DD" pattern="\\d{2}-\\d{2}" value="${esc(S.priv.birthday || '')}"></label></div>
-        <label class="check" style="margin-top:-2px"><input type="checkbox" name="share_phone" ${S.priv.share_phone ? 'checked' : ''}> Show my phone number to other members</label>
-        <div class="tiny dim" style="margin:-4px 0 8px 30px">Members can call or text you from your profile. Off by default; Personnel always sees it.</div>
+        <div class="gc-lbl" style="margin:6px 0 2px">Contact</div>
+        <div class="tiny dim" style="margin-bottom:4px">Shows on your card in the Crew tab. Personnel always sees all of your details.</div>
+        <label class="check" style="opacity:.7"><input type="checkbox" checked disabled> Discord (always shown)</label>
+        <label class="check"><input type="checkbox" name="share_phone" ${S.priv.share_phone ? 'checked' : ''}> Phone, so members can call or text me</label>
+        <label class="check"><input type="checkbox" name="share_email" ${S.priv.share_email ? 'checked' : ''}> Email (${esc(S.priv.email || (S.session.user && S.session.user.email) || 'my sign-in email')})</label>
         <label class="f"><span>City (for the member map, city level only)</span><input class="in" name="city" placeholder="Redondo Beach" value="${esc(me.city || '')}"></label>
         <label class="check"><input type="checkbox" name="show_on_map" ${me.show_on_map ? 'checked' : ''}> Show me on the member map</label>
         <div class="tiny dim" style="margin:-4px 0 8px 30px">Only your city shows, at the city's center. New cities appear within about 10 minutes.</div>
@@ -1300,7 +1303,7 @@ function renderMine(m) {
   $('#mygb').onclick = ev => { ev.preventDefault(); openQR(); };
   $('#mf').onsubmit = async ev => {
     ev.preventDefault(); const f = ev.target;
-    await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked, share_phone: f.share_phone.checked } });
+    await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked, share_phone: f.share_phone.checked, share_email: f.share_email.checked } });
     await refresh(); toast('Saved');
   };
 }
@@ -1539,7 +1542,12 @@ function openPerson(id) {
       <div class="small muted">${esc([p.callsign && '"' + p.callsign + '"', p.title || (p.status === 'rookie' ? 'Rookie' : 'Buster'), p.member_since && 'since ' + fmtDay(p.member_since, { year: 'numeric' })].filter(Boolean).join(' · '))}</div>
       ${p.status === 'rookie' ? `<span class="pill cream" style="margin-top:6px;display:inline-block">Rookie${p.rookie_since ? ' since ' + fmtDay(p.rookie_since, { month: 'short', year: 'numeric' }) : ''}</span>` : ''}</div>${can('manage_abilities') ? `<button class="xedit" id="pedit" title="Edit abilities" aria-label="Edit ${esc(p.full_name)}'s abilities" style="align-self:flex-start">${pen}</button>` : ''}</div>
     <div class="pstats"><div><b>${doneYr}</b><span>events in ${yr}</span></div><div><b>${up.length}</b><span>coming up</span></div><div><b>${raised ? money0(raised) : '$0'}</b><span>raised</span></div></div>
-    ${S.phones && S.phones[p.id] ? `<div class="ct" style="margin-top:12px"><div class="ct-who small"><span class="gc-lbl">Phone</span><div>${esc(S.phones[p.id])} · <a href="#" data-copy="${esc(S.phones[p.id])}" style="color:var(--cyan)">Copy</a></div></div>${contactBtns(S.phones[p.id], null)}</div>` : ''}
+    ${(() => { const c = (S.contacts || {})[p.id] || {};
+      const dc = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.4 15.4 0 0 0-5.4 0l-.5-1a16.5 16.5 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.7 16.7 0 0 0 5 2.5l1.1-1.7a10.8 10.8 0 0 1-1.7-.8l.4-.3a11.9 11.9 0 0 0 10.9 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.7a16.6 16.6 0 0 0 5-2.5c.4-4.3-.7-8-3-11.4zM8.7 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>';
+      const rowC = (lbl, val, btns) => `<div class="ct" style="margin-top:10px"><div class="ct-who small"><span class="gc-lbl">${lbl}</span><div>${esc(val)} · <a href="#" data-copy="${esc(val)}" style="color:var(--cyan)">Copy</a></div></div>${btns}</div>`;
+      const rows = [c.discord || c.discord_user_id ? rowC('Discord', c.discord || 'On the LAGB server', c.discord_user_id ? `<span class="ct-btns"><a class="cbtn" href="https://discord.com/users/${encodeURIComponent(c.discord_user_id)}" target="_blank" rel="noopener" aria-label="Message on Discord" title="Message on Discord">${dc}</a></span>` : '') : '',
+        c.phone ? rowC('Phone', c.phone, contactBtns(c.phone, null)) : '', c.email ? rowC('Email', c.email, contactBtns(null, c.email)) : ''].join('');
+      return `<div class="sec" style="margin-top:12px"><div class="gc-lbl" style="margin-bottom:2px">Contact</div>${rows || '<div class="small muted">No contact info yet. Find them on the LAGB Discord.</div>'}</div>`; })()}
     ${p.show_on_map && p.city ? `<div class="small" style="margin-top:10px"><span class="gc-lbl">City</span> ${esc(p.city.replace(/\b\w/g, c => c.toUpperCase()))}</div>` : ''}
     ${up.length ? `<div class="sec"><div class="gc-lbl" style="margin-bottom:4px">Going to</div>${up.slice(0, 6).map(e => `<a href="#" class="prow2" data-ev2="${e.id}"><span>${fmtDay(e.event_date, { month: 'short', day: 'numeric' })}</span>${esc(e.title)}</a>`).join('')}</div>` : ''}
     ${can('manage_abilities') ? `<div class="sec pab" id="pab" hidden><div><b>Abilities</b> <span class="muted small">${esc(role)}</span></div>
