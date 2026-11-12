@@ -754,17 +754,18 @@ function byMonth(items, dateOf, render) {
     return div + render(x); }).join('');
 }
 const whenText = e => e.date_tbd ? fmtDay(e.event_date, { month: 'long', year: 'numeric' }) + ', date TBD' : fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric' });
-function eventRow(e) {
+// opts.admin: the Admin list's version, with a 'Needs details' line and pills in place of the quick answer.
+function eventRow(e, opts = {}) {
   const pls = placesFor(e.id); const p1 = pls[0]; const where = p1 ? p1.place.name : '';
-  const open = S.xopen === e.id; const w = isWaiting(e); const r = myRsvp(e.id) || {};
+  const open = S.xopen === e.id; const w = !opts.admin && isWaiting(e); const r = myRsvp(e.id) || {};
   const canAns = e.status === 'scheduled' && (e.end_date || e.event_date) >= todayISO();
   const tl = timeLine(e);
   return `<div class="xrow${open ? ' open' : ''}${w ? ' waiting' : ''}" data-xr="${e.id}">
     <div class="row xh" role="button" aria-expanded="${open}">
     ${dateBox(e)}
     <div class="grow"><div class="t">${esc(e.title)}</div>
-      <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([e.date_tbd ? 'Date TBD' : '', tl, where].filter(Boolean).join(' · ')) || 'Times and place coming'}</div>
-      ${canAns && !r.answer && !open ? `<div class="qa${w ? ' hot' : ''}"><span class="qal">${e.max_busters ? 'Want in?' : 'Are you in?'}</span><button class="qb y" data-qa="going" aria-label="${e.max_busters ? 'Count me in' : 'Going'}" title="${e.max_busters ? 'Count me in' : 'Going'}">&#10003;</button><button class="qb m" data-qa="maybe" aria-label="Maybe" title="Maybe">?</button><button class="qb n" data-qa="no" aria-label="Not going" title="Not going">&#10005;</button><span class="qsp"></span>${staffPill(e)}</div>`
+      ${opts.line != null ? opts.line : ''}${opts.line ? '' : `<div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([e.date_tbd ? 'Date TBD' : '', tl, where].filter(Boolean).join(' · ')) || 'Times and place coming'}</div>`}
+      ${opts.admin ? (opts.pills ? `<div class="pills">${opts.pills}</div>` : '') : canAns && !r.answer && !open ? `<div class="qa${w ? ' hot' : ''}"><span class="qal">${e.max_busters ? 'Want in?' : 'Are you in?'}</span><button class="qb y" data-qa="going" aria-label="${e.max_busters ? 'Count me in' : 'Going'}" title="${e.max_busters ? 'Count me in' : 'Going'}">&#10003;</button><button class="qb m" data-qa="maybe" aria-label="Maybe" title="Maybe">?</button><button class="qb n" data-qa="no" aria-label="Not going" title="Not going">&#10005;</button><span class="qsp"></span>${staffPill(e)}</div>`
         : `<div class="pills">${myStatus(e, r)}${staffPill(e)}</div>`}
     </div><div class="xside">${can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id) ? `<button class="xedit" data-edit="${e.id}" title="Edit event" aria-label="Edit ${esc(e.title)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>` : ''}<span class="chev">${ICON.back}</span></div></div>
     ${open ? `<div class="xb">
@@ -784,7 +785,7 @@ function wireRows(el) {
   el.querySelectorAll('[data-ev]').forEach(a => a.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); openEvent(a.dataset.ev); });
   el.querySelectorAll('[data-xr]').forEach(x => {
     const id = x.dataset.xr;
-    const ed = x.querySelector('[data-edit]'); if (ed) ed.onclick = ev => { ev.stopPropagation(); const e = S.events.find(v => v.id === id); if (e) editEvent(e); };
+    const ed = x.querySelector('[data-edit]'); if (ed) ed.onclick = ev => { ev.stopPropagation(); const e = S.events.find(v => v.id === id); if (e) (e.missing && e.missing.length ? finishEvent(e.id) : editEvent(e)); };
     x.querySelector('.xh').onclick = () => { const prev = S.xopen; S.xopen = prev === id ? null : id; if (prev && prev !== id) rerow(prev); rerow(id); };
     x.querySelectorAll('[data-chg]').forEach(b => b.onclick = ev => { ev.stopPropagation(); S.chg[id] = true; rerow(id); });
     x.querySelectorAll('[data-qa]').forEach(b => b.onclick = async ev => {
@@ -1838,16 +1839,11 @@ function renderTeam(m) {
     events: () => { const need = new Map(), add = (e, k) => { if (!need.has(e.id)) need.set(e.id, { e, k: new Set() }); need.get(e.id).k.add(k); };
       proposals.forEach(e => add(e, 'prop')); short.forEach(e => add(e, 'short')); limited.forEach(e => add(e, 'pick')); incomplete.forEach(e => add(e, 'details'));
       const tile = ({ e, k }) => {
-        const pills = [k.has('prop') ? `<span class="pill cyan">Proposed by ${esc(nameOf(personById(e.proposed_by)))}</span>` : '',
-          k.has('short') ? `<span class="pill bad">Short: ${e.going} of ${e.min_busters} minimum</span>` : '',
-          k.has('pick') ? `<span class="pill warn">${e.going} want in, ${e.max_busters} spots</span>` : '',
-          ''].join('');
-        const btn = k.has('prop') ? `<button class="btn sm primary" data-prop="${e.id}">Review</button>`
-          : k.has('details') ? `<button class="btn sm" data-fin="${e.id}">Add details</button>`
-          : k.has('pick') ? `<button class="btn sm" data-ev="${e.id}">Pick Busters</button>` : '';
-        return `<div class="row" ${k.has('prop') ? 'data-prop' : 'data-ev'}="${e.id}" role="button" style="cursor:pointer">${dateBox(e)}<div class="grow"><div class="t">${esc(e.title)}</div>
-          ${k.has('details') ? `<div class="small" style="color:var(--warn)">Needs details: ${esc(e.missing.join(', '))}</div>` : `<div class="small muted">${esc(whenText(e))}</div>`}
-          ${pills ? `<div class="pills">${pills}</div>` : ''}</div>${btn ? `<div class="xside">${btn}</div>` : ''}</div>`; };
+        if (k.has('prop')) return `<div class="row" data-prop="${e.id}" role="button" style="cursor:pointer">${dateBox(e)}<div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">${esc(whenText(e))}</div>
+          <div class="pills"><span class="pill cyan">Proposed by ${esc(nameOf(personById(e.proposed_by)))}</span></div></div><div class="xside"><button class="btn sm primary" data-prop="${e.id}">Review</button></div></div>`;
+        const pills = [k.has('short') ? `<span class="pill bad">Short: ${e.going} of ${e.min_busters} minimum</span>` : '',
+          k.has('pick') ? `<span class="pill warn">Pick who is in: ${e.going} want in, ${e.max_busters} spots</span>` : ''].join('');
+        return eventRow(e, { admin: true, pills, line: k.has('details') ? `<div class="small" style="color:var(--warn)">Needs details: ${esc(e.missing.join(', '))}</div>` : '' }); };
       const xs = [...need.values()].sort((a, b) => a.e.event_date < b.e.event_date ? -1 : a.e.event_date > b.e.event_date ? 1 : 0);
       return `<div class="sec">${xs.length ? byMonth(xs, x => x.e.event_date, tile) : list([])}</div>
       ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}`; },
