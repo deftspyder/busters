@@ -369,6 +369,7 @@ input.in{min-width:0}
 .mdiv::before,.mdiv::after{content:'';flex:1;height:1px;background:var(--line)}
 .prow+.mdiv,.row+.mdiv,.xrow+.mdiv{margin-top:16px}.mdiv+.row,.mdiv+.xrow,.mdiv+.prow{margin-top:0}
 .mdiv:first-child{margin-top:2px}
+.okbox{align-items:flex-start;margin:8px 0 14px;padding:12px 14px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:var(--panel)}.okbox input{margin-top:3px}
 .tbdck{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px;font-weight:400;text-transform:none;letter-spacing:0}
 /* chat */
 .chlbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
@@ -1099,7 +1100,7 @@ function finishEvent(id) {
     els.forEach(el => el.classList.add('needsfill'));
     const top = els.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0];
     if (top) top.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    toast('Fill in the outlined details, then save');
+    toast(e.missing.some(k => k !== 'Date') ? 'Fill in the outlined details, or approve without them, then save' : 'Set the date, then save');
   }, 60);
 }
 function editEvent(e, propose = false) {
@@ -1113,6 +1114,8 @@ function editEvent(e, propose = false) {
     m.innerHTML = `<button class="back" id="bk">${ICON.back} ${isNew ? 'Events' : 'Back to brief'}</button>
       <h2 style="font-size:30px">${propose ? 'Suggest an event' : isNew ? 'New event' : 'Edit event'}</h2>
       <p class="muted small">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, times, minimum and goal are in.'}</p>
+      ${(() => { const gaps = (e.missing_all || e.missing || []).filter(x => x !== 'Date');
+        return !isNew && !propose && gaps.length ? `<label class="check okbox"><input type="checkbox" id="eok" ${e.details_ok ? 'checked' : ''}><span><b>Approve without the rest</b><br><span class="small muted">This event doesn't need ${esc(gaps.join(', '))}. It stops showing as needing details.${e.date_tbd ? ' The date is still needed.' : ''}</span></span></label>` : ''; })()}
       <form id="ef">
         <label class="f"><span>Event name</span><input class="in" name="title" required value="${v('title')}"></label>
         <div class="grid2"><label class="f"><span>Date</span><input class="in" type="date" name="event_date" required value="${v('event_date')}"><span class="tbdck"><input type="checkbox" id="etbd" ${e.date_tbd ? 'checked' : ''}> Day not set yet (date TBD)</span></label><label class="f"><span>Ends (multi-day only)</span><input class="in" type="date" name="end_date" value="${v('end_date')}"></label></div>
@@ -1166,6 +1169,7 @@ function editEvent(e, propose = false) {
       if (!isNew) p.id = e.id;
       if (propose) p.status = 'proposed';
       p.date_tbd = !!$('#etbd').checked;
+      if ($('#eok')) p.details_ok = $('#eok').checked;
       if (p.date_tbd && p.event_date) p.event_date = p.event_date.slice(0, 8) + '01';
       ev.target.querySelector('button.primary').disabled = true;
       try {
@@ -1766,14 +1770,23 @@ function renderTeam(m) {
   if (!dash.some(d => d[0] === S.adminTab)) S.adminTab = dash.length ? dash[0][0] : 'events';
   const at = S.adminTab, list = xs => xs.length ? xs.join('') : '<div class="empty">All clear. Nothing waiting here.</div>';
   const body = {
-    // One date-ordered list with month divider lines; each entry keeps its tag (Proposed, Short, Pick, Details coming).
-    events: () => { const dt = e => e.date_tbd ? whenText(e) : fmtDay(e.event_date);
-      const xs = [...proposals.map(e => [e, item('Proposed event', e.title, dt(e) + ' · suggested by ' + esc(nameOf(personById(e.proposed_by))), `data-prop="${e.id}"`, 'Review')]),
-        ...short.map(e => [e, item('Short on Busters', e.title, `${dt(e)} · ${e.going} of ${e.min_busters} minimum`, `data-ev="${e.id}"`, 'Open')]),
-        ...limited.map(e => [e, item('Pick who is In', e.title, `${dt(e)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')]),
-        ...incomplete.map(e => [e, item('Details coming', e.title, `${dt(e)} · needs ${esc(e.missing.join(', '))}`, `data-fin="${e.id}"`, 'Finish')])]
-        .sort((a, b) => a[0].event_date < b[0].event_date ? -1 : a[0].event_date > b[0].event_date ? 1 : 0);
-      return `<div class="sec">${xs.length ? byMonth(xs, x => x[0].event_date, x => x[1]) : list([])}</div>
+    // One tile per event, like the Events list: date box, name, a pill for each thing it needs, and a clear button
+    // for the main job. Tapping the tile opens the event. Date order, with month divider lines.
+    events: () => { const need = new Map(), add = (e, k) => { if (!need.has(e.id)) need.set(e.id, { e, k: new Set() }); need.get(e.id).k.add(k); };
+      proposals.forEach(e => add(e, 'prop')); short.forEach(e => add(e, 'short')); limited.forEach(e => add(e, 'pick')); incomplete.forEach(e => add(e, 'details'));
+      const tile = ({ e, k }) => {
+        const pills = [k.has('prop') ? `<span class="pill cyan">Proposed by ${esc(nameOf(personById(e.proposed_by)))}</span>` : '',
+          k.has('short') ? `<span class="pill bad">Short: ${e.going} of ${e.min_busters} minimum</span>` : '',
+          k.has('pick') ? `<span class="pill warn">${e.going} want in, ${e.max_busters} spots</span>` : '',
+          ''].join('');
+        const btn = k.has('prop') ? `<button class="btn sm primary" data-prop="${e.id}">Review</button>`
+          : k.has('details') ? `<button class="btn sm" data-fin="${e.id}">Add details</button>`
+          : k.has('pick') ? `<button class="btn sm" data-ev="${e.id}">Pick Busters</button>` : '';
+        return `<div class="row" ${k.has('prop') ? 'data-prop' : 'data-ev'}="${e.id}" role="button" style="cursor:pointer">${dateBox(e)}<div class="grow"><div class="t">${esc(e.title)}</div>
+          ${k.has('details') ? `<div class="small" style="color:var(--warn)">Needs details: ${esc(e.missing.join(', '))}</div>` : `<div class="small muted">${esc(whenText(e))}</div>`}
+          ${pills ? `<div class="pills">${pills}</div>` : ''}</div>${btn ? `<div class="xside">${btn}</div>` : ''}</div>`; };
+      const xs = [...need.values()].sort((a, b) => a.e.event_date < b.e.event_date ? -1 : a.e.event_date > b.e.event_date ? 1 : 0);
+      return `<div class="sec">${xs.length ? byMonth(xs, x => x.e.event_date, tile) : list([])}</div>
       ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}`; },
     personnel: () => can('manage_recruits') ? `<div class="sec" id="plist"><div class="empty">Loading...</div></div>`
       : `<div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>`,
@@ -1811,8 +1824,8 @@ function renderTeam(m) {
   const lg = $('#log'); if (lg) lg.onclick = () => show(renderLog);
   wireRows(m);
   m.querySelectorAll('[data-join]').forEach(r => r.onclick = () => reviewJoin(personById(r.dataset.join)));
-  m.querySelectorAll('[data-fin]').forEach(r => r.onclick = () => finishEvent(r.dataset.fin));
-  m.querySelectorAll('[data-prop]').forEach(r => r.onclick = () => reviewProposal(S.events.find(e => e.id === r.dataset.prop)));
+  m.querySelectorAll('[data-fin]').forEach(r => r.onclick = ev => { ev.stopPropagation(); finishEvent(r.dataset.fin); });
+  m.querySelectorAll('[data-prop]').forEach(r => r.onclick = ev => { ev.stopPropagation(); reviewProposal(S.events.find(e => e.id === r.dataset.prop)); });
 }
 // Roles: bundles of abilities, each opening one Admin section. Personnel sets them from Edit on the Personnel list.
 const ROLES = [
