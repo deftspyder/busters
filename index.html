@@ -967,7 +967,7 @@ function renderBrief(m, e) {
     <div class="btns" style="margin-top:12px"><button class="btn primary" id="dc-go">Post it</button><button class="btn ghost" data-close>Not now</button></div>`, sh => {
     $('#dc-go', sh).onclick = async () => {
       const st = await rpc('discord_post_event', { p_event: e.id, p_note: $('#dc-note', sh).value });
-      closeSheet(); toast(st == null ? 'Discord is not connected yet (Admin, then Crew).' : st >= 200 && st < 300 ? 'Posted to Discord' : 'Discord said no (code ' + st + ')');
+      closeSheet(); toast(st == null ? 'Discord is not connected yet (Admin, then App).' : st >= 200 && st < 300 ? 'Posted to Discord' : 'Discord said no (code ' + st + ')');
     };
   });
   const ca = $('#cancel'); if (ca) ca.onclick = () => cancelEvent(e);
@@ -1624,7 +1624,7 @@ function renderTeam(m) {
     isEv && ['events', 'Events', proposals.length + short.length + limited.length + incomplete.length],
     (can('approve_members') || can('manage_recruits')) && ['personnel', 'Personnel', pending.length],
     can('webmaster') && ['media', 'Media', 0],
-    (can('crew_admin') || can('view_log')) && ['crew', 'Crew', unpublished.length],
+    (can('crew_admin') || can('view_log')) && ['crew', 'Fundraising', unpublished.length],
     S.appAdmin && ['app', 'App', 0]
   ].filter(Boolean);
   if (!dash.some(d => d[0] === S.adminTab)) S.adminTab = dash.length ? dash[0][0] : 'events';
@@ -1806,7 +1806,7 @@ const loadScript = src => new Promise((ok, no) => { if (document.querySelector(`
 const donateCodes = () => ((S.settings || {}).donate_codes || []).filter(c => c && (c.url || c.img));
 async function openQR() {
   const codes = donateCodes();
-  if (!codes.length) return sheet(`<h3>Donate QR codes</h3><p class="muted">No donation codes are set up yet.${can('crew_admin') ? ' Add them under Admin, then Crew, then Donate QR codes.' : ' Ask a crew admin to add them.'}</p><button class="btn block" data-close>Close</button>`);
+  if (!codes.length) return sheet(`<h3>Donate QR codes</h3><p class="muted">No donation codes are set up yet.${can('crew_admin') ? ' Add them under Admin, then Fundraising, then Donate QR codes.' : ' Ask a crew admin to add them.'}</p><button class="btn block" data-close>Close</button>`);
   sheet(`<div class="qrhead"><h3>Scan to donate</h3><button class="iconbtn" data-close aria-label="Close">&#10005;</button></div>
     <div class="qrtrack" id="qrt">${codes.map((c, i) => `<div class="qrcard">
       <div class="qrbox" id="qrb${i}">${c.url ? '' : `<img src="${esc(c.img)}" alt="QR code for ${esc(c.label)}">`}</div>
