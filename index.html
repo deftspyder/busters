@@ -1967,10 +1967,10 @@ async function personnelList(box) {
     const st = !r ? '<span style="color:var(--warn)">Not checked yet</span>' : r.outcome === 'clear' ? `<span style="color:var(--good)">Clear</span> <span class="tiny muted">· ${esc(new Date(r.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }))} by ${esc(r.checked_by || 'Personnel')}</span>` : `<span style="color:var(--bad)">Needs a closer look</span> <span class="tiny muted">· ${esc(new Date(r.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))} by ${esc(r.checked_by || 'Personnel')}</span>`;
     return `<div class="regbox"><div class="gc-lbl">Registry check</div><div class="small" style="margin:2px 0 8px">${st}</div>
       <div class="btns"><button type="button" class="btn sm" data-rcopy="${esc(p.full_name)}">Copy name</button>
-        <a class="btn sm" href="https://meganslaw.ca.gov/" target="_blank" rel="noopener">California Megan's Law ↗</a>
-        <a class="btn sm" href="https://www.nsopw.gov/" target="_blank" rel="noopener">National (NSOPW) ↗</a></div>
+        <a class="btn sm" data-rgo="${esc(p.full_name)}" href="https://meganslaw.ca.gov/" target="_blank" rel="noopener">California Megan's Law ↗</a>
+        <a class="btn sm" data-rgo="${esc(p.full_name)}" href="https://www.nsopw.gov/search-public-sex-offender-registries" target="_blank" rel="noopener">National (NSOPW) ↗</a></div>
       <div class="btns" style="margin-top:8px"><button type="button" class="btn sm primary" data-rset="${p.id}:clear">Mark clear</button><button type="button" class="btn sm" data-rset="${p.id}:review">Needs a closer look</button>${r ? `<button type="button" class="btn sm ghost" data-rset="${p.id}:">Undo</button>` : ''}</div>
-      <div class="tiny dim" style="margin-top:6px">Busters keeps only the outcome, who checked and when. Look up both sites, and use the city and age to rule out someone with the same name.</div></div>`; };
+      <div class="tiny dim" style="margin-top:6px">Opening a site copies the name, so you can paste it into the search after accepting the site's terms. Busters keeps only the outcome, who checked and when. Use the city and age to rule out someone with the same name.</div></div>`; };
   const detail = p => `${p.status === 'pending' ? regBox(p) : ''}<div class="pdet">
       <div class="pgrp"><div class="gc-lbl">Names and accounts</div>
         ${line('Real name', esc(p.full_name))}${line('Callsign', esc(p.callsign || ''))}
@@ -2004,6 +2004,7 @@ async function personnelList(box) {
     $('#pcnt').textContent = rows.length + ' shown';
     box.querySelectorAll('[data-px]').forEach(b => b.onclick = () => { const id = b.dataset.px; rosterOpen.has(id) ? rosterOpen.delete(id) : rosterOpen.add(id); draw(); });
     box.querySelectorAll('[data-pe]').forEach(b => b.onclick = () => editPerson(rosterData.find(x => x.id === b.dataset.pe), () => personnelList(box)));
+    box.querySelectorAll('[data-rgo]').forEach(a => a.addEventListener('click', () => { try { navigator.clipboard.writeText(a.dataset.rgo).then(() => toast('Name copied. Paste it into the search.')).catch(() => {}); } catch (e) { } }));
     box.querySelectorAll('[data-rcopy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.rcopy); toast('Name copied'); } catch (e) { toast(b.dataset.rcopy); } });
     box.querySelectorAll('[data-rset]').forEach(b => b.onclick = async () => { const [id, out] = b.dataset.rset.split(':');
       await rpc('set_registry_check', { p_person: id, p_outcome: out || null });
