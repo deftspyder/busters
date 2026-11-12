@@ -198,6 +198,7 @@ input.in{min-width:0}
 .lbrow .rk{width:22px;text-align:center;color:var(--muted);font-weight:700}
 .lbrow.me{background:rgba(56,217,232,.08);border-radius:10px}
 .mystripe{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;justify-content:flex-end}
+.mystripe.me{justify-content:flex-start;margin-top:14px}
 .mystripe .gbpill{margin-left:0;height:32px;padding:0 12px;font-size:13px}
 .mypill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
 .mypill b{font-weight:700}
@@ -372,7 +373,7 @@ const nice = m => /not allowed/.test(m) ? "You don't have the ability to do that
 const ICON = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
   events: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
-  me: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>',
+  me: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c.9-4.2 4-6.5 8-6.5s7.1 2.3 8 6.5"/></svg>',
   chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>',
   crew: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 14.2c2.6.2 4.4 1.9 5 4.8"/></svg>',
   team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L6.8 5M3.5 12l1.2 1.2 2.1-2.2M3.5 18l1.2 1.2 2.1-2.2"/></svg>',
@@ -531,7 +532,7 @@ async function loadAll() {
 async function refresh() { await loadAll(); render(); }
 
 /* ---------- shell ---------- */
-const TABS = [['home', 'Home'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Admin']];
+const TABS = [['home', 'Home'], ['chat', 'Chat'], ['crew', 'Crew'], ['me', 'Me'], ['team', 'Admin']];
 function renderShell() {
   $('#app').innerHTML = `
     <header class="top"><div class="bar">
@@ -696,16 +697,7 @@ function renderHome(m) {
   const mine = up.filter(e => { const r = myRsvp(e.id); return r && r.answer === 'going'; });
   const next = mine[0] || null;
   const needsMe = up.filter(e => e.missing.length && (e.poc_id === S.me.id || e.created_by === S.me.id));
-  const yr = todayISO().slice(0, 4);
-  const myYr = S.events.filter(e => e.status !== 'cancelled' && e.event_date.startsWith(yr) && (myRsvp(e.id) || {}).answer === 'going');
-  const done = myYr.filter(e => e.event_date < todayISO()).length, soon = myYr.length - done, MIN = 2;
-  const pips = Array.from({ length: MIN }, (_, i) => `<i class="${i < done ? 'f' : i < done + soon ? 'r' : ''}"></i>`).join('');
   m.innerHTML = `
-    <div class="mystripe sec">
-      <a href="#" class="mypill${done >= MIN ? ' met' : ''}" id="myev" title="${done} event${done === 1 ? '' : 's'} done in ${yr}${soon ? ', ' + soon + ' signed up' : ''}. Members do at least ${MIN} a year."><span class="pips">${pips}</span><b>${done}</b> event${done === 1 ? '' : 's'} in ${yr}${soon ? `<span class="muted"> +${soon}</span>` : ''}</a>
-      <a href="#" class="mypill" id="myraised" title="Fundraising credited to you in ${yr}. Tap for the leaderboard."><span style="color:#f87171">&#9829;</span>${myRaised() ? `<b>${money0(myRaised())}</b>` : '<b class="muted">$0</b>'} raised</a>
-      ${gbPill()}
-    </div>
     ${S.announcements[0] && (Date.now() - new Date(S.announcements[0].created_at)) < 14 * 86400000 ? `<div class="card ann" style="margin-top:12px"><div class="tiny dim" style="margin-bottom:4px">Latest from ${esc(first(nameOf(personById(S.announcements[0].author_id))))}</div><div class="pre small">${linkify(S.announcements[0].body)}</div></div>` : ''}
     ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
     <div id="evwrap"></div>
@@ -713,8 +705,6 @@ function renderHome(m) {
       ${S.announcements.length ? S.announcements.map(a => `<div class="card"><div class="pre">${linkify(a.body)}</div><div class="tiny dim" style="margin-top:6px">${esc(nameOf(personById(a.author_id)))} · ${new Date(a.created_at).toLocaleDateString()}${can('crew_admin') ? ` · <a href="#" data-del="${a.id}">Remove</a>` : ''}</div></div>`).join('') : '<div class="empty">No announcements.</div>'}</div><div style="height:72px"></div>`;
   wireRows(m);
   renderEvents($('#evwrap'));
-  $('#myev').onclick = ev => { ev.preventDefault(); show(renderMine); };
-  $('#myraised').onclick = ev => { ev.preventDefault(); openBoard(); };
   const post = $('#post'); if (post) post.onclick = postAnnouncement;
   m.querySelectorAll('[data-del]').forEach(a => a.onclick = async e => { e.preventDefault(); if (!confirmBox('Remove this announcement?')) return; await rpc('delete_announcement', { p_id: a.dataset.del }); refresh(); });
 }
@@ -1034,6 +1024,19 @@ function editEvent(e, propose = false) {
 }
 
 /* ---------- My Busters ---------- */
+// Personal stats row for the Me tab: events this year (with yearly minimum pips), money raised, and the crew's Give Back standing.
+function myStripe() {
+  const yr = todayISO().slice(0, 4);
+  const myYr = S.events.filter(e => e.status !== 'cancelled' && e.event_date.startsWith(yr) && (myRsvp(e.id) || {}).answer === 'going');
+  const done = myYr.filter(e => e.event_date < todayISO()).length, soon = myYr.length - done, MIN = 2;
+  const pips = Array.from({ length: MIN }, (_, i) => `<i class="${i < done ? 'f' : i < done + soon ? 'r' : ''}"></i>`).join('');
+  return `
+    <div class="mystripe me">
+      <a href="#" class="mypill${done >= MIN ? ' met' : ''}" id="myev" style="cursor:default" title="${done} event${done === 1 ? '' : 's'} done in ${yr}${soon ? ', ' + soon + ' signed up' : ''}. Members do at least ${MIN} a year."><span class="pips">${pips}</span><b>${done}</b> event${done === 1 ? '' : 's'} in ${yr}${soon ? `<span class="muted"> +${soon}</span>` : ''}</a>
+      <a href="#" class="mypill" id="myraised" title="Fundraising credited to you in ${yr}. Tap for the leaderboard."><span style="color:#f87171">&#9829;</span>${myRaised() ? `<b>${money0(myRaised())}</b>` : '<b class="muted">$0</b>'} raised</a>
+      ${gbPill()}
+    </div>`;
+}
 function renderMine(m) {
   const t = todayISO();
   const mineUp = S.events.filter(e => (e.end_date || e.event_date) >= t && e.status !== 'proposed' && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer));
@@ -1042,12 +1045,14 @@ function renderMine(m) {
   const thisYear = past.filter(e => e.event_date.startsWith(yr));
   const hosp = past.filter(e => e.category === 'Hospital');
   const me = S.me;
-  m.innerHTML = `<button class="back" id="bk">${ICON.back} Back</button>
+  const asTab = S.tab === 'me' && !S.view;
+  m.innerHTML = `${asTab ? '' : `<button class="back" id="bk">${ICON.back} Back</button>`}
     <div class="sec" style="display:flex;gap:14px;align-items:center"><div class="avatar" style="width:58px;height:58px;font-size:22px;cursor:default">${esc(initials(me.full_name))}</div>
       <div><h2>${esc(me.full_name)}</h2><div class="muted small">${esc([me.callsign, me.title].filter(Boolean).join(' · '))}</div>
       <div class="pills">${me.status === 'rookie' ? '<span class="pill cream">Rookie</span>' : '<span class="pill good">Active member</span>'}${me.member_since ? `<span class="pill">Since ${fmtDay(me.member_since, { month: 'short', year: 'numeric' })}</span>` : ''}</div></div></div>
     <div class="tiles"><div class="tile"><div class="k">${yr} events</div><div class="v">${thisYear.length}</div></div><div class="tile"><div class="k">All events</div><div class="v">${past.length}</div></div><div class="tile"><div class="k">Hospital visits</div><div class="v">${hosp.length}</div></div></div>
-    <p class="tiny dim">Counts start from Busters sign-ups. Check-in attendance and your fundraising total arrive in Phase 2.</p>
+    ${myStripe()}
+    <p class="tiny dim">Counts start from Busters sign-ups. Check-in attendance arrives in a later update.</p>
     <div class="sec"><h2>Coming up</h2>${mineUp.length ? mineUp.map(eventRow).join('') : '<div class="empty">Nothing yet. Answer Going on an event and it shows here.</div>'}</div>
     <div class="sec"><h2>Dues</h2><div class="card">${Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span><span class="pill ${/paid|exempt/i.test(s) ? 'good' : 'warn'}">${esc(s)}</span></div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
     <div class="sec"><h2>My details</h2><div class="card">
@@ -1065,7 +1070,9 @@ function renderMine(m) {
         <button class="btn primary" style="margin-top:12px">Save my details</button>
       </form></div></div><div style="height:30px"></div>`;
   wireRows(m);
-  $('#bk').onclick = () => { S.view = null; render(); scrollTo(0, 0); };
+  if (!asTab) $('#bk').onclick = () => { S.view = null; render(); scrollTo(0, 0); };
+  $('#myraised').onclick = ev => { ev.preventDefault(); openBoard(); };
+  $('#myev').onclick = ev => ev.preventDefault();
   $('#mf').onsubmit = async ev => {
     ev.preventDefault(); const f = ev.target;
     await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked, share_phone: f.share_phone.checked } });
@@ -1136,7 +1143,7 @@ function renderCrew(m) {
   };
   $('#cq').oninput = e => { crewQ = e.target.value; draw(); };
   draw();
-  if ($('#mmme')) $('#mmme').onclick = ev => { ev.preventDefault(); show(renderMine); setTimeout(() => { const c = document.querySelector('[name=city]'); if (c) { c.scrollIntoView({ block: 'center' }); c.focus(); } }, 50); };
+  if ($('#mmme')) $('#mmme').onclick = ev => { ev.preventDefault(); S.tab = 'me'; S.view = null; render(); scrollTo(0, 0); setTimeout(() => { const c = document.querySelector('[name=city]'); if (c) { c.scrollIntoView({ block: 'center' }); c.focus(); } }, 50); };
   if ($('#mmap') && !$('.gmap')) drawMemberMap();
 }
 function openPerson(id) {
@@ -1646,7 +1653,7 @@ function openProfile() {
     <div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>
     <a class="menuitem" id="pm-alerts"><span class="grow">Alerts<div class="small muted">Short-staffed events and last calls</div></span><span class="muted">›</span></a>
     <a class="menuitem" id="out"><span class="grow" style="color:var(--bad)">Sign out</span></a>`, s => {
-    $('#pm-me', s).onclick = () => { closeSheet(); show(renderMine); };
+    $('#pm-me', s).onclick = () => { closeSheet(); S.tab = 'me'; S.view = null; render(); scrollTo(0, 0); };
     $('#pm-alerts', s).onclick = () => { closeSheet(); openAlerts(); };
     s.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => { await rpc('set_maps_app', { p_app: b.dataset.m }); S.profile.maps_app = b.dataset.m; s.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); toast('Saved'); });
     $('#out', s).onclick = () => { closeSheet(); sb.auth.signOut(); };
@@ -1725,9 +1732,6 @@ async function openAlerts() {
 }
 function openMenu() {
   sheet(`<div class="menu-r"><img src="img/emblem.png" alt="" style="width:70px;margin:0 auto 8px">
-    <a class="menuitem" href="${DONATE_URL}" target="_blank" rel="noopener"><span class="grow">Give Back: donate to Starlight</span><span class="muted">↗</span></a>
-    <a class="menuitem" href="https://forms.wix.com/r/7168473352057652079" target="_blank" rel="noopener"><span class="grow">Event request form</span><span class="muted">↗</span></a>
-    <a class="menuitem" href="https://forms.wix.com/r/6936122162306613874" target="_blank" rel="noopener"><span class="grow">Recruit form</span><span class="muted">↗</span></a>
     <a class="menuitem" href="https://www.losangelesgb.com/" target="_blank" rel="noopener"><span class="grow">About LAGB</span><span class="muted">↗</span></a>
     <a class="menuitem" id="pp"><span class="grow">Proton pack monitor<div class="small muted">In-world pack diagnostics, assigned to a Buster</div></span><span class="muted">›</span></a>
     <a class="menuitem" id="how"><span class="grow">How to use Busters</span><span class="muted">›</span></a>
