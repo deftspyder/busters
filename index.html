@@ -352,6 +352,7 @@ input.in{min-width:0}
 .msgs .b{font-size:15px;line-height:1.4;margin-top:2px;overflow-wrap:anywhere}
 .msgs .m.me{justify-content:flex-end}.msgs .m.me .bub{background:rgba(53,178,232,.16);border:1px solid rgba(53,178,232,.35);border-radius:14px 14px 4px 14px;padding:8px 12px;max-width:80%}
 .msgs .ph{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.msgs .ph img{width:140px;height:140px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:var(--panel2)}
+.msgs .ph.gif img,.msgs .ph.gif video{width:auto;height:auto;max-width:min(260px,100%);max-height:220px;object-fit:contain;border-radius:8px;background:var(--panel2);display:block}
 .msgs .botc{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:9px 12px;font-size:13px;color:var(--muted);margin:10px 0}.msgs .botc b{color:var(--ink)}
 .msgs .dc{display:inline-block;font-size:10px;color:#8b93f8;border:1px solid rgba(139,147,248,.4);border-radius:999px;padding:0 6px;vertical-align:1px}
 .comp{position:fixed;left:0;right:0;bottom:calc(var(--tabh) + env(safe-area-inset-bottom));background:#08090c;border-top:1px solid var(--line);padding:8px var(--pad);z-index:25}
@@ -1141,7 +1142,7 @@ function renderMine(m) {
 /* ---------- Chat (backed by the crew's Discord: #rookies and each event's thread) ---------- */
 // Reading and sending go through the busters-chat edge function. Messages written here post into Discord under
 // the member's own name and picture. Nothing here links back to the app from Discord.
-S.chat = { list: null, crewCh: null, events: new Set(), unread: 0, at: 0 };
+S.chat = { list: null, crewCh: null, events: new Set(), joined: new Set(), unread: 0, at: 0 };
 async function chatCall(body, form) {
   const { data } = await sb.auth.getSession();
   const tok = data && data.session ? data.session.access_token : '';
@@ -1152,21 +1153,24 @@ async function chatCall(body, form) {
   if (!r.ok) { const e = new Error(j.error || 'Chat error ' + r.status); e.retry = !!j.retry || r.status === 429; throw e; }
   return j;
 }
-// Events whose chat shows in the list: your upcoming ones (Going or Maybe), then ones you went to in the last 2 weeks.
+// Events whose chat shows in the list: upcoming ones you said Going or Maybe to, then ones you went to in the last 2 weeks,
+// plus any event whose Discord thread you're in.
 function chatEventList() {
   const t = todayISO(), ago = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
   // Webmasters and crew admins are in every event thread on Discord, so they see every event chat here too.
   const all = can('webmaster') || can('crew_admin');
   const ans = e => (myRsvp(e.id) || {}).answer;
-  const up = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) >= t && e.status !== 'proposed' && (all || ['going', 'maybe'].includes(ans(e))));
-  const past = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) < t && e.event_date >= ago && (all || ans(e) === 'going')).reverse();
+  const inThread = e => S.chat.joined && S.chat.joined.has(e.id);
+  const up = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) >= t && e.status !== 'proposed' && (all || inThread(e) || ['going', 'maybe'].includes(ans(e))));
+  const past = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) < t && e.event_date >= ago && (all || inThread(e) || ans(e) === 'going')).reverse();
   return { up, past };
 }
 async function chatRefresh(force) {
   if (!force && S.chat.list && Date.now() - S.chat.at < 60000) return;
   try {
     const ev = await sb.rpc('chat_events', { p_crew: S.crew.id });
-    S.chat.events = new Set((ev.data || []).map(x => typeof x === 'string' ? x : x.chat_events));
+    S.chat.events = new Set((ev.data || []).map(x => x.event_id));
+    S.chat.joined = new Set((ev.data || []).filter(x => x.joined).map(x => x.event_id));
     const { up, past } = chatEventList();
     const j = await chatCall({ action: 'overview', events: [...up, ...past].map(e => e.id) });
     S.chat.list = j.chats; S.chat.crewCh = j.crew_channel; S.chat.at = Date.now();
@@ -1177,7 +1181,7 @@ async function chatRefresh(force) {
 setInterval(() => { if (S.crew && S.me && document.visibilityState === 'visible') chatRefresh(); }, 120000);
 
 const chatTime = ts => { const d = new Date(ts), now = new Date(); return d.toDateString() === now.toDateString() ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : (now - d < 6 * 86400000 ? d.toLocaleDateString([], { weekday: 'short' }) : d.toLocaleDateString([], { month: 'short', day: 'numeric' })); };
-const chatSnip = m => !m ? '<span class="dim">No messages yet</span>' : `${m.kind === 'bot' ? '' : `<b>${esc(first(m.name))}:</b> `}${esc(m.text || (m.files.length ? '📷 Photo' : (m.cards[0] || {}).title || 'Card'))}`;
+const chatSnip = m => !m ? '<span class="dim">No messages yet</span>' : `${m.kind === 'bot' ? '' : `<b>${esc(first(m.name))}:</b> `}${esc(m.text || (m.files.length ? '📷 Photo' : (m.media || []).length ? 'GIF' : (m.cards[0] || {}).title || 'Card'))}`;
 
 function renderChat(m) {
   const L = S.chat.list;
@@ -1282,12 +1286,14 @@ async function chatView(m, e, channel) {
 function chatMsg(x, me) {
   const mine = x.person_id && x.person_id === me && x.kind !== 'bot';
   const time = new Date(x.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  const files = x.files.length ? `<div class="ph">${x.files.map(f => f.type.startsWith('image/') ? `<img src="${esc(f.thumb || f.url)}${(f.thumb || '').includes('?') ? '&' : '?'}width=320&height=320" data-full="${esc(f.url)}" alt="${esc(f.name)}" loading="lazy">` : `<a class="small" href="${esc(f.url)}" target="_blank" rel="noopener">📎 ${esc(f.name)}</a>`).join('')}</div>` : '';
+  const files = x.files.length ? `<div class="ph">${x.files.map(f => f.type.startsWith('image/') ? `<img src="${f.type === 'image/gif' ? esc(f.url) : `${esc(f.thumb || f.url)}${(f.thumb || '').includes('?') ? '&' : '?'}width=320&height=320`}" data-full="${esc(f.url)}" alt="${esc(f.name)}" loading="lazy">` : `<a class="small" href="${esc(f.url)}" target="_blank" rel="noopener">📎 ${esc(f.name)}</a>`).join('')}</div>` : '';
   const text = x.text ? `<div class="b pre">${linkify(x.text)}</div>` : '';
-  if (x.kind === 'bot') return `<div class="botc"><div class="tiny dim" style="margin-bottom:3px">${esc(x.name)} · ${time}</div>${text}${x.cards.map(c => `<div>${c.title ? `<b>${esc(c.title)}</b>` : ''}${c.text ? `<div class="small pre">${linkify(c.text)}</div>` : ''}</div>`).join('')}${files}</div>`;
-  if (mine) return `<div class="m me"><div class="bub">${text}${files}<div class="tiny dim" style="text-align:right;margin-top:3px">${time}${x.kind === 'app' ? ' · sent to Discord ✓' : ''}</div></div></div>`;
+  const media = (x.media || []).map(g => g.type === 'video' ? `<video src="${esc(g.url)}"${g.poster ? ` poster="${esc(g.poster)}"` : ''} autoplay loop muted playsinline></video>` : `<img src="${esc(g.url)}" data-full="${esc(g.link || g.url)}" alt="" loading="lazy">`).join('');
+  const gif = media ? `<div class="ph gif">${media}</div>` : '';
+  if (x.kind === 'bot') return `<div class="botc"><div class="tiny dim" style="margin-bottom:3px">${esc(x.name)} · ${time}</div>${text}${gif}${x.cards.map(c => `<div>${c.title ? `<b>${esc(c.title)}</b>` : ''}${c.text ? `<div class="small pre">${linkify(c.text)}</div>` : ''}</div>`).join('')}${files}</div>`;
+  if (mine) return `<div class="m me"><div class="bub">${text}${gif}${files}<div class="tiny dim" style="text-align:right;margin-top:3px">${time}${x.kind === 'app' ? ' · sent to Discord ✓' : ''}</div></div></div>`;
   const av = x.avatar ? `<img class="a" src="${esc(x.avatar)}" alt="">` : `<div class="a" style="background:${chatColor(x.name)}">${esc(initials(x.name))}</div>`;
-  return `<div class="m">${av}<div style="min-width:0"><div class="who">${esc(x.name)}<span>${time}</span>${x.kind === 'member' || x.kind === 'other' ? '<span class="dc">Discord</span>' : ''}${x.edited ? '<span>(edited)</span>' : ''}</div>${text}${files}</div></div>`;
+  return `<div class="m">${av}<div style="min-width:0"><div class="who">${esc(x.name)}<span>${time}</span>${x.kind === 'member' || x.kind === 'other' ? '<span class="dc">Discord</span>' : ''}${x.edited ? '<span>(edited)</span>' : ''}</div>${text}${gif}${files}</div></div>`;
 }
 const chatColor = n => ['#f7e3a0', '#4ade80', '#ff8c78', '#35b2e8', '#9b6fb0', '#ff5e86', '#3ba7c0'][[...String(n)].reduce((a, c) => a + c.charCodeAt(0), 0) % 7];
 async function shrinkPhoto(f) {

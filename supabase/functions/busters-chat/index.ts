@@ -5,7 +5,7 @@
 //
 // POST JSON {action:"overview", crew, events:[event ids]}  -> crew chat plus those events' chats, with last message and unread
 // POST JSON {action:"messages", crew, channel, after?, before?} -> up to 50 messages, oldest first; marks the chat read
-// POST multipart (action=send, crew, channel, text, files...)  -> posts as the member, returns the message
+// POST multipart (action=send, crew, channel, text, files...)  -> posts as the member (and adds them to the event thread), returns the message
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -88,6 +88,15 @@ function plain(c: Ctx, m: Msg, names: Map<string, string>): string {
   return t;
 }
 
+// GIFs from Discord's GIF picker (Tenor) arrive as link embeds, not attachments: Discord gives a looping video.
+function gifs(m: Msg): { type: string; url: string; poster: string | null; link: string }[] {
+  return (m.embeds || []).filter((e: Msg) => ["gifv", "image", "video"].includes(e.type)).slice(0, 4).map((e: Msg) => {
+    const vid = e.video?.proxy_url || e.video?.url;
+    return vid ? { type: "video", url: vid, poster: e.thumbnail?.proxy_url || null, link: e.url || "" }
+               : { type: "image", url: e.image?.proxy_url || e.thumbnail?.proxy_url || e.thumbnail?.url || e.url, poster: null, link: e.url || "" };
+  }).filter((g: { url: string }) => !!g.url);
+}
+
 async function shape(c: Ctx, raw: Msg[]): Promise<Msg[]> {
   const { byDiscord, bySent } = await people(c, raw);
   const names = new Map<string, string>();
@@ -102,9 +111,10 @@ async function shape(c: Ctx, raw: Msg[]): Promise<Msg[]> {
       person_id: member?.id || null,
       name: member?.full_name || m.author?.global_name || m.author?.username || "Someone",
       avatar: avatar(m.author),
-      text: plain(c, m, names),
+      text: gifs(m).some(g => g.link === String(m.content || "").trim()) ? "" : plain(c, m, names),
       files: (m.attachments || []).map((a: Msg) => ({ url: a.url, thumb: a.proxy_url, name: a.filename, type: a.content_type || "", w: a.width || null, h: a.height || null })),
-      cards: (m.embeds || []).filter((e: Msg) => e.title || e.description).slice(0, 2).map((e: Msg) => ({ title: plain(c, { content: e.title || "" }, names), text: plain(c, { content: (e.description || "").slice(0, 400) }, names) })),
+      media: gifs(m),
+      cards: (m.embeds || []).filter((e: Msg) => (e.title || e.description) && !["gifv", "image", "video"].includes(e.type)).slice(0, 2).map((e: Msg) => ({ title: plain(c, { content: e.title || "" }, names), text: plain(c, { content: (e.description || "").slice(0, 400) }, names) })),
     };
   });
 }
@@ -187,6 +197,16 @@ async function send(c: Ctx, ch: string, text: string, files: File[]) {
   if (!r.ok) return json({ error: "Discord said " + r.status }, 502);
   const m = await r.json();
   await sb.from("chat_sent").insert({ message_id: m.id, crew_id: c.crew, person_id: c.me.id, channel_id: ch });
+  // Writing in an event chat puts you in that thread on Discord too, so it shows in your Discord sidebar.
+  const ev = c.threads.get(ch);
+  if (ev && c.me.discord_user_id) {
+    const j = await dc(c, `/channels/${ch}/thread-members/${c.me.discord_user_id}`, { method: "PUT" });
+    if (j.ok) {
+      const row = { event_id: ev.event_id, discord_user_id: c.me.discord_user_id };
+      await sb.from("discord_thread_members").upsert(row, { ignoreDuplicates: true });
+      await sb.from("discord_thread_present").upsert(row, { ignoreDuplicates: true });
+    }
+  }
   await markRead(c, ch, m.id);
   cache.delete(ch);
   return json({ message: (await shape(c, [m]))[0] });
