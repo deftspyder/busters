@@ -1766,11 +1766,15 @@ function renderTeam(m) {
   if (!dash.some(d => d[0] === S.adminTab)) S.adminTab = dash.length ? dash[0][0] : 'events';
   const at = S.adminTab, list = xs => xs.length ? xs.join('') : '<div class="empty">All clear. Nothing waiting here.</div>';
   const body = {
-    events: () => `<div class="sec">${list([...proposals.map(e => item('Proposed event', e.title, fmtDay(e.event_date) + ' · suggested by ' + esc(nameOf(personById(e.proposed_by))), `data-prop="${e.id}"`, 'Review')),
-        ...short.map(e => item('Short on Busters', e.title, `${fmtDay(e.event_date)} · ${e.going} of ${e.min_busters} minimum`, `data-ev="${e.id}"`, 'Open')),
-        ...limited.map(e => item('Pick who is In', e.title, `${fmtDay(e.event_date)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')),
-        ...incomplete.map(e => item('Details coming', e.title, `${fmtDay(e.event_date)} · needs ${esc(e.missing.join(', '))}`, `data-fin="${e.id}"`, 'Finish'))])}</div>
-      ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}`,
+    // One date-ordered list with month divider lines; each entry keeps its tag (Proposed, Short, Pick, Details coming).
+    events: () => { const dt = e => e.date_tbd ? whenText(e) : fmtDay(e.event_date);
+      const xs = [...proposals.map(e => [e, item('Proposed event', e.title, dt(e) + ' · suggested by ' + esc(nameOf(personById(e.proposed_by))), `data-prop="${e.id}"`, 'Review')]),
+        ...short.map(e => [e, item('Short on Busters', e.title, `${dt(e)} · ${e.going} of ${e.min_busters} minimum`, `data-ev="${e.id}"`, 'Open')]),
+        ...limited.map(e => [e, item('Pick who is In', e.title, `${dt(e)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')]),
+        ...incomplete.map(e => [e, item('Details coming', e.title, `${dt(e)} · needs ${esc(e.missing.join(', '))}`, `data-fin="${e.id}"`, 'Finish')])]
+        .sort((a, b) => a[0].event_date < b[0].event_date ? -1 : a[0].event_date > b[0].event_date ? 1 : 0);
+      return `<div class="sec">${xs.length ? byMonth(xs, x => x[0].event_date, x => x[1]) : list([])}</div>
+      ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}`; },
     personnel: () => can('manage_recruits') ? `<div class="sec" id="plist"><div class="empty">Loading...</div></div>`
       : `<div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
