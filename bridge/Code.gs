@@ -46,11 +46,17 @@ function syncSheet() {
     ss.getSheets().forEach(function (sh) {
       const name = sh.getName();
       const m = name.match(/^\s*(\d{1,2})\s*\/\s*(\d{1,2})/);
-      if (!m) return;   // template and other tabs; "12/XX" tabs have no day yet
-      const guess = year + '-' + pad_(m[1]) + '-' + pad_(m[2]);
-      if (guess < today) return;
+      // "12/XX" tabs: the month is known but not the day. Busters lists them under that month as "Date TBD".
+      const tbd = !m && name.match(/^\s*(\d{1,2})\s*\/\s*XX\b\s*_?\s*(.*)$/i);
+      if (!m && !tbd) return;   // template and other tabs
+      const guess = tbd ? year + '-' + pad_(tbd[1]) + '-01' : year + '-' + pad_(m[1]) + '-' + pad_(m[2]);
+      if (guess < (tbd ? today.slice(0, 8) + '01' : today)) return;
       try {
         const ev = parseEventTab_(sh.getDataRange().getDisplayValues(), name, year);
+        if (ev && tbd) {
+          ev.date = guess; ev.end_date = null; ev.tbd = true;
+          if (!ev.title || ev.title === name) ev.title = String(tbd[2] || name).trim();
+        }
         if (ev) tabs.push(ev);
       } catch (e) { console.error('Could not read tab ' + name + ': ' + e.message); }
     });

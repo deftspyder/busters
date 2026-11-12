@@ -358,6 +358,12 @@ input.in{min-width:0}
 /* roles */
 .rchips{display:flex;flex-wrap:wrap;gap:6px}.rchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:3px 4px 3px 10px;font-size:13px}
 .rchip button{width:20px;height:20px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:11px}.rchip button:hover{color:var(--bad)}
+/* date TBD and month dividers */
+.datebox.tbd .d{font-size:20px;letter-spacing:.04em;color:var(--warn)}.datebox.tbd .w{opacity:.7}
+.mdiv{display:flex;align-items:center;gap:10px;margin:14px 0 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.mdiv::after{content:'';flex:1;height:1px;background:var(--line)}
+.mdiv:first-child{margin-top:2px}
+.tbdck{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px;font-weight:400;text-transform:none;letter-spacing:0}
 /* chat */
 .chlbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
 .chrow .chav,.chav{width:52px;height:52px;flex:0 0 52px;border-radius:10px;background:var(--panel2);display:grid;place-items:center}.chav img{width:40px}
@@ -689,6 +695,11 @@ function durText(e) {
 }
 function timeLine(e) { const bits = []; if (e.call_time) bits.push('Call ' + fmtTime(e.call_time)); if (e.start_time) bits.push((e.wrap_time ? fmtTime(e.start_time) + ' to ' + fmtTime(e.wrap_time) + ' (' + durText(e) + ')' : 'Starts ' + fmtTime(e.start_time))); return bits.join(' · '); }
 const isWaiting = e => e.status === 'scheduled' && (e.end_date || e.event_date) >= todayISO() && daysUntil(e.event_date) <= 30 && !myRsvp(e.id);
+// Date box for an event; a date-TBD event shows its month over "TBD".
+const dateBox = (e, cls = '') => e.date_tbd
+  ? `<div class="datebox tbd ${cls}"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">TBD</div><div class="w">date</div></div>`
+  : `<div class="datebox ${cls}"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${parseDay(e.event_date).getDate()}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>`;
+const whenText = e => e.date_tbd ? fmtDay(e.event_date, { month: 'long', year: 'numeric' }) + ', date TBD' : fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric' });
 function eventRow(e) {
   const pls = placesFor(e.id); const p1 = pls[0]; const where = p1 ? p1.place.name : '';
   const open = S.xopen === e.id; const w = isWaiting(e); const r = myRsvp(e.id) || {};
@@ -696,9 +707,9 @@ function eventRow(e) {
   const tl = timeLine(e);
   return `<div class="xrow${open ? ' open' : ''}${w ? ' waiting' : ''}" data-xr="${e.id}">
     <div class="row xh" role="button" aria-expanded="${open}">
-    <div class="datebox"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${parseDay(e.event_date).getDate()}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>
+    ${dateBox(e)}
     <div class="grow"><div class="t">${esc(e.title)}</div>
-      <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([tl, where].filter(Boolean).join(' · ')) || 'Times and place coming'}</div>
+      <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([e.date_tbd ? 'Date TBD' : '', tl, where].filter(Boolean).join(' · ')) || 'Times and place coming'}</div>
       ${canAns && !r.answer && !open ? `<div class="qa${w ? ' hot' : ''}"><span class="qal">${e.max_busters ? 'Want in?' : 'Are you in?'}</span><button class="qb y" data-qa="going" aria-label="${e.max_busters ? 'Count me in' : 'Going'}" title="${e.max_busters ? 'Count me in' : 'Going'}">&#10003;</button><button class="qb m" data-qa="maybe" aria-label="Maybe" title="Maybe">?</button><button class="qb n" data-qa="no" aria-label="Not going" title="Not going">&#10005;</button><span class="qsp"></span>${staffPill(e)}</div>`
         : `<div class="pills">${myStatus(e, r)}${staffPill(e)}</div>`}
     </div><div class="xside">${can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id) ? `<button class="xedit" data-edit="${e.id}" title="Edit event" aria-label="Edit ${esc(e.title)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>` : ''}<span class="chev">${ICON.back}</span></div></div>
@@ -784,7 +795,7 @@ function renderHome(m) {
   const needsMe = up.filter(e => e.missing.length && (e.poc_id === S.me.id || e.created_by === S.me.id));
   m.innerHTML = `
     ${annBanner()}
-    ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
+    ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${(e.date_tbd ? 9 : 8) - e.missing.length} of ${e.date_tbd ? 9 : 8} done</span></a>`).join('')}</div>` : ''}
     <div id="evwrap"></div>
     <div style="height:72px"></div>`;
   wireRows(m);
@@ -843,7 +854,9 @@ function fillList() {
   const box = $('#list'); if (!box) return;
   if (S.evMode === 'cal') return renderCal(box);
   const list = filtered();
-  box.innerHTML = list.length ? list.map(eventRow).join('') : '<div class="empty">No events here.</div>';
+  // Month divider lines between months, so date-TBD events sit under their month.
+  let mon = '';
+  box.innerHTML = list.length ? list.map(e => { const k = e.event_date.slice(0, 7); const div = k !== mon ? `<div class="mdiv"><span>${fmtDay(k + '-01', { month: 'long' })}${k.slice(0, 4) !== todayISO().slice(0, 4) ? ' ' + k.slice(0, 4) : ''}</span></div>` : ''; mon = k; return div + eventRow(e); }).join('') : '<div class="empty">No events here.</div>';
   wireRows(box);
 }
 function renderCal(box) {
@@ -851,7 +864,7 @@ function renderCal(box) {
   const [y, mo] = base.split('-').map(Number);
   const firstDay = new Date(y, mo - 1, 1); const start = new Date(firstDay); start.setDate(1 - firstDay.getDay());
   const t = todayISO(); const q = S.evSearch.toLowerCase();
-  const evs = S.events.filter(e => e.status !== 'proposed' && (!q || e.title.toLowerCase().includes(q)));
+  const evs = S.events.filter(e => e.status !== 'proposed' && !e.date_tbd && (!q || e.title.toLowerCase().includes(q)));
   const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   let cells = ''; const d = new Date(start);
   for (let i = 0; i < 42; i++) {
@@ -924,7 +937,7 @@ function renderBrief(m, e) {
     <button class="back" id="bk">${ICON.back} Back</button>
     ${(() => { const others = pls.filter(x => x !== parkPl); const top = others[0]; const rest = others.slice(1);
       return `<div class="gc-title"><span class="gc-sq" style="background:${e.status === 'cancelled' ? 'var(--bad)' : 'var(--cyan)'}"></span><div style="flex:1;min-width:0"><h1>${esc(e.title)}</h1>
-      <div class="gc-when">${fmtDay(e.event_date, { weekday: 'long', month: 'long', day: 'numeric' })}${e.end_date ? ' to ' + fmtDay(e.end_date, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}${e.start_time ? ' · ' + esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) : '') : ''}${durText(e) ? ` <span class="muted" style="white-space:nowrap">(${esc(durText(e))})</span>` : ''}</div>
+      <div class="gc-when">${esc(whenText(e))}${e.end_date && !e.date_tbd ? ' to ' + fmtDay(e.end_date, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}${e.start_time ? ' · ' + esc(fmtTime(e.start_time)) + (e.wrap_time ? ' to ' + esc(fmtTime(e.wrap_time)) : '') : ''}${durText(e) ? ` <span class="muted" style="white-space:nowrap">(${esc(durText(e))})</span>` : ''}</div>
       ${e.call_time || (!e.call_time && !e.start_time) || e.status === 'cancelled' ? `<div class="gc-sub">${[e.call_time && '<b>Call ' + esc(fmtTime(e.call_time)) + '</b>', !e.call_time && !e.start_time && 'Times coming', e.status === 'cancelled' && '<span style="color:var(--bad)">Cancelled</span>'].filter(Boolean).join(' · ')}</div>` : ''}
       <div class="gc-place">${top ? `${GI.pin}<div style="flex:1;min-width:0">${top.label && top.label !== 'Event' ? `<div class="gc-lbl">${esc(top.label)}</div>` : ''}<b>${esc(top.place.name)}</b>${top.place.address ? `<div class="muted small">${esc(top.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(top.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(top.place.name)}">${ICON.nav}</a>` : `${GI.pin}<span class="muted">Address coming</span>`}</div>
       </div></div>
@@ -962,7 +975,7 @@ function renderBrief(m, e) {
 
 
 
-    ${canEdit && e.missing.length && e.status === 'scheduled' ? `<div class="card missing" style="margin-top:16px"><b>${8 - e.missing.length} of 8 done.</b> <span class="small">Still needs: ${esc(e.missing.join(', '))}</span></div>` : ''}
+    ${canEdit && e.missing.length && e.status === 'scheduled' ? `<div class="card missing" style="margin-top:16px"><b>${(e.date_tbd ? 9 : 8) - e.missing.length} of ${e.date_tbd ? 9 : 8} done.</b> <span class="small">Still needs: ${esc(e.missing.join(', '))}</span></div>` : ''}
     ${S.chat.events.has(e.id) ? `<div class="btns" style="margin-top:18px"><button class="btn" id="evchat">${ICON.chat} Event chat</button></div>` : ''}
     ${canEdit ? `<div class="btns" style="margin:18px 0 30px"><button class="btn primary" id="edit">Edit event</button>${e.status === 'scheduled' ? '<button class="btn" id="todc">Post to Discord</button>' : ''}${e.status === 'scheduled' ? '<button class="btn danger" id="cancel">Cancel event</button>' : e.status === 'cancelled' ? '<button class="btn" id="restore">Put back on</button>' : ''}</div>` : '<div style="height:30px"></div>'}
   </div>`;
@@ -1036,7 +1049,7 @@ function pickSpots(e, going) {
 
 /* ---------- Event editor ---------- */
 // Finish (Admin, then Events): open the editor with the still-missing details outlined, scrolled to the first one.
-const MISSING_FIELD = { 'Point of contact': 'poc_id', 'Event contact': 'contact_name', 'Call time': 'call_time', 'Start time': 'start_time', 'Wrap time': 'wrap_time', 'Minimum Busters': 'min_busters', 'Goal': 'goal_busters' };
+const MISSING_FIELD = { 'Date': 'event_date', 'Point of contact': 'poc_id', 'Event contact': 'contact_name', 'Call time': 'call_time', 'Start time': 'start_time', 'Wrap time': 'wrap_time', 'Minimum Busters': 'min_busters', 'Goal': 'goal_busters' };
 function finishEvent(id) {
   const e = S.events.find(x => x.id === id); if (!e) return;
   editEvent(e);
@@ -1061,7 +1074,7 @@ function editEvent(e, propose = false) {
       <p class="muted small">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, times, minimum and goal are in.'}</p>
       <form id="ef">
         <label class="f"><span>Event name</span><input class="in" name="title" required value="${v('title')}"></label>
-        <div class="grid2"><label class="f"><span>Date</span><input class="in" type="date" name="event_date" required value="${v('event_date')}"></label><label class="f"><span>Ends (multi-day only)</span><input class="in" type="date" name="end_date" value="${v('end_date')}"></label></div>
+        <div class="grid2"><label class="f"><span>Date</span><input class="in" type="date" name="event_date" required value="${v('event_date')}"><span class="tbdck"><input type="checkbox" id="etbd" ${e.date_tbd ? 'checked' : ''}> Day not set yet (date TBD)</span></label><label class="f"><span>Ends (multi-day only)</span><input class="in" type="date" name="end_date" value="${v('end_date')}"></label></div>
         <label class="f"><span>Category</span><select class="in" name="category"><option value="">Choose</option>${CATEGORIES.map(c => `<option ${e.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
         <div class="grid3"><label class="f"><span>Call</span><input class="in" type="time" name="call_time" value="${t('call_time')}"></label><label class="f"><span>Start</span><input class="in" type="time" name="start_time" value="${t('start_time')}"></label><label class="f"><span>Wrap</span><input class="in" type="time" name="wrap_time" value="${t('wrap_time')}"></label></div>
         <h3 style="margin-top:20px">Places</h3><p class="muted small" style="margin:2px 0 0">Each place gets its own Navigate button. Pick a saved place or type a new one; new ones are saved for next time.</p>
@@ -1104,12 +1117,15 @@ function editEvent(e, propose = false) {
     const leave = () => isNew ? (S.view = null, render()) : openEvent(e.id);
     $('#bk').onclick = leave; $('#cx').onclick = leave;
     const del = $('#del'); if (del) del.onclick = async () => { if (!confirmBox('Delete this event for good? Use Cancel instead if it was called off.')) return; await rpc('delete_event', { p_event: e.id }); await refresh(); S.view = null; S.tab = 'home'; render(); toast('Deleted'); };
+    const etd = $('[name="event_date"]'); if (etd) etd.addEventListener('change', () => { const c = $('#etbd'); if (c && c.checked && !etd.value.endsWith('-01')) c.checked = false; });
     $('#ef').onsubmit = async ev => {
       ev.preventDefault();
       const fd = new FormData(ev.target); const p = {};
       for (const [k, val] of fd.entries()) p[k] = String(val).trim();
       if (!isNew) p.id = e.id;
       if (propose) p.status = 'proposed';
+      p.date_tbd = !!$('#etbd').checked;
+      if (p.date_tbd && p.event_date) p.event_date = p.event_date.slice(0, 8) + '01';
       ev.target.querySelector('button.primary').disabled = true;
       try {
         const id = await rpc('save_event', { p_crew: S.crew.id, p });
@@ -1238,7 +1254,7 @@ function renderChat(m) {
   if (!L) { m.innerHTML = '<div class="sec"><h2>Chat</h2></div><div class="empty">Loading chats...</div>'; chatRefresh(true); return; }
   const byCh = new Map(L.map(c => [c.event_id || 'crew', c]));
   const row = (c, e) => `<a class="row chrow" data-chat="${e ? e.id : ''}">
-      ${e ? `<div class="datebox"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${Number(e.event_date.slice(8))}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>` : '<div class="chav"><img src="img/emblem.png" alt=""></div>'}
+      ${e ? dateBox(e) : '<div class="chav"><img src="img/emblem.png" alt=""></div>'}
       <div class="grow"><div class="t">${e ? esc(e.title) : '#rookies'}</div><div class="last${c && c.unread ? ' on' : ''}">${chatSnip(c && c.last)}</div></div>
       <div class="chmeta"><span class="chwhen">${c && c.last ? chatTime(c.last.ts) : ''}</span>${c && c.unread ? '<i class="dot"></i>' : ''}</div></a>`;
   const { up, past } = chatEventList();
@@ -1261,7 +1277,7 @@ function openChat(eventId) {
 async function chatView(m, e, channel) {
   const st = { msgs: [], me: S.me.id, more: false, timer: null, busy: false, files: [], alive: true };
   m.innerHTML = `<div class="chead"><button class="back" id="bk" style="margin:0">${ICON.back}</button>
-      ${e ? `<div class="datebox sm"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${Number(e.event_date.slice(8))}</div></div>` : '<div class="chav sm"><img src="img/emblem.png" alt=""></div>'}
+      ${e ? dateBox(e, 'sm') : '<div class="chav sm"><img src="img/emblem.png" alt=""></div>'}
       <div style="flex:1;min-width:0"><div class="t ell" style="font-weight:700">${e ? esc(e.title) : '#rookies'}</div><div class="small muted">${e ? `${e.going || 0} going · Discord thread` : `${esc(S.crew.short)} Discord channel`}</div></div>
       ${e ? '<button class="pill cyan" id="brief" style="cursor:pointer;background:none">Brief</button>' : ''}</div>
     <div class="msgs" id="msgs"><div class="empty">Loading...</div></div>
