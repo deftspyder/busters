@@ -369,6 +369,13 @@ input.in{min-width:0}
 .mdiv::before,.mdiv::after{content:'';flex:1;height:1px;background:var(--line)}
 .prow+.mdiv,.row+.mdiv,.xrow+.mdiv{margin-top:16px}.mdiv+.row,.mdiv+.xrow,.mdiv+.prow{margin-top:0}
 .mdiv:first-child{margin-top:2px}
+.wrap.wideview{max-width:1240px}.eform,.eintro{max-width:720px}.ehd{margin-top:20px}
+@media (min-width:1100px){.eform{max-width:1180px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 36px;align-items:start}.eform>.eacts{grid-column:1/-1}.eform>.ecol:nth-child(2)>.ehd:first-of-type{margin-top:0}}
+.atts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.att{position:relative;width:96px;height:96px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--panel2);padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text);text-decoration:none}
+.att img{width:100%;height:100%;object-fit:cover;display:block}.att.doc b{font-size:15px;color:var(--cyan)}.att.doc small{font-size:11px;color:var(--muted);max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attflag{position:absolute;left:4px;bottom:4px;font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;background:rgba(0,0,0,.7);color:var(--cyan)}
+.attrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.attrow img,.attrow .attic{width:48px;height:48px;border-radius:8px;object-fit:cover;flex:0 0 48px;background:var(--panel2);display:grid;place-items:center;font-size:11px;color:var(--cyan);font-weight:600}
 .okbox{align-items:flex-start;margin:8px 0 14px;padding:12px 14px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:var(--panel)}.okbox input{margin-top:3px}
 .tbdck{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px;font-weight:400;text-transform:none;letter-spacing:0}
 /* chat */
@@ -598,7 +605,7 @@ function renderBlocked(st) {
 async function loadAll() {
   const c = S.crew.id;
   const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
-  const [sess, ev, pl, pe, rs, ep, an, gb, fb, sp, cs] = await Promise.all([
+  const [sess, ev, pl, pe, rs, ep, an, gb, fb, sp, cs, ef] = await Promise.all([
     rpc('my_session', { p_crew: c }),
     sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
     sb.from('places').select('*').eq('crew_id', c).order('name'),
@@ -609,11 +616,12 @@ async function loadAll() {
     sb.rpc('giveback_for_crew', { p_crew: c }),
     sb.rpc('fundraising_board', { p_crew: c, p_year: Number(todayISO().slice(0, 4)) }),
     sb.rpc('shared_phones', { p_crew: c }),
-    sb.rpc('crew_settings', { p_crew: c })
+    sb.rpc('crew_settings', { p_crew: c }),
+    sb.from('event_files').select('*').eq('crew_id', c).order('created_at')
   ]);
   S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
   if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
-  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.settings = (cs && cs.data) || {}; S.phones = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x.phone]));
+  S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.files = (ef && ef.data) || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.settings = (cs && cs.data) || {}; S.phones = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x.phone]));
 }
 async function refresh() { await loadAll(); render(); }
 
@@ -652,12 +660,13 @@ function renderTabs() {
 function render() {
   renderTabs();
   const m = $('#main');
+  m.classList.toggle('wideview', !!(S.view && S.wide));   // the event editor uses the full width on a PC
   if (S.view) return S.view();
   ({ home: renderHome, events: renderEvents, me: renderMine, chat: renderChat, crew: renderCrew, team: renderTeam })[S.tab](m);
   syncUrl();
 }
 // Other screens (editors, profiles) have no address of their own and keep their tab's.
-function show(fn, route) { S.viewRoute = route || null; S.view = () => fn($('#main')); render(); syncUrl(); scrollTo(0, 0); }
+function show(fn, route, wide) { S.viewRoute = route || null; S.wide = !!wide; S.view = () => fn($('#main')); render(); syncUrl(); scrollTo(0, 0); }
 
 /* ---------- addresses ----------
    Each screen has its own address (#crew, #admin/media, #event/<id>, #chat/rookies), so a refresh keeps you where you
@@ -941,8 +950,27 @@ const GI = {
   alert: gsv('<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4M12 17v.2"/>'),
   user: gsv('<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-4 3.7-6 7-6s6.2 2 7 6"/>'),
   tag: gsv('<path d="M3.5 12.5 12 4h8v8l-8.5 8.5z"/><circle cx="16" cy="8" r="1.3"/>'),
-  cal: gsv('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>')
+  cal: gsv('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
+  clip: gsv('<path d="M20.5 11.5 12 20a5 5 0 0 1-7-7l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7L9.7 17.7a1.7 1.7 0 0 1-2.4-2.4L15 7.6"/>')
 };
+
+/* ---------- event attachments (flyers, maps, PDFs) ----------
+   Files live in Busters' storage at <crew>/<event>/<random>-<name>. The flyer is the image shown on Discord cards. */
+const fileUrl = f => SB_URL + '/storage/v1/object/public/event-files/' + f.path.split('/').map(encodeURIComponent).join('/');
+const filesFor = id => (S.files || []).filter(f => f.event_id === id);
+const isImg = f => (f.mime || '').startsWith('image/');
+const fileKind = f => isImg(f) ? 'Image' : /pdf/.test(f.mime) ? 'PDF' : (f.name.split('.').pop() || 'File').toUpperCase().slice(0, 4);
+async function reloadFiles() { const { data } = await sb.from('event_files').select('*').eq('crew_id', S.crew.id).order('created_at'); S.files = data || []; }
+function attTiles(e) {
+  return filesFor(e.id).map(f => isImg(f)
+    ? `<button type="button" class="att" data-att="${f.id}" title="${esc(f.name)}"><img src="${fileUrl(f)}" alt="${esc(f.name)}" loading="lazy">${f.is_flyer ? '<span class="attflag">Flyer</span>' : ''}</button>`
+    : `<a class="att doc" href="${fileUrl(f)}" target="_blank" rel="noopener" title="${esc(f.name)}"><b>${esc(fileKind(f))}</b><small>${esc(f.name)}</small></a>`).join('');
+}
+function wireAtts(root) {
+  root.querySelectorAll('[data-att]').forEach(b => b.onclick = ev => { ev.preventDefault(); const f = (S.files || []).find(x => x.id === b.dataset.att); if (!f) return;
+    sheet(`<h3 style="margin-bottom:10px">${esc(f.name)}</h3><img src="${fileUrl(f)}" alt="${esc(f.name)}" style="width:100%;max-height:70vh;object-fit:contain;border-radius:10px;background:#000">
+      <div class="btns" style="margin-top:12px"><a class="btn" href="${fileUrl(f)}" target="_blank" rel="noopener">Open full size</a><button class="btn ghost" data-close>Close</button></div>`); });
+}
 function contactBtns(phone, email) {
   const sv = d => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ph = sv('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>');
@@ -984,6 +1012,7 @@ function renderBrief(m, e) {
       <div class="gc-place">${top ? `${GI.pin}<div style="flex:1;min-width:0">${top.label && top.label !== 'Event' ? `<div class="gc-lbl">${esc(top.label)}</div>` : ''}<b>${esc(top.place.name)}</b>${top.place.address ? `<div class="muted small">${esc(top.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(top.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(top.place.name)}">${ICON.nav}</a>` : `${GI.pin}<span class="muted">Address coming</span>`}</div>
       </div></div>
       ${rest.map(x => `<div class="gc-row">${GI.pin}<div class="gc-body"><div class="gc-lbl">${esc(x.label)}</div><b>${esc(x.place.name)}</b>${x.place.address ? `<div class="small muted">${esc(x.place.address)}</div>` : ''}</div><a class="navic" href="${mapsUrl(x.place)}" target="_blank" rel="noopener" title="Navigate" aria-label="Navigate to ${esc(x.place.name)}">${ICON.nav}</a></div>`).join('')}`; })()}
+    ${filesFor(e.id).length ? `<div class="gc-row">${GI.clip}<div class="gc-body"><div class="gc-lbl">Attachments</div><div class="atts">${attTiles(e)}</div></div></div>` : ''}
     ${sameDay.length ? `<div class="gc-row">${GI.cal}<div class="gc-body small" style="color:var(--warn)">Also this day: ${sameDay.map(x => `<a href="#" data-ev="${x.id}">${esc(x.title)}</a>`).join(', ')}</div></div>` : ''}
 
     ${open && r.answer && !S.chg[e.id] ? ansSummary(e, r) : ''}${open && (!r.answer || S.chg[e.id]) ? `<div class="choices">${['going', 'maybe', 'no'].map(a => `<button class="ch ${a}${r.answer === a ? ' on' : ''}" data-a="${a}">${a === 'going' ? '✓ ' : ''}${{ going: e.max_busters ? 'Count me in' : 'Going', maybe: 'Maybe', no: 'No' }[a]}</button>`).join('')}</div>` : ''}${open ? `
@@ -1022,6 +1051,7 @@ function renderBrief(m, e) {
     ${canEdit ? `<div class="btns" style="margin:18px 0 30px"><button class="btn primary" id="edit">Edit event</button>${e.status === 'scheduled' ? '<button class="btn" id="todc">Post to Discord</button>' : ''}${e.status === 'scheduled' ? '<button class="btn danger" id="cancel">Cancel event</button>' : e.status === 'cancelled' ? '<button class="btn" id="restore">Put back on</button>' : ''}</div>` : '<div style="height:30px"></div>'}
   </div>`;
   $('#bk').onclick = () => goBack(() => { S.view = null; render(); });
+  wireAtts(m);
   const ec = $('#evchat'); if (ec) ec.onclick = () => openChat(e.id);
   wireRows(m);
   m.querySelectorAll('[data-person]').forEach(x => x.onclick = ev => { ev.preventDefault(); openPerson(x.dataset.person); });
@@ -1113,21 +1143,25 @@ function editEvent(e, propose = false) {
   show(m => {
     m.innerHTML = `<button class="back" id="bk">${ICON.back} ${isNew ? 'Events' : 'Back to brief'}</button>
       <h2 style="font-size:30px">${propose ? 'Suggest an event' : isNew ? 'New event' : 'Edit event'}</h2>
-      <p class="muted small">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, times, minimum and goal are in.'}</p>
+      <p class="muted small eintro">${propose ? 'The events team sees your suggestion and decides whether to take it on.' : 'Save with just a name and date if that is all you have. The event shows as Details coming until the point of contact, event contact, address, times, minimum and goal are in.'}</p>
       ${(() => { const gaps = (e.missing_all || e.missing || []).filter(x => x !== 'Date');
-        return !isNew && !propose && gaps.length ? `<label class="check okbox"><input type="checkbox" id="eok" ${e.details_ok ? 'checked' : ''}><span><b>Approve without the rest</b><br><span class="small muted">This event doesn't need ${esc(gaps.join(', '))}. It stops showing as needing details.${e.date_tbd ? ' The date is still needed.' : ''}</span></span></label>` : ''; })()}
-      <form id="ef">
+        return !isNew && !propose && gaps.length ? `<label class="check okbox eintro"><input type="checkbox" id="eok" ${e.details_ok ? 'checked' : ''}><span><b>Approve without the rest</b><br><span class="small muted">This event doesn't need ${esc(gaps.join(', '))}. It stops showing as needing details.${e.date_tbd ? ' The date is still needed.' : ''}</span></span></label>` : ''; })()}
+      <form id="ef" class="eform"><div class="ecol">
         <label class="f"><span>Event name</span><input class="in" name="title" required value="${v('title')}"></label>
         <div class="grid2"><label class="f"><span>Date</span><input class="in" type="date" name="event_date" required value="${v('event_date')}"><span class="tbdck"><input type="checkbox" id="etbd" ${e.date_tbd ? 'checked' : ''}> Day not set yet (date TBD)</span></label><label class="f"><span>Ends (multi-day only)</span><input class="in" type="date" name="end_date" value="${v('end_date')}"></label></div>
         <label class="f"><span>Category</span><select class="in" name="category"><option value="">Choose</option>${CATEGORIES.map(c => `<option ${e.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
         <div class="grid3"><label class="f"><span>Call</span><input class="in" type="time" name="call_time" value="${t('call_time')}"></label><label class="f"><span>Start</span><input class="in" type="time" name="start_time" value="${t('start_time')}"></label><label class="f"><span>Wrap</span><input class="in" type="time" name="wrap_time" value="${t('wrap_time')}"></label></div>
         <h3 style="margin-top:20px">Places</h3><p class="muted small" style="margin:2px 0 0">Each place gets its own Navigate button. Pick a saved place or type a new one; new ones are saved for next time.</p>
         <div id="pls"></div><button type="button" class="btn sm" id="addpl" style="margin-top:8px">+ Add a place</button>
+        ${propose ? '' : `<h3 class="ehd">Attachments</h3><p class="muted small" style="margin:2px 0 0">Flyers, maps and PDFs, shown on the event page. The flyer also shows on the event's Discord cards.</p>
+        ${isNew ? '<div class="small dim" style="margin-top:8px">Save the event first, then add attachments.</div>' : `<div id="atts"></div><label class="btn sm" style="margin-top:8px;cursor:pointer">+ Add files<input type="file" id="attin" multiple accept="image/*,application/pdf" hidden></label>`}`}
+        </div><div class="ecol">
         <datalist id="saved">${S.places.filter(p => !p.retired_at).map(p => `<option value="${esc(p.name)}">`).join('')}</datalist><datalist id="savedaddr">${[...new Map(S.places.filter(p => !p.retired_at && p.address).map(p => [p.address, p])).values()].map(p => `<option value="${esc(p.address)}">${esc(p.name)}</option>`).join('')}</datalist>
-        ${propose ? '' : `<h3 style="margin-top:20px">People</h3>
+        ${propose ? '' : `<h3 class="ehd">People</h3>
         <label class="f"><span>Point of contact</span><select class="in" name="poc_id"><option value="">Choose</option>${pocs.map(p => `<option value="${p.id}" ${e.poc_id === p.id ? 'selected' : ''}>${esc(nameOf(p))}</option>`).join('')}</select></label>
+        <div class="small" style="margin:14px 0 -4px;font-weight:600">Busters needed</div>
         <div class="grid3"><label class="f"><span>Minimum</span><input class="in" type="number" min="0" name="min_busters" value="${v('min_busters')}"></label><label class="f"><span>Goal</span><input class="in" type="number" min="0" name="goal_busters" value="${v('goal_busters')}"></label><label class="f"><span>Maximum</span><input class="in" type="number" min="0" name="max_busters" value="${v('max_busters')}" placeholder="Only if limited"></label></div>`}
-        <h3 style="margin-top:20px">Event contact</h3>
+        <h3 class="ehd">Event contact</h3>
         <label class="f"><span>Name</span><input class="in" name="contact_name" value="${v('contact_name')}"></label>
         <div class="grid2"><label class="f"><span>Phone</span><input class="in" type="tel" name="contact_phone" value="${v('contact_phone')}"></label><label class="f"><span>Email</span><input class="in" type="email" name="contact_email" value="${v('contact_email')}"></label></div>
         <h3 style="margin-top:20px">Details</h3>
@@ -1135,7 +1169,7 @@ function editEvent(e, propose = false) {
         <label class="f"><span>Driving and parking</span><textarea class="in" name="parking">${v('parking')}</textarea></label>
         <label class="f"><span>Conditions (indoors, weather, uniform)</span><input class="in" name="conditions" value="${v('conditions')}"></label>
         <label class="f"><span>Notes</span><textarea class="in" name="notes" style="min-height:140px">${v('notes')}</textarea></label>
-        <div class="btns" style="margin:20px 0 10px"><button class="btn primary">${propose ? 'Send suggestion' : 'Save event'}</button><button type="button" class="btn ghost" id="cx">Cancel</button>${!isNew && can('edit_events') ? '<button type="button" class="btn danger" id="del" style="margin-left:auto">Delete</button>' : ''}</div>
+        </div><div class="btns eacts" style="margin:20px 0 10px"><button class="btn primary">${propose ? 'Send suggestion' : 'Save event'}</button><button type="button" class="btn ghost" id="cx">Cancel</button>${!isNew && can('edit_events') ? '<button type="button" class="btn danger" id="del" style="margin-left:auto">Delete</button>' : ''}</div>
       </form><div style="height:40px"></div>`;
     const drawPls = () => {
       $('#pls').innerHTML = pls.map((p, i) => `<div class="card" style="margin-top:8px"><div class="grid2">
@@ -1157,6 +1191,27 @@ function editEvent(e, propose = false) {
       $('#pls').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { pls.splice(+b.dataset.rm, 1); drawPls(); });
     };
     drawPls();
+    const drawAtts = () => { const box = $('#atts'); if (!box) return; const fs = filesFor(e.id);
+      box.innerHTML = fs.map(f => `<div class="attrow">${isImg(f) ? `<img src="${fileUrl(f)}" alt="">` : `<span class="attic">${esc(fileKind(f))}</span>`}
+        <div class="grow" style="min-width:0"><div class="ell">${esc(f.name)}</div><div class="tiny muted">${f.is_flyer ? '<span style="color:var(--cyan)">Flyer, shows on Discord cards</span>' : fileKind(f) + (f.size ? ' · ' + (f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB') : '')}</div></div>
+        ${isImg(f) && !f.is_flyer ? `<button type="button" class="btn sm ghost" data-fly="${f.id}">Use as flyer</button>` : ''}<button type="button" class="btn sm ghost" data-rmf="${f.id}">Remove</button></div>`).join('') || '<div class="small dim" style="margin-top:8px">No attachments yet.</div>';
+      box.querySelectorAll('[data-fly]').forEach(b => b.onclick = async () => { await rpc('set_event_flyer', { p_id: b.dataset.fly }); await reloadFiles(); drawAtts(); toast('Flyer set'); });
+      box.querySelectorAll('[data-rmf]').forEach(b => b.onclick = async () => { if (!confirmBox('Remove this attachment?')) return; const path = await rpc('remove_event_file', { p_id: b.dataset.rmf }); if (path) await sb.storage.from('event-files').remove([path]); await reloadFiles(); drawAtts(); toast('Removed'); });
+    };
+    drawAtts();
+    const ain = $('#attin'); if (ain) ain.onchange = async () => {
+      const files = [...ain.files]; ain.value = '';
+      for (const file of files) {
+        if (file.size > 20 * 1048576) { toast(file.name + ' is over 20 MB'); continue; }
+        const safe = file.name.replace(/[^\w.\-]+/g, '_').slice(-80) || 'file';
+        const path = `${S.crew.id}/${e.id}/${Math.random().toString(36).slice(2, 10)}-${safe}`;
+        toast('Uploading ' + file.name + '...');
+        const { error } = await sb.storage.from('event-files').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+        if (error) { toast('Could not upload ' + file.name + ': ' + error.message); continue; }
+        try { await rpc('add_event_file', { p_event: e.id, p_path: path, p_name: file.name, p_mime: file.type || '', p_size: file.size }); } catch (_) { await sb.storage.from('event-files').remove([path]); }
+      }
+      await reloadFiles(); drawAtts(); if (files.length) toast('Added');
+    };
     $('#addpl').onclick = () => { pls.push({ label: 'Parking', name: '', address: '' }); drawPls(); };
     const leave = () => isNew ? (S.view = null, render()) : openEvent(e.id);
     $('#bk').onclick = leave; $('#cx').onclick = leave;
@@ -1180,7 +1235,7 @@ function editEvent(e, propose = false) {
         else { openEvent(id); toast('Saved'); }
       } catch (err) { ev.target.querySelector('button.primary').disabled = false; }
     };
-  });
+  }, null, true);
 }
 
 /* ---------- Me tab (your record, details and settings) ---------- */
