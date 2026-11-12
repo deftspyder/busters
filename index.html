@@ -335,6 +335,35 @@ input.in{min-width:0}
 .fab:active{transform:scale(.95)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom));background:var(--ink);color:#000;padding:10px 16px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw}
 
+/* chat */
+.chlbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
+.chrow .chav,.chav{width:52px;height:52px;flex:0 0 52px;border-radius:10px;background:var(--panel2);display:grid;place-items:center}.chav img{width:40px}
+.chav.sm{width:40px;height:40px;flex-basis:40px}.chav.sm img{width:30px}
+.datebox.sm{width:40px;flex-basis:40px;padding:4px 0}.datebox.sm .d{font-size:20px}
+.chrow .last{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chrow .last b{color:var(--ink);font-weight:500}.chrow .last.on{color:var(--ink)}
+.chmeta{display:flex;flex-direction:column;align-items:flex-end;gap:8px;align-self:flex-start;padding-top:2px}.chmeta .chwhen{font-size:11px;color:var(--dim);white-space:nowrap}
+.chmeta .dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.chead{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);position:sticky;top:calc(66px + env(safe-area-inset-top));background:var(--bg);z-index:5}
+.msgs{padding:6px 0 calc(var(--tabh) + 110px)}
+.msgs .day{text-align:center;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin:16px 0 6px}
+.msgs .m{display:flex;gap:10px;margin:10px 0}
+.msgs .m .a{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-weight:700;font-size:12px;color:#000;object-fit:cover}
+.msgs .who{font-size:13px;font-weight:700}.msgs .who span{font-weight:400;color:var(--dim);font-size:11px;margin-left:6px}
+.msgs .b{font-size:15px;line-height:1.4;margin-top:2px;overflow-wrap:anywhere}
+.msgs .m.me{justify-content:flex-end}.msgs .m.me .bub{background:rgba(53,178,232,.16);border:1px solid rgba(53,178,232,.35);border-radius:14px 14px 4px 14px;padding:8px 12px;max-width:80%}
+.msgs .ph{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.msgs .ph img{width:140px;height:140px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:var(--panel2)}
+.msgs .botc{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:9px 12px;font-size:13px;color:var(--muted);margin:10px 0}.msgs .botc b{color:var(--ink)}
+.msgs .dc{display:inline-block;font-size:10px;color:#8b93f8;border:1px solid rgba(139,147,248,.4);border-radius:999px;padding:0 6px;vertical-align:1px}
+.comp{position:fixed;left:0;right:0;bottom:calc(var(--tabh) + env(safe-area-inset-bottom));background:#08090c;border-top:1px solid var(--line);padding:8px var(--pad);z-index:25}
+.comp>*{max-width:728px;margin-left:auto;margin-right:auto}
+.comp .in2{display:flex;gap:8px;align-items:flex-end}
+.comp textarea{flex:1;min-height:40px;max-height:140px;resize:none;border-radius:20px;border:1px solid var(--line);background:var(--panel);padding:9px 14px;font-size:15px;line-height:1.35}
+.comp .sb{width:40px;height:40px;border-radius:50%;border:0;background:var(--cyan);color:#001018;font-weight:700;cursor:pointer;flex:0 0 auto}.comp .sb:disabled{opacity:.5}
+.comp .cam{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);cursor:pointer;flex:0 0 auto}
+.comp .note{font-size:11px;color:var(--dim);margin-top:5px;text-align:center}
+.cfiles{display:flex;gap:6px;flex-wrap:wrap}.cfiles:not(:empty){margin-bottom:8px}.cf{position:relative}.cf img{width:56px;height:56px;object-fit:cover;border-radius:8px}
+.cf b{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#000;border:1px solid var(--line);font-size:11px;display:grid;place-items:center;cursor:pointer}
+body.chatting .fab{display:none}
 /* sign in */
 .gate{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px var(--pad) 48px;max-width:440px;margin:0 auto}
 .gate .mark{width:min(320px,80%);margin:0 auto 20px}
@@ -390,6 +419,7 @@ const ICON = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
   events: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   me: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c.9-4.2 4-6.5 8-6.5s7.1 2.3 8 6.5"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>',
   crew: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 14.2c2.6.2 4.4 1.9 5 4.8"/></svg>',
   team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L6.8 5M3.5 12l1.2 1.2 2.1-2.2M3.5 18l1.2 1.2 2.1-2.2"/></svg>',
@@ -496,6 +526,7 @@ async function enter(name) {
   const dbx = new URLSearchParams(location.search).get('dropbox');
   if (dbx) { S.tab = 'team'; S.adminTab = 'media'; history.replaceState(null, '', location.pathname); }
   renderShell();
+  chatRefresh(true);
   if (dbx) toast({ connected: 'Dropbox connected. Photo calls start the morning after each event.', cancelled: 'Dropbox connection cancelled', expired: 'That link expired. Tap Connect Dropbox again.' }[dbx] || 'Dropbox could not connect. Try again.');
   const hash = location.hash.slice(1); if (hash.startsWith('event/')) openEvent(hash.slice(6));
 }
@@ -573,11 +604,15 @@ function teamCount() {
     + (can('pick_attendees') ? up.filter(e => e.max_busters && e.going > 0 && e.spots_in < e.max_busters).length : 0)
     + (can('crew_admin') ? S.events.filter(e => e.status !== 'cancelled' && Number(e.raised) > 0 && !e.credit_published).length : 0);
 }
-function render() {
+function renderTabs() {
+  if (!$('#tabs')) return;
   const tabs = TABS.filter(([k]) => k !== 'team' || onTeam());
-  const tc = teamCount(); const wc = upcoming().filter(isWaiting).length;
-  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab ${S.tab === k && !S.view ? 'on' : ''}" data-t="${k}">${ICON[k]}<span>${l}</span>${k === 'team' && tc ? `<b class="badge">${tc}</b>` : ''}${k === 'home' && wc ? `<b class="badge pulse" title="${wc} waiting on your answer">${wc}</b>` : ''}</button>`).join('');
-  $('#tabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { S.tab = b.dataset.t; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); });
+  const tc = teamCount(); const wc = upcoming().filter(isWaiting).length; const cc = (S.chat && S.chat.unread) || 0;
+  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab ${S.tab === k && (!S.view || (k === 'chat' && document.body.classList.contains('chatting'))) ? 'on' : ''}" data-t="${k}">${ICON[k]}<span>${l}</span>${k === 'team' && tc ? `<b class="badge">${tc}</b>` : ''}${k === 'home' && wc ? `<b class="badge pulse" title="${wc} waiting on your answer">${wc}</b>` : ''}${k === 'chat' && cc ? `<b class="badge" title="${cc} chat${cc === 1 ? '' : 's'} with new messages">${cc}</b>` : ''}</button>`).join('');
+  $('#tabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { document.body.classList.remove('chatting'); S.tab = b.dataset.t; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); });
+}
+function render() {
+  renderTabs();
   const m = $('#main');
   if (S.view) return S.view();
   ({ home: renderHome, events: renderEvents, me: renderMine, chat: renderChat, crew: renderCrew, team: renderTeam })[S.tab](m);
@@ -899,9 +934,11 @@ function renderBrief(m, e) {
 
 
     ${canEdit && e.missing.length && e.status === 'scheduled' ? `<div class="card missing" style="margin-top:16px"><b>${8 - e.missing.length} of 8 done.</b> <span class="small">Still needs: ${esc(e.missing.join(', '))}</span></div>` : ''}
+    ${S.chat.events.has(e.id) ? `<div class="btns" style="margin-top:18px"><button class="btn" id="evchat">${ICON.chat} Event chat</button></div>` : ''}
     ${canEdit ? `<div class="btns" style="margin:18px 0 30px"><button class="btn primary" id="edit">Edit event</button>${e.status === 'scheduled' ? '<button class="btn" id="todc">Post to Discord</button>' : ''}${e.status === 'scheduled' ? '<button class="btn danger" id="cancel">Cancel event</button>' : e.status === 'cancelled' ? '<button class="btn" id="restore">Put back on</button>' : ''}</div>` : '<div style="height:30px"></div>'}
   </div>`;
   $('#bk').onclick = () => { S.view = null; history.replaceState(null, '', location.pathname); render(); };
+  const ec = $('#evchat'); if (ec) ec.onclick = () => openChat(e.id);
   wireRows(m);
   m.querySelectorAll('[data-person]').forEach(x => x.onclick = ev => { ev.preventDefault(); openPerson(x.dataset.person); });
   m.querySelectorAll('[data-reveal]').forEach(b => b.onclick = () => { const n = $('#' + b.dataset.reveal); n.hidden = !n.hidden; });
@@ -1101,16 +1138,163 @@ function renderMine(m) {
   };
 }
 
-/* ---------- Chat (placeholder until the chat build) ---------- */
+/* ---------- Chat (backed by the crew's Discord: #rookies and each event's thread) ---------- */
+// Reading and sending go through the busters-chat edge function. Messages written here post into Discord under
+// the member's own name and picture. Nothing here links back to the app from Discord.
+S.chat = { list: null, crewCh: null, events: new Set(), unread: 0, at: 0 };
+async function chatCall(body, form) {
+  const { data } = await sb.auth.getSession();
+  const tok = data && data.session ? data.session.access_token : '';
+  const h = { apikey: SB_KEY, Authorization: 'Bearer ' + tok };
+  if (!form) h['Content-Type'] = 'application/json';
+  const r = await fetch(SB_URL + '/functions/v1/busters-chat', { method: 'POST', headers: h, body: form || JSON.stringify({ crew: S.crew.id, ...body }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || 'Chat error ' + r.status); e.retry = !!j.retry || r.status === 429; throw e; }
+  return j;
+}
+// Events whose chat shows in the list: your upcoming ones (Going or Maybe), then ones you went to in the last 2 weeks.
+function chatEventList() {
+  const t = todayISO(), ago = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+  const ans = e => (myRsvp(e.id) || {}).answer;
+  const up = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) >= t && e.status !== 'proposed' && ['going', 'maybe'].includes(ans(e)));
+  const past = S.events.filter(e => S.chat.events.has(e.id) && (e.end_date || e.event_date) < t && e.event_date >= ago && ans(e) === 'going').reverse();
+  return { up, past };
+}
+async function chatRefresh(force) {
+  if (!force && S.chat.list && Date.now() - S.chat.at < 60000) return;
+  try {
+    const ev = await sb.rpc('chat_events', { p_crew: S.crew.id });
+    S.chat.events = new Set((ev.data || []).map(x => typeof x === 'string' ? x : x.chat_events));
+    const { up, past } = chatEventList();
+    const j = await chatCall({ action: 'overview', events: [...up, ...past].map(e => e.id) });
+    S.chat.list = j.chats; S.chat.crewCh = j.crew_channel; S.chat.at = Date.now();
+    S.chat.unread = j.chats.filter(c => c.unread).length;
+  } catch (e) { if (!S.chat.list) S.chat.list = []; S.chat.err = e.message; }
+  if (!S.view) render(); else renderTabs();
+}
+setInterval(() => { if (S.crew && S.me && document.visibilityState === 'visible') chatRefresh(); }, 120000);
+
+const chatTime = ts => { const d = new Date(ts), now = new Date(); return d.toDateString() === now.toDateString() ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : (now - d < 6 * 86400000 ? d.toLocaleDateString([], { weekday: 'short' }) : d.toLocaleDateString([], { month: 'short', day: 'numeric' })); };
+const chatSnip = m => !m ? '<span class="dim">No messages yet</span>' : `${m.kind === 'bot' ? '' : `<b>${esc(first(m.name))}:</b> `}${esc(m.text || (m.files.length ? '📷 Photo' : (m.cards[0] || {}).title || 'Card'))}`;
+
 function renderChat(m) {
-  const t = todayISO();
-  const mine = S.events.filter(e => (e.end_date || e.event_date) >= t && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer));
-  m.innerHTML = `<div class="sec"><div class="seg"><button class="on">Busters</button><button id="dc">Discord</button></div></div>
-    <a class="row" style="cursor:default"><div class="datebox" style="display:grid;place-items:center"><img src="img/emblem.png" alt="" style="width:38px"></div><div class="grow"><div class="t">LAGB Everyone</div><div class="small muted">Crew-wide chat</div></div><span class="pill">Next build</span></a>
-    ${mine.map(e => `<a class="row" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">${fmtDay(e.event_date)} · event chat</div></div><span class="pill">Next build</span></a>`).join('')}
-    <p class="muted small" style="margin-top:16px">Chat is the next piece being built. Your events show here already; their chats open once it lands. Until then, keep using Discord.</p>`;
-  wireRows(m);
-  $('#dc').onclick = () => toast('The Discord switch arrives with the Busters bot in Phase 2.');
+  const L = S.chat.list;
+  if (!L) { m.innerHTML = '<div class="sec"><h2>Chat</h2></div><div class="empty">Loading chats...</div>'; chatRefresh(true); return; }
+  const byCh = new Map(L.map(c => [c.event_id || 'crew', c]));
+  const row = (c, e) => `<a class="row chrow" data-chat="${e ? e.id : ''}">
+      ${e ? `<div class="datebox"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${Number(e.event_date.slice(8))}</div><div class="w">${fmtDay(e.event_date, { weekday: 'short' })}</div></div>` : '<div class="chav"><img src="img/emblem.png" alt=""></div>'}
+      <div class="grow"><div class="t">${e ? esc(e.title) : '#rookies'}</div><div class="last${c && c.unread ? ' on' : ''}">${chatSnip(c && c.last)}</div></div>
+      <div class="chmeta"><span class="chwhen">${c && c.last ? chatTime(c.last.ts) : ''}</span>${c && c.unread ? '<i class="dot"></i>' : ''}</div></a>`;
+  const { up, past } = chatEventList();
+  m.innerHTML = `<div class="sec"><h2>Chat</h2><p class="small muted" style="margin:2px 0 12px">The same conversations as the ${esc(S.crew.short)} Discord. Write here or there and everyone sees it.</p>
+    ${S.chat.err && !L.length ? `<div class="card small">Chat couldn't load: ${esc(S.chat.err)}</div>` : row(byCh.get('crew'), null)}
+    ${up.length ? `<div class="chlbl">Your events</div>${up.map(e => row(byCh.get(e.id), e)).join('')}` : ''}
+    ${past.length ? `<div class="chlbl">Recent</div>${past.map(e => row(byCh.get(e.id), e)).join('')}` : ''}
+    ${!up.length && !past.length ? '<p class="small muted" style="margin-top:14px">Say Going or Maybe on an event and its chat shows up here.</p>' : ''}</div><div style="height:30px"></div>`;
+  m.querySelectorAll('[data-chat]').forEach(a => a.onclick = ev => { ev.preventDefault(); openChat(a.dataset.chat || null); });
+  chatRefresh();
+}
+
+function openChat(eventId) {
+  S.tab = 'chat';
+  const e = eventId ? S.events.find(x => x.id === eventId) : null;
+  const known = (S.chat.list || []).find(c => (c.event_id || null) === (eventId || null));
+  show(m => chatView(m, e, known ? known.channel : null));
+}
+
+async function chatView(m, e, channel) {
+  const st = { msgs: [], me: S.me.id, more: false, timer: null, busy: false, files: [], alive: true };
+  m.innerHTML = `<div class="chead"><button class="back" id="bk" style="margin:0">${ICON.back}</button>
+      ${e ? `<div class="datebox sm"><div class="m">${fmtDay(e.event_date, { month: 'short' })}</div><div class="d">${Number(e.event_date.slice(8))}</div></div>` : '<div class="chav sm"><img src="img/emblem.png" alt=""></div>'}
+      <div style="flex:1;min-width:0"><div class="t ell" style="font-weight:700">${e ? esc(e.title) : '#rookies'}</div><div class="small muted">${e ? `${e.going || 0} going · Discord thread` : `${esc(S.crew.short)} Discord channel`}</div></div>
+      ${e ? '<button class="pill cyan" id="brief" style="cursor:pointer;background:none">Brief</button>' : ''}</div>
+    <div class="msgs" id="msgs"><div class="empty">Loading...</div></div>
+    <div class="comp" id="comp"><div id="cfiles" class="cfiles"></div><div class="in2">
+      <label class="cam" title="Add photos"><input type="file" id="cph" accept="image/*" multiple hidden>${ICON.camera}</label>
+      <textarea id="ctext" rows="1" maxlength="2000" placeholder="Message ${e ? esc(e.title) : '#rookies'}"></textarea>
+      <button class="sb" id="csend" aria-label="Send">➤</button></div>
+      <div class="note">Posts in Discord as you${e ? ', in the event thread' : ', in #rookies'}</div></div>`;
+  document.body.classList.add('chatting');
+  renderTabs();
+  const box = $('#msgs', m);
+  const stop = () => { st.alive = false; clearTimeout(st.timer); document.body.classList.remove('chatting'); };
+  $('#bk', m).onclick = () => { stop(); S.view = null; S.tab = 'chat'; render(); scrollTo(0, 0); };
+  const br = $('#brief', m); if (br) br.onclick = () => { stop(); openEvent(e.id); };
+  if (!channel) {
+    try { const j = await chatCall({ action: 'overview', events: e ? [e.id] : [] }); const k = j.chats.find(c => (c.event_id || null) === (e ? e.id : null)); channel = k && k.channel; } catch (x) { /* shown below */ }
+    if (!channel) { box.innerHTML = `<div class="empty">${e ? "This event doesn't have a Discord thread yet. It gets one when its first card posts." : 'Chat is not available right now.'}</div>`; $('#comp', m).hidden = true; return; }
+  }
+  const atBottom = () => scrollY + innerHeight >= document.documentElement.scrollHeight - 140;
+  const draw = (stick) => {
+    let day = '';
+    box.innerHTML = (st.more ? '<button class="btn sm ghost" id="older" style="display:block;margin:6px auto 4px">Load earlier messages</button>' : '')
+      + (st.msgs.length ? '' : '<div class="empty">No messages yet. Say hi.</div>')
+      + st.msgs.map(x => { const d = new Date(x.ts).toDateString(); const sep = d !== day ? `<div class="day">${new Date(x.ts).toDateString() === new Date().toDateString() ? 'Today' : new Date(x.ts).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</div>` : ''; day = d; return sep + chatMsg(x, st.me); }).join('');
+    const o = $('#older', box); if (o) o.onclick = older;
+    box.querySelectorAll('img[data-full]').forEach(i => i.onclick = () => window.open(i.dataset.full, '_blank', 'noopener'));
+    if (stick) requestAnimationFrame(() => scrollTo(0, document.documentElement.scrollHeight));
+  };
+  async function older() {
+    try { const j = await chatCall({ action: 'messages', channel, before: st.msgs[0].id }); const h = document.documentElement.scrollHeight; st.msgs = j.messages.concat(st.msgs); st.more = j.more; draw(false); scrollTo(0, scrollY + document.documentElement.scrollHeight - h); } catch (x) { toast(x.message); }
+  }
+  async function poll(first) {
+    if (!st.alive || !document.body.contains(box)) return stop();
+    let wait = 5000;
+    if (document.visibilityState === 'visible' && !st.busy) {
+      try {
+        const last = st.msgs.length ? st.msgs[st.msgs.length - 1].id : null;
+        const j = await chatCall({ action: 'messages', channel, after: first ? undefined : last });
+        if (first) { st.msgs = j.messages; st.more = j.more; draw(true); }
+        else if (j.messages.length) { const stick = atBottom(); const have = new Set(st.msgs.map(x => x.id)); st.msgs = st.msgs.concat(j.messages.filter(x => !have.has(x.id))); draw(stick); }
+        const c = (S.chat.list || []).find(c => c.channel === channel); if (c && c.unread) { c.unread = false; S.chat.unread = Math.max(0, S.chat.unread - 1); renderTabs(); }
+      } catch (x) { if (first) box.innerHTML = `<div class="empty">Couldn't load the chat: ${esc(x.message)}</div>`; wait = x.retry ? 12000 : 20000; }
+    }
+    st.timer = setTimeout(() => poll(false), wait);
+  }
+  // Composer: Enter sends on a computer, Shift+Enter for a new line; photos are shrunk before sending.
+  const ta = $('#ctext', m), files = $('#cfiles', m);
+  const grow = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'; };
+  ta.oninput = grow;
+  ta.onkeydown = ev => { if (ev.key === 'Enter' && !ev.shiftKey && !('ontouchstart' in window)) { ev.preventDefault(); sendIt(); } };
+  const showFiles = () => { files.innerHTML = st.files.map((f, i) => `<span class="cf"><img src="${f.prev}" alt=""><b data-rm="${i}">✕</b></span>`).join(''); files.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { st.files.splice(Number(b.dataset.rm), 1); showFiles(); }); };
+  $('#cph', m).onchange = async ev => {
+    for (const f of [...ev.target.files].slice(0, 6 - st.files.length)) { const blob = await shrinkPhoto(f); st.files.push({ blob, name: (f.name || 'photo').replace(/\.\w+$/, '') + '.jpg', prev: URL.createObjectURL(blob) }); }
+    ev.target.value = ''; showFiles();
+  };
+  async function sendIt() {
+    const text = ta.value.trim(); if ((!text && !st.files.length) || st.busy) return;
+    st.busy = true; $('#csend', m).disabled = true;
+    const fd = new FormData(); fd.append('action', 'send'); fd.append('crew', S.crew.id); fd.append('channel', channel); fd.append('text', text);
+    st.files.forEach(f => fd.append('files', f.blob, f.name));
+    try {
+      const j = await chatCall(null, fd);
+      ta.value = ''; grow(); st.files = []; showFiles();
+      if (!st.msgs.some(x => x.id === j.message.id)) st.msgs.push(j.message);
+      draw(true);
+    } catch (x) { toast(x.message); }
+    st.busy = false; $('#csend', m).disabled = false;
+  }
+  $('#csend', m).onclick = sendIt;
+  poll(true);
+}
+function chatMsg(x, me) {
+  const mine = x.person_id && x.person_id === me && x.kind !== 'bot';
+  const time = new Date(x.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const files = x.files.length ? `<div class="ph">${x.files.map(f => f.type.startsWith('image/') ? `<img src="${esc(f.thumb || f.url)}${(f.thumb || '').includes('?') ? '&' : '?'}width=320&height=320" data-full="${esc(f.url)}" alt="${esc(f.name)}" loading="lazy">` : `<a class="small" href="${esc(f.url)}" target="_blank" rel="noopener">📎 ${esc(f.name)}</a>`).join('')}</div>` : '';
+  const text = x.text ? `<div class="b pre">${linkify(x.text)}</div>` : '';
+  if (x.kind === 'bot') return `<div class="botc"><div class="tiny dim" style="margin-bottom:3px">${esc(x.name)} · ${time}</div>${text}${x.cards.map(c => `<div>${c.title ? `<b>${esc(c.title)}</b>` : ''}${c.text ? `<div class="small pre">${linkify(c.text)}</div>` : ''}</div>`).join('')}${files}</div>`;
+  if (mine) return `<div class="m me"><div class="bub">${text}${files}<div class="tiny dim" style="text-align:right;margin-top:3px">${time}${x.kind === 'app' ? ' · sent to Discord ✓' : ''}</div></div></div>`;
+  const av = x.avatar ? `<img class="a" src="${esc(x.avatar)}" alt="">` : `<div class="a" style="background:${chatColor(x.name)}">${esc(initials(x.name))}</div>`;
+  return `<div class="m">${av}<div style="min-width:0"><div class="who">${esc(x.name)}<span>${time}</span>${x.kind === 'member' || x.kind === 'other' ? '<span class="dc">Discord</span>' : ''}${x.edited ? '<span>(edited)</span>' : ''}</div>${text}${files}</div></div>`;
+}
+const chatColor = n => ['#f7e3a0', '#4ade80', '#ff8c78', '#35b2e8', '#9b6fb0', '#ff5e86', '#3ba7c0'][[...String(n)].reduce((a, c) => a + c.charCodeAt(0), 0) % 7];
+async function shrinkPhoto(f) {
+  try {
+    const bmp = await createImageBitmap(f); const k = Math.min(1, 2048 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(res => c.toBlob(b => res(b || f), 'image/jpeg', 0.86));
+  } catch (e) { return f; }
 }
 
 /* ---------- Crew ---------- */
