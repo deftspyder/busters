@@ -2,6 +2,7 @@
 // "Busters Photo Drop". Sources: attachments posted in an event's Discord thread, and files people sent
 // through the event's Dropbox upload link (those are deleted from Dropbox once they're safely in Drive).
 // Files are streamed through in 8 MB pieces and never stored. Woken by media_kick_copy() in the database.
+// Each event's folder is made as soon as its Discord thread exists, so the Drive mirrors the threads.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const CHUNK = 8 * 1024 * 1024; // must be a multiple of 256 KB for Drive resumable uploads
@@ -99,24 +100,44 @@ async function run(secret: string) {
   const tokens = new Map<string, string>();
   const roots = new Map<string, string>();
   const folders = new Map<string, string>();
-  let ok = 0, failed = 0;
+  let ok = 0, failed = 0, made = 0;
+  const getToken = async (crew: string) => {
+    let token = tokens.get(crew);
+    if (!token) {
+      token = await rpc<string | null>("media_copy_token", { p_secret: secret, p_crew: crew, p_which: "google" }) || "";
+      if (!token) throw new Error("google not connected");
+      tokens.set(crew, token);
+    }
+    return token;
+  };
+  const getRoot = async (crew: string, token: string, known: string | null, name: string) => {
+    let root = roots.get(crew) || known || "";
+    if (!roots.has(crew)) {
+      if (!root || !(await folderAlive(token, root))) {
+        root = await makeFolder(token, name || "Busters Photo Drop");
+        await rpc("media_copy_folder", { p_secret: secret, p_crew: crew, p_event: null, p_folder: root });
+      }
+      roots.set(crew, root);
+    }
+    return root;
+  };
+  // Folders for events that have a thread but no folder yet.
+  type Need = { crew_id: string; event_id: string; g_root_id: string | null; g_root_name: string; folder_name: string };
+  for (const n of await rpc<Need[]>("media_copy_folders_needed", { p_secret: secret }).catch(() => [] as Need[])) {
+    try {
+      const token = await getToken(n.crew_id);
+      const root = await getRoot(n.crew_id, token, n.g_root_id, n.g_root_name);
+      const folder = await makeFolder(token, n.folder_name, root);
+      await rpc("media_copy_folder", { p_secret: secret, p_crew: n.crew_id, p_event: n.event_id, p_folder: folder });
+      folders.set(n.event_id, folder);
+      made++;
+    } catch (e) { console.error("folder", n.event_id, String(e)); }
+  }
   for (const job of jobs) {
     if (Date.now() - started > BUDGET_MS) break;
     try {
-      let token = tokens.get(job.crew_id);
-      if (!token) {
-        token = await rpc<string | null>("media_copy_token", { p_secret: secret, p_crew: job.crew_id, p_which: "google" }) || "";
-        if (!token) throw new Error("google not connected");
-        tokens.set(job.crew_id, token);
-      }
-      let root = roots.get(job.crew_id) || job.g_root_id || "";
-      if (!roots.has(job.crew_id)) {
-        if (!root || !(await folderAlive(token, root))) {
-          root = await makeFolder(token, job.g_root_name || "Busters Photo Drop");
-          await rpc("media_copy_folder", { p_secret: secret, p_crew: job.crew_id, p_event: null, p_folder: root });
-        }
-        roots.set(job.crew_id, root);
-      }
+      const token = await getToken(job.crew_id);
+      const root = await getRoot(job.crew_id, token, job.g_root_id, job.g_root_name);
       let folder = folders.get(job.event_id) || job.g_folder_id || "";
       if (!folders.has(job.event_id)) {
         if (!folder || !(await folderAlive(token, folder))) {
@@ -145,7 +166,7 @@ async function run(secret: string) {
       await rpc("media_copy_result", { p_secret: secret, p_id: job.id, p_dest_id: null, p_err: String(e) }).catch(() => {});
     }
   }
-  console.log(`copied ${ok}, failed ${failed}, of ${jobs.length}`);
+  console.log(`made ${made} folders; copied ${ok}, failed ${failed}, of ${jobs.length}`);
 }
 
 Deno.serve(async (req) => {
