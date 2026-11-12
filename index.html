@@ -38,7 +38,12 @@ h2{font-size:26px}h3{font-size:20px}
 /* header */
 .top{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.92);backdrop-filter:blur(10px);padding-top:env(safe-area-inset-top)}
 .top .bar{display:flex;align-items:center;gap:12px;height:56px;max-width:760px;margin:0 auto;padding:0 var(--pad)}
-.top .logo{height:26px;flex:0 0 auto}
+.top .brand{display:flex;align-items:center;gap:10px;min-width:0;flex:0 1 auto;background:none;border:0;padding:0;cursor:pointer}
+.top .bmk{width:32px;height:32px;border-radius:8px;flex:0 0 auto;display:block;box-shadow:0 0 0 1px rgba(53,178,232,.45),0 0 10px rgba(53,178,232,.35)}
+.top .iconbtn,.top .avatar{flex:0 0 auto}
+.top .bdiv{width:1px;height:24px;background:var(--line);flex:0 0 auto}
+.top .logo{display:block;width:156px;max-width:100%;height:auto;min-width:0}
+@media (max-width:400px){.top .bar{gap:8px}.top .brand{gap:7px}.top .bmk{width:28px;height:28px;border-radius:7px}}
 .top .sp{flex:1}
 .hz{height:10px;background:repeating-linear-gradient(-45deg,var(--hazard) 0 10px,#111 10px 20px)}
 .iconbtn.cyc{overflow:hidden;padding:0}.iconbtn.cyc svg{width:100%;height:100%;display:block}
@@ -529,7 +534,7 @@ const TABS = [['home', 'Home'], ['chat', 'Chat'], ['crew', 'Crew'], ['team', 'Ad
 function renderShell() {
   $('#app').innerHTML = `
     <header class="top"><div class="bar">
-      <img class="logo" src="img/wordmark-wide.png" alt="The Los Angeles Ghostbusters">
+      <button class="brand" id="brand" title="Busters home" aria-label="Busters home"><img class="bmk" src="icons/icon-192.png?v=4" alt=""><span class="bdiv"></span><img class="logo" src="img/wordmark-wide.png" alt="The Los Angeles Ghostbusters"></button>
       <div class="sp"></div>
       <button class="iconbtn cyc" id="pk" title="Proton pack monitor" aria-label="Proton pack monitor">${ICON.pack}</button>
       <button class="iconbtn" id="qr" title="Donate QR codes" aria-label="Donate QR codes">${ICON.qr}</button>
@@ -538,6 +543,7 @@ function renderShell() {
     </div><div class="hz"></div></header>
     <nav class="tabs"><div class="tabs-in" id="tabs"></div></nav>
     <main class="wrap" id="main"></main>`;
+  $('#brand').onclick = () => { S.tab = 'home'; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); };
   $('#av').onclick = openProfile; $('#menu').onclick = openMenu; $('#qr').onclick = openQR; $('#pk').onclick = openPack;
   render();
 }
