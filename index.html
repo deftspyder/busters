@@ -198,6 +198,7 @@ input.in{min-width:0}
 .lbrow .rk{width:22px;text-align:center;color:var(--muted);font-weight:700}
 .lbrow.me{background:rgba(56,217,232,.08);border-radius:10px}
 .mystripe{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;justify-content:flex-end}
+.mystripe .gbpill{margin-left:0;height:32px;padding:0 12px;font-size:13px}
 .mypill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:13px;white-space:nowrap}
 .mypill b{font-weight:700}
 .mypill .pips{display:inline-flex;gap:3px}
@@ -700,10 +701,10 @@ function renderHome(m) {
   const done = myYr.filter(e => e.event_date < todayISO()).length, soon = myYr.length - done, MIN = 2;
   const pips = Array.from({ length: MIN }, (_, i) => `<i class="${i < done ? 'f' : i < done + soon ? 'r' : ''}"></i>`).join('');
   m.innerHTML = `
-    <div class="sec hello"><div class="script">Welcome back, ${esc(first(S.me.callsign || S.me.full_name))}</div>${gbPill()}</div>
-    <div class="mystripe">
+    <div class="mystripe sec">
       <a href="#" class="mypill${done >= MIN ? ' met' : ''}" id="myev" title="${done} event${done === 1 ? '' : 's'} done in ${yr}${soon ? ', ' + soon + ' signed up' : ''}. Members do at least ${MIN} a year."><span class="pips">${pips}</span><b>${done}</b> event${done === 1 ? '' : 's'} in ${yr}${soon ? `<span class="muted"> +${soon}</span>` : ''}</a>
       <a href="#" class="mypill" id="myraised" title="Fundraising credited to you in ${yr}. Tap for the leaderboard."><span style="color:#f87171">&#9829;</span>${myRaised() ? `<b>${money0(myRaised())}</b>` : '<b class="muted">$0</b>'} raised</a>
+      ${gbPill()}
     </div>
     ${S.announcements[0] && (Date.now() - new Date(S.announcements[0].created_at)) < 14 * 86400000 ? `<div class="card ann" style="margin-top:12px"><div class="tiny dim" style="margin-bottom:4px">Latest from ${esc(first(nameOf(personById(S.announcements[0].author_id))))}</div><div class="pre small">${linkify(S.announcements[0].body)}</div></div>` : ''}
     ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
