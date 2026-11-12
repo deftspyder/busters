@@ -770,20 +770,26 @@ function gbPill() {
   return `<a class="gbpill" href="${DONATE_URL}" target="_blank" rel="noopener" title="${esc(tip)}"><span class="ic">&#9829;</span>GIVEBACK ${money(g.amount)} · #${g.rank}</a>`;
 }
 
+// The announcement is a banner at the top of Home: the latest one stays up until it's removed or replaced.
+// Crew admins post and remove it right on the banner.
+function annBanner() {
+  const a = S.announcements[0], admin = can('crew_admin');
+  if (!a) return admin ? '<button class="btn sm ghost" id="post" style="margin-top:12px">+ Post an announcement</button>' : '';
+  return `<div class="card ann" style="margin-top:12px"><div class="tiny dim" style="margin-bottom:4px;display:flex;gap:10px;align-items:center"><span style="flex:1">From ${esc(first(nameOf(personById(a.author_id))))} · ${new Date(a.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>${admin ? `<a href="#" id="post">New</a><a href="#" data-del="${a.id}">Remove</a>` : ''}</div><div class="pre small">${linkify(a.body)}</div></div>`;
+}
 function renderHome(m) {
   const up = upcoming().filter(e => e.status === 'scheduled');
   const mine = up.filter(e => { const r = myRsvp(e.id); return r && r.answer === 'going'; });
   const next = mine[0] || null;
   const needsMe = up.filter(e => e.missing.length && (e.poc_id === S.me.id || e.created_by === S.me.id));
   m.innerHTML = `
-    ${S.announcements[0] && (Date.now() - new Date(S.announcements[0].created_at)) < 14 * 86400000 ? `<div class="card ann" style="margin-top:12px"><div class="tiny dim" style="margin-bottom:4px">Latest from ${esc(first(nameOf(personById(S.announcements[0].author_id))))}</div><div class="pre small">${linkify(S.announcements[0].body)}</div></div>` : ''}
+    ${annBanner()}
     ${needsMe.length ? `<div class="sec"><h2>Needs you</h2>${needsMe.map(e => `<a class="row missing" data-ev="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">Still needs: ${esc(e.missing.join(', '))}</div></div><span class="pill cream">${8 - e.missing.length} of 8 done</span></a>`).join('')}</div>` : ''}
     <div id="evwrap"></div>
-    <div class="sec"><h2>Announcements ${can('crew_admin') ? '<button class="btn sm act" id="post">Post</button>' : ''}</h2>
-      ${S.announcements.length ? S.announcements.map(a => `<div class="card"><div class="pre">${linkify(a.body)}</div><div class="tiny dim" style="margin-top:6px">${esc(nameOf(personById(a.author_id)))} · ${new Date(a.created_at).toLocaleDateString()}${can('crew_admin') ? ` · <a href="#" data-del="${a.id}">Remove</a>` : ''}</div></div>`).join('') : '<div class="empty">No announcements.</div>'}</div><div style="height:72px"></div>`;
+    <div style="height:72px"></div>`;
   wireRows(m);
   renderEvents($('#evwrap'));
-  const post = $('#post'); if (post) post.onclick = postAnnouncement;
+  const post = $('#post'); if (post) post.onclick = ev => { ev.preventDefault(); postAnnouncement(); };
   m.querySelectorAll('[data-del]').forEach(a => a.onclick = async e => { e.preventDefault(); if (!confirmBox('Remove this announcement?')) return; await rpc('delete_announcement', { p_id: a.dataset.del }); refresh(); });
 }
 function nextCard(e) {
