@@ -1731,10 +1731,10 @@ const hasRole = (p, r) => r[3].some(a => (p.abilities || []).includes(a));
 const fullRole = (p, r) => r[3].every(a => (p.abilities || []).includes(a));
 const roleTags = p => (p.abilities || []).includes('crew_admin') ? '<span class="rtag adm">Crew admin</span>'
   : ROLES.filter(r => r[0] !== 'admin' && fullRole(p, r)).map(r => `<span class="rtag">${r[1]}</span>`).join('');
-// Dues: N/A (nothing on record), Paid, Not paid, Extension (given a pass; Personnel's own word for it). Older saved
-// values map in: "PAID in 2024" is Paid; Exempt shows as Extension too.
-const DUES = [['', 'N/A', ''], ['PAID', 'Paid', 'good'], ['UNPAID', 'Not paid', 'warn'], ['EXTENSION', 'Extension', 'cyan']];
-const duesKey = s => !s ? '' : /^paid/i.test(s) ? 'PAID' : /exempt|extension|grace/i.test(s) ? 'EXTENSION' : /unpaid|not paid/i.test(s) ? 'UNPAID' : s;
+// Dues, in Personnel's own words: N/A (nothing on record), Paid, Not paid, Extension (given more time), Exempt
+// (doesn't owe). "PAID in 2024" counts as Paid.
+const DUES = [['', 'N/A', ''], ['PAID', 'Paid', 'good'], ['UNPAID', 'Not paid', 'warn'], ['EXTENSION', 'Extension', 'cyan'], ['EXEMPT', 'Exempt', 'cream']];
+const duesKey = s => !s ? '' : /^paid/i.test(s) ? 'PAID' : /exempt/i.test(s) ? 'EXEMPT' : /extension|grace/i.test(s) ? 'EXTENSION' : /unpaid|not paid/i.test(s) ? 'UNPAID' : s;
 const duesPill = s => { const k = duesKey(s), d = DUES.find(x => x[0] === k) || [k, s, '']; return k ? `<span class="pill ${d[2]}">${esc(d[1])}</span>` : '<span class="pill na">N/A</span>'; };
 
 async function personnelList(box) {
@@ -1811,7 +1811,7 @@ function editPerson(p, after) {
       <label class="f"><span>Role in crew</span><input class="in" name="title" value="${v('title')}" placeholder="Buster, Quartermaster..."></label>
       <div class="grid2"><label class="f"><span>Member since</span><input class="in" type="date" name="member_since" value="${v('member_since')}"></label><label class="f"><span>Rookie since</span><input class="in" type="date" name="rookie_since" value="${v('rookie_since')}"></label></div>
       <label class="f"><span>Member eligible</span><input class="in" type="date" name="eligible_date" value="${v('eligible_date')}"></label>
-      ${isNew ? '' : `<div class="gc-lbl" style="margin-top:14px">Dues <span class="tiny dim" style="text-transform:none;letter-spacing:0">Extension: given a pass</span></div><div class="grid2">${[yr - 1, yr].map(y => `<label class="f"><span>${y}</span><select class="in" data-dues="${y}">${DUES.map(([k, l]) => `<option value="${k}" ${duesKey(p.dues[y]) === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div>`}
+      ${isNew ? '' : `<div class="gc-lbl" style="margin-top:14px">Dues</div><div class="grid2">${[yr - 1, yr].map(y => `<label class="f"><span>${y}</span><select class="in" data-dues="${y}">${DUES.map(([k, l]) => `<option value="${k}" ${duesKey(p.dues[y]) === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div>`}
       <div class="btns" style="margin-top:16px"><button class="btn primary">Save</button><button type="button" class="btn ghost" data-close>Cancel</button></div>
     </form>`, s => {
     let st = p.status;
