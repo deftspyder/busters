@@ -350,6 +350,9 @@ input.in{min-width:0}
 .ptags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:4px}.ptags .pill{font-size:11px;padding:1px 8px}
 .rtag{white-space:nowrap;font-size:11px;border-radius:999px;padding:1px 8px;background:rgba(53,178,232,.12);color:var(--cyan)}.rtag.adm{background:rgba(255,140,120,.14);color:#ff8c78}
 .pdet{border-top:1px solid var(--line);padding:10px 14px 12px;display:grid;gap:12px}
+.pgrid.mgrid{grid-template-columns:20px minmax(0,1fr) 88px 56px}.pgrid.mgrid.up{grid-template-columns:20px minmax(0,1fr) minmax(0,1.1fr)}@media (min-width:640px){.pgrid.mgrid{grid-template-columns:28px minmax(0,1fr) 110px 70px}.pgrid.mgrid.up{grid-template-columns:28px minmax(0,1fr) minmax(0,1fr)}}
+.mdet-foot{padding:0 14px 12px}.mact{display:flex;align-items:center;gap:10px;margin-top:8px}.mact .btn{flex:0 0 230px;justify-content:center}.mact span{line-height:1.3}@media (max-width:480px){.mact{flex-direction:column;align-items:stretch;gap:3px}.mact .btn{flex-basis:auto}}
+.msub{font-size:12px;color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 6px;font-weight:600}
 @media (min-width:700px){.pdet{grid-template-columns:1fr 1fr 1fr}}
 .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0}.kv span{color:var(--muted);flex:0 0 auto}.kv b{font-weight:500;text-align:right;overflow-wrap:anywhere}
 .rsws{display:grid;gap:6px}.rsw{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
@@ -1630,42 +1633,71 @@ function mediaCard(box, part = 'events') {
       : `<div class="card" style="margin-top:10px"><div class="small">🗂️ Want photos to end up in a Google Drive instead? Make a one-time link and send it to whoever has that Google account. They don't need Busters, they just tap Allow.</div>
          ${g.link_open ? `<div class="tiny dim" style="margin-top:6px">A link is out, good until ${new Date(g.link_expires).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Making a new one cancels it.</div>` : ''}
          <button class="btn sm${d.connected ? ' primary' : ''}" id="g-link" style="margin-top:10px" ${g.has_app ? '' : 'disabled'}>Copy connect link</button>${g.has_app ? '' : '<div class="tiny dim" style="margin-top:6px">Waiting on a crew admin to add the Google keys.</div>'}</div>`;
-    const rows = (d.events || []).map(e => {
-      const st = e.completed_at ? '✅ Complete' : !e.called_at ? (d.connected ? 'Photo call not posted yet' : 'Not started') : `${e.answered} of ${e.went} answered`;
-      return `<div class="row" data-me="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">${day(e.event_date)} · ${st}${e.files ? ` · ${e.files} file${e.files == 1 ? '' : 's'}` : ''}</div></div><span class="btn sm">Open</span></div>`;
+    // Media collection management: events whose photo collection is open (or done), then upcoming events.
+    const evs = d.events || [];
+    const status = e => e.completed_at ? '<span class="pill good">Complete</span>' : !e.called_at ? `<span class="pill">${d.connected ? 'Not posted' : 'Not started'}</span>` : `<span class="pill warn">${e.answered} of ${e.went}</span>`;
+    const row = e => `<div class="prow${mediaOpen.has(e.id) ? ' open' : ''}">
+        <div class="pgrid mgrid"><button class="pexp" data-mx="${e.id}" aria-expanded="${mediaOpen.has(e.id)}" aria-label="Show ${esc(e.title)}">›</button>
+          <div data-mx="${e.id}" style="cursor:pointer;min-width:0"><div class="pname">${esc(e.title)}</div><div class="tiny muted">${day(e.event_date)}</div></div>
+          <div>${status(e)}</div><div class="small muted" style="text-align:right">${e.files || 0} file${e.files == 1 ? '' : 's'}</div></div>
+        ${mediaOpen.has(e.id) ? `<div class="mdet" id="md-${e.id}"><div class="tiny dim">Loading...</div></div>` : ''}</div>`;
+    const open = evs.filter(e => !e.completed_at), done = evs.filter(e => e.completed_at);
+    const head = `<div class="pgrid mgrid phead"><span></span><span>Event</span><span>Answered</span><span style="text-align:right">Photos</span></div>`;
+    // Upcoming: when each event's thread (and Drive folder) will be made. Threads come with the first Discord card.
+    const what = g.connected ? 'Thread and folder' : 'Thread';
+    const when = t => new Date(t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const up = (d.upcoming || []).map(e => {
+      const st = e.has_thread && (e.has_folder || !g.connected) ? `✅ ${what} ready`
+        : e.has_thread ? 'Thread ready, folder within 15 minutes'
+        : e.date_tbd ? `${what} once the date is set`
+        : e.thread_due ? `${what} about ${when(e.thread_due)}`
+        : `${what} with its first Discord post`;
+      return `<div class="prow"><div class="pgrid mgrid up"><span></span><div style="min-width:0"><div class="pname">${esc(e.title)}</div><div class="tiny muted">${e.date_tbd ? esc(whenText(e)) : day(e.event_date)}</div></div><div class="small muted">${st}</div></div></div>`;
     }).join('');
     box.innerHTML = part === 'setup'
       ? `<h2>Photo storage</h2>${conn}${keys}${gdrive}${gkeys}`
-      : `<h2>Past events</h2>${!d.connected ? '<div class="small muted" style="margin-bottom:8px">Photo calls start once photo storage is set up.</div>' : ''}${rows || '<div class="empty">No past events with Busters in the last 90 days.</div>'}`;
+      : `<h2>Media collection management</h2>
+         <div class="small muted" style="margin-bottom:8px">${d.connected ? 'The morning after an event, Busters posts a photo call in its Discord thread. Tap an event to see who has sent photos and to manage it.' : 'Photo calls start once photo storage is set up.'}</div>
+         <h3 class="msub">Collecting now</h3>${open.length ? head + open.map(row).join('') : '<div class="empty">No photo collections open right now.</div>'}
+         ${done.length ? `<button class="btn sm ghost" id="m-done" style="margin:4px 0 0">${mediaShowDone ? 'Hide' : 'Show'} completed (${done.length})</button>${mediaShowDone ? '<div style="margin-top:8px">' + head + done.map(row).join('') + '</div>' : ''}` : ''}
+         <h3 class="msub">Upcoming</h3>${up || '<div class="empty">No upcoming events.</div>'}`;
     const gs = $('#gk-save'); if (gs) gs.onclick = async () => { await rpc('media_set_google_app', { p_crew: S.crew.id, p_id: $('#gk-id').value, p_secret: $('#gk-sec').value }); toast('Google keys saved'); mediaCard(box, part); };
     const gl = $('#g-link'); if (gl) gl.onclick = async () => { const url = await rpc('media_google_link', { p_crew: S.crew.id }); try { await navigator.clipboard.writeText(url); toast('Connect link copied. It works once, for 7 days.'); } catch (e) { prompt('Connect link', url); } mediaCard(box, part); };
     const go = $('#g-off'); if (go) go.onclick = async () => { if (!confirmBox('Disconnect Google Drive? Photos already copied stay there. New photos stay in Dropbox until Drive is connected again.')) return; await rpc('media_google_disconnect', { p_crew: S.crew.id }); toast('Drive disconnected'); mediaCard(box, part); };
     const ms = $('#mk-save'); if (ms) ms.onclick = async () => { await rpc('media_set_app', { p_crew: S.crew.id, p_key: $('#mk-key').value, p_secret: $('#mk-sec').value }); toast('Keys saved'); mediaCard(box, part); };
     const mc = $('#m-con'); if (mc) mc.onclick = async () => { location.href = await rpc('media_connect_url', { p_crew: S.crew.id }); };
     const mo = $('#m-off'); if (mo) mo.onclick = async () => { if (!confirmBox('Disconnect Dropbox? Photos already saved stay in Dropbox. New photo calls stop until it is connected again.')) return; await rpc('media_disconnect', { p_crew: S.crew.id }); toast('Disconnected'); mediaCard(box, part); };
-    box.querySelectorAll('[data-me]').forEach(r => r.onclick = () => mediaEvent((d.events || []).find(x => x.id === r.dataset.me), d.connected, () => mediaCard(box, part)));
+    const md = $('#m-done'); if (md) md.onclick = () => { mediaShowDone = !mediaShowDone; mediaCard(box, part); };
+    box.querySelectorAll('[data-mx]').forEach(b => b.onclick = () => { const id = b.dataset.mx; mediaOpen.has(id) ? mediaOpen.delete(id) : mediaOpen.add(id); mediaCard(box, part); });
+    evs.filter(e => mediaOpen.has(e.id)).forEach(e => mediaDetail($('#md-' + e.id, box), e, d.connected, () => mediaCard(box, part)));
   }).catch(() => { box.innerHTML = '<div class="empty">Event photos could not load right now.</div>'; });
 }
-async function mediaEvent(ev, connected, after) {
-  const x = await rpc('media_event', { p_event: ev.id }); const m = x.media || {};
-  const grp = (k, label) => { const ps = x.people.filter(p => (p.answer || 'waiting') === k); return ps.length ? `<div class="small" style="margin-top:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;font-size:11px">${label} (${ps.length})</div>` + ps.map(p => `<div class="small">${esc(p.name)}${p.files ? ` · ${p.files} file${p.files == 1 ? '' : 's'}` : ''}</div>`).join('') : ''; };
-  sheet(`<h2>${esc(ev.title)}</h2><div class="small muted">${new Date(ev.event_date + 'T12:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}${m.completed_at ? ' · ✅ marked complete' : m.called_at ? ' · photo call posted ' + new Date(m.called_at).toLocaleDateString() : ''}</div>
-    ${grp('uploaded', '📷 Sent photos')}${grp('none', 'No photos')}${grp('waiting', 'Waiting')}
-    <div class="tiny dim" style="margin-top:8px">Photos people send through the upload link land in the folder too, but Busters can't tell who sent them.</div>
-    <div class="btns" style="margin-top:14px;flex-wrap:wrap">
-      ${!m.called_at && connected ? '<button class="btn sm primary" id="me-call">Post photo call now</button>' : ''}
-      ${m.called_at && !m.completed_at ? '<button class="btn sm" id="me-rem">Send reminder</button>' : ''}
-      ${m.called_at ? `<button class="btn sm" id="me-done">${m.completed_at ? 'Reopen' : 'Mark complete'}</button>` : ''}
-      ${m.request_url ? '<button class="btn sm" id="me-link">Copy upload link</button>' : ''}
-      ${m.g_folder_id ? `<a class="btn sm" href="https://drive.google.com/drive/folders/${encodeURIComponent(m.g_folder_id)}" target="_blank" rel="noopener">Open in Drive</a>`
-        : m.folder_path ? `<a class="btn sm" href="https://www.dropbox.com/home${encodeURI(m.folder_path)}" target="_blank" rel="noopener">Open folder</a>` : ''}
-      <button class="btn sm ghost" data-close>Close</button></div>`, s => {
-    const on2 = (id, f) => { const b = $(id, s); if (b) b.onclick = f; };
-    on2('#me-call', async () => { const st = await rpc('media_call_now', { p_event: ev.id }); toast(st >= 200 && st < 300 ? 'Photo call posted in the event thread' : st === -2 ? 'Dropbox said no. Try reconnecting it.' : st === -3 ? 'Could not open the event thread in Discord' : 'Discord said no (code ' + st + ')'); closeSheet(); after(); });
-    on2('#me-rem', async () => { const st = await rpc('media_remind', { p_event: ev.id }); toast(st === 0 ? 'Everyone has answered' : st >= 200 && st < 300 ? 'Reminder sent' : 'Discord said no (code ' + st + ')'); });
-    on2('#me-done', async () => { await rpc('media_complete', { p_event: ev.id, p_done: !m.completed_at }); toast(m.completed_at ? 'Reopened' : 'Marked complete'); closeSheet(); after(); });
-    on2('#me-link', async () => { try { await navigator.clipboard.writeText(m.request_url); toast('Upload link copied'); } catch (e) { prompt('Upload link', m.request_url); } });
-  });
+// The expanded part of a media collection row: who has answered, then each action with what it does.
+let mediaOpen = new Set(), mediaShowDone = false;
+async function mediaDetail(el, ev, connected, after) {
+  if (!el) return;
+  let x; try { x = await rpc('media_event', { p_event: ev.id }); } catch (e) { el.innerHTML = '<div class="tiny dim">Could not load this event.</div>'; return; }
+  const m = x.media || {};
+  const grp = (k, label) => { const ps = x.people.filter(p => (p.answer || 'waiting') === k);
+    return `<div class="pgrp"><div class="gc-lbl">${label} (${ps.length})</div>${ps.length ? ps.map(p => `<div class="small">${esc(p.name)}${p.files ? ` <span class="muted">· ${p.files} file${p.files == 1 ? '' : 's'}</span>` : ''}</div>`).join('') : '<div class="tiny dim">Nobody</div>'}</div>`; };
+  const waiting = x.people.filter(p => !p.answer).length;
+  const act = (id, label, what, primary) => `<div class="mact"><button class="btn sm${primary ? ' primary' : ''}" id="${id}">${label}</button><span class="tiny muted">${what}</span></div>`;
+  const acts = [
+    !m.called_at && connected ? act('me-call', 'Post photo call now', 'Posts the photo call in the event thread now instead of waiting for the morning after.', true) : '',
+    m.called_at && !m.completed_at && waiting ? act('me-rem', 'Remind people still waiting', `Posts a reminder in the event thread that tags the ${waiting} ${waiting == 1 ? 'person who hasn\'t' : 'people who haven\'t'} answered.`) : '',
+    m.called_at && !m.completed_at ? act('me-done', 'Mark collection complete', 'Changes the Discord post to say photos are collected and stops reminders. The upload link stays open.') : '',
+    m.completed_at ? act('me-done', 'Reopen collection', 'Turns the photo call back on so reminders can go out again.') : '',
+    m.request_url ? act('me-link', 'Copy upload link', 'For people not on Discord, or files over 10 MB. Anyone with the link can send files.') : '',
+    m.g_folder_id ? `<div class="mact"><a class="btn sm" href="https://drive.google.com/drive/folders/${encodeURIComponent(m.g_folder_id)}" target="_blank" rel="noopener">Open folder in Drive</a><span class="tiny muted">See everything collected for this event.</span></div>`
+      : m.folder_path ? `<div class="mact"><a class="btn sm" href="https://www.dropbox.com/home${encodeURI(m.folder_path)}" target="_blank" rel="noopener">Open folder in Dropbox</a><span class="tiny muted">See everything collected for this event.</span></div>` : ''].join('');
+  el.innerHTML = `<div class="pdet">${grp('uploaded', '📷 Sent photos')}${grp('none', 'No photos')}${grp('waiting', 'Waiting')}</div>
+    <div class="mdet-foot">${m.called_at ? `<div class="tiny dim">Photo call posted ${new Date(m.called_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${m.completed_at ? ', marked complete ' + new Date(m.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}. Files sent through the upload link land in the folder too, but Busters can't tell who sent them.</div>` : ''}
+      ${acts ? `<div class="gc-lbl" style="margin-top:10px">Actions</div>${acts}` : ''}</div>`;
+  const on2 = (id, f) => { const b = $(id, el); if (b) b.onclick = f; };
+  on2('#me-call', async () => { const st = await rpc('media_call_now', { p_event: ev.id }); toast(st >= 200 && st < 300 ? 'Photo call posted in the event thread' : st === -2 ? 'Dropbox said no. Try reconnecting it.' : st === -3 ? 'Could not open the event thread in Discord' : 'Discord said no (code ' + st + ')'); after(); });
+  on2('#me-rem', async () => { const st = await rpc('media_remind', { p_event: ev.id }); toast(st === 0 ? 'Everyone has answered' : st >= 200 && st < 300 ? 'Reminder posted' : 'Discord said no (code ' + st + ')'); });
+  on2('#me-done', async () => { await rpc('media_complete', { p_event: ev.id, p_done: !m.completed_at }); toast(m.completed_at ? 'Reopened' : 'Marked complete'); if (!m.completed_at) mediaOpen.delete(ev.id); after(); });
+  on2('#me-link', async () => { try { await navigator.clipboard.writeText(m.request_url); toast('Upload link copied'); } catch (e) { prompt('Upload link', m.request_url); } });
 }
 function renderTeam(m) {
   const pending = can('approve_members') ? S.people.filter(p => p.status === 'pending') : [];
