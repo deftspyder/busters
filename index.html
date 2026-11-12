@@ -525,7 +525,7 @@ async function enter(name) {
   await loadAll();
   if (!S.me) return renderBlocked('removed');
   const dbx = new URLSearchParams(location.search).get('dropbox');
-  if (dbx) { S.tab = 'team'; S.adminTab = 'media'; history.replaceState(null, '', location.pathname); }
+  if (dbx) { S.tab = 'team'; S.adminTab = 'app'; history.replaceState(null, '', location.pathname); }
   renderShell();
   chatRefresh(true);
   if (dbx) toast({ connected: 'Dropbox connected. Photo calls start the morning after each event.', cancelled: 'Dropbox connection cancelled', expired: 'That link expired. Tap Connect Dropbox again.' }[dbx] || 'Dropbox could not connect. Try again.');
@@ -1536,8 +1536,9 @@ function wireDiscord() {
     on('#dc-test', async () => { const st = await rpc('discord_test', { p_crew: S.crew.id }); toast(st >= 200 && st < 300 ? 'Posted. Check the channel.' : 'Discord said no (code ' + st + ')'); wireDiscord(); });
   }).catch(() => {});
 }
-// Media (Jeff): Dropbox connected once, then one row per past event with who has sent photos.
-function mediaCard(box) {
+// Media (Jeff): one row per past event with who has sent photos. The photo storage setup (Dropbox relay, Google Drive)
+// is app admin only and shows under Admin, then App (part = 'setup').
+function mediaCard(box, part = 'events') {
   rpc('media_status', { p_crew: S.crew.id }).then(d => {
     const day = x => new Date(x + 'T12:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     const keys = d.is_admin && !d.connected ? `<div class="card" style="margin-top:10px"><div class="small muted">${d.has_app ? 'Dropbox app keys are saved. Paste new ones to replace them.' : 'First, a crew admin pastes the App key and App secret from the Busters app at dropbox.com/developers/apps.'}</div>
@@ -1567,15 +1568,16 @@ function mediaCard(box) {
       const st = e.completed_at ? '✅ Complete' : !e.called_at ? (d.connected ? 'Photo call not posted yet' : 'Not started') : `${e.answered} of ${e.went} answered`;
       return `<div class="row" data-me="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">${day(e.event_date)} · ${st}${e.files ? ` · ${e.files} file${e.files == 1 ? '' : 's'}` : ''}</div></div><span class="btn sm">Open</span></div>`;
     }).join('');
-    box.innerHTML = `<h2>Event photos</h2>${conn}${keys}${gdrive}${gkeys}
-      <h2 style="margin-top:16px">Past events</h2>${rows || '<div class="empty">No past events with Busters in the last 90 days.</div>'}`;
-    const gs = $('#gk-save'); if (gs) gs.onclick = async () => { await rpc('media_set_google_app', { p_crew: S.crew.id, p_id: $('#gk-id').value, p_secret: $('#gk-sec').value }); toast('Google keys saved'); mediaCard(box); };
-    const gl = $('#g-link'); if (gl) gl.onclick = async () => { const url = await rpc('media_google_link', { p_crew: S.crew.id }); try { await navigator.clipboard.writeText(url); toast('Connect link copied. It works once, for 7 days.'); } catch (e) { prompt('Connect link', url); } mediaCard(box); };
-    const go = $('#g-off'); if (go) go.onclick = async () => { if (!confirmBox('Disconnect Google Drive? Photos already copied stay there. New photos stay in Dropbox until Drive is connected again.')) return; await rpc('media_google_disconnect', { p_crew: S.crew.id }); toast('Drive disconnected'); mediaCard(box); };
-    const ms = $('#mk-save'); if (ms) ms.onclick = async () => { await rpc('media_set_app', { p_crew: S.crew.id, p_key: $('#mk-key').value, p_secret: $('#mk-sec').value }); toast('Keys saved'); mediaCard(box); };
+    box.innerHTML = part === 'setup'
+      ? `<h2>Photo storage</h2>${conn}${keys}${gdrive}${gkeys}`
+      : `<h2>Past events</h2>${!d.connected ? '<div class="small muted" style="margin-bottom:8px">Photo calls start once photo storage is set up.</div>' : ''}${rows || '<div class="empty">No past events with Busters in the last 90 days.</div>'}`;
+    const gs = $('#gk-save'); if (gs) gs.onclick = async () => { await rpc('media_set_google_app', { p_crew: S.crew.id, p_id: $('#gk-id').value, p_secret: $('#gk-sec').value }); toast('Google keys saved'); mediaCard(box, part); };
+    const gl = $('#g-link'); if (gl) gl.onclick = async () => { const url = await rpc('media_google_link', { p_crew: S.crew.id }); try { await navigator.clipboard.writeText(url); toast('Connect link copied. It works once, for 7 days.'); } catch (e) { prompt('Connect link', url); } mediaCard(box, part); };
+    const go = $('#g-off'); if (go) go.onclick = async () => { if (!confirmBox('Disconnect Google Drive? Photos already copied stay there. New photos stay in Dropbox until Drive is connected again.')) return; await rpc('media_google_disconnect', { p_crew: S.crew.id }); toast('Drive disconnected'); mediaCard(box, part); };
+    const ms = $('#mk-save'); if (ms) ms.onclick = async () => { await rpc('media_set_app', { p_crew: S.crew.id, p_key: $('#mk-key').value, p_secret: $('#mk-sec').value }); toast('Keys saved'); mediaCard(box, part); };
     const mc = $('#m-con'); if (mc) mc.onclick = async () => { location.href = await rpc('media_connect_url', { p_crew: S.crew.id }); };
-    const mo = $('#m-off'); if (mo) mo.onclick = async () => { if (!confirmBox('Disconnect Dropbox? Photos already saved stay in Dropbox. New photo calls stop until it is connected again.')) return; await rpc('media_disconnect', { p_crew: S.crew.id }); toast('Disconnected'); mediaCard(box); };
-    box.querySelectorAll('[data-me]').forEach(r => r.onclick = () => mediaEvent((d.events || []).find(x => x.id === r.dataset.me), d.connected, () => mediaCard(box)));
+    const mo = $('#m-off'); if (mo) mo.onclick = async () => { if (!confirmBox('Disconnect Dropbox? Photos already saved stay in Dropbox. New photo calls stop until it is connected again.')) return; await rpc('media_disconnect', { p_crew: S.crew.id }); toast('Disconnected'); mediaCard(box, part); };
+    box.querySelectorAll('[data-me]').forEach(r => r.onclick = () => mediaEvent((d.events || []).find(x => x.id === r.dataset.me), d.connected, () => mediaCard(box, part)));
   }).catch(() => { box.innerHTML = '<div class="empty">Event photos could not load right now.</div>'; });
 }
 async function mediaEvent(ev, connected, after) {
@@ -1614,7 +1616,8 @@ function renderTeam(m) {
     isEv && ['events', 'Events', proposals.length + short.length + limited.length + incomplete.length],
     (can('approve_members') || can('manage_recruits')) && ['personnel', 'Personnel', pending.length],
     can('webmaster') && ['media', 'Media', 0],
-    (can('crew_admin') || can('view_log')) && ['crew', 'Crew', unpublished.length]
+    (can('crew_admin') || can('view_log')) && ['crew', 'Crew', unpublished.length],
+    S.appAdmin && ['app', 'App', 0]
   ].filter(Boolean);
   if (!dash.some(d => d[0] === S.adminTab)) S.adminTab = dash.length ? dash[0][0] : 'events';
   const at = S.adminTab, list = xs => xs.length ? xs.join('') : '<div class="empty">All clear. Nothing waiting here.</div>';
@@ -1628,6 +1631,8 @@ function renderTeam(m) {
       <div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>
       ${can('manage_recruits') ? '<div class="small muted">Contact details, dues and rookie dates are in the Personnel roster.</div>' : ''}`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
+    // App admin only: how Busters itself is wired up (accounts and keys), not day-to-day crew work.
+    app: () => `<div class="small muted" style="margin:-4px 0 4px">Only app admins see this.</div><div class="sec" id="mediasetup"><div class="empty">Loading...</div></div>`,
     crew: () => `<div class="btns">${can('view_log') ? '<button class="btn sm" id="log">Action log</button>' : ''}</div>
       ${can('crew_admin') ? `<div class="sec">${list(unpublished.map(e => item('Publish credit', e.title, `${fmtDay(e.event_date)} · ${money0(e.raised)} raised, split is a draft`, `data-ev="${e.id}"`, 'Review')))}</div>`
         + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div><div class="sec" id="discord"></div><div class="sec small" id="bridge"></div>' : ''}`
@@ -1639,6 +1644,7 @@ function renderTeam(m) {
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
   if ($('#dcsched')) scheduleCard($('#dcsched'));
   if ($('#mediabox')) mediaCard($('#mediabox'));
+  if ($('#mediasetup')) mediaCard($('#mediasetup'), 'setup');
   if ($('#donatecodes')) donateCodesCard($('#donatecodes'));
   const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
     const num = id => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
