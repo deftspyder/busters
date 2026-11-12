@@ -335,6 +335,8 @@ input.in{min-width:0}
 .fab:active{transform:scale(.95)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom));background:var(--ink);color:#000;padding:10px 16px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw}
 
+/* Admin section chips stay under the header while scrolling */
+.adtabs{position:sticky;top:calc(66px + env(safe-area-inset-top));z-index:6;background:var(--bg);margin:0 calc(-1 * var(--pad));padding:8px var(--pad);border-bottom:1px solid var(--line)}
 /* roles */
 .rchips{display:flex;flex-wrap:wrap;gap:6px}.rchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:3px 4px 3px 10px;font-size:13px}
 .rchip button{width:20px;height:20px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:11px}.rchip button:hover{color:var(--bad)}
@@ -1649,7 +1651,8 @@ function renderTeam(m) {
         + adoptionCard() + goalCard() + '<div class="sec" id="donatecodes"></div>' : ''}`
   };
   m.innerHTML = `<div class="sec"><h2>Admin ${at === 'events' && ev ? '<button class="btn sm primary act" id="new">+ New event</button>' : ''}</h2>
-    ${dash.length > 1 ? `<div class="chips" id="adtabs" style="margin-top:8px">${dash.map(([k, l, n]) => `<button class="chip ${k === at ? 'on' : ''}" data-ad="${k}">${l}${n ? ` <b class="badge" style="position:static;display:inline-grid;margin-left:4px">${n}</b>` : ''}</button>`).join('')}</div>` : ''}</div>
+</div>
+    ${dash.length > 1 ? `<div class="chips adtabs" id="adtabs">${dash.map(([k, l, n]) => `<button class="chip ${k === at ? 'on' : ''}" data-ad="${k}">${l}${n ? ` <b class="badge" style="position:static;display:inline-grid;margin-left:4px">${n}</b>` : ''}</button>`).join('')}</div>` : ''}
     ${dash.length ? body[at]() : '<div class="empty">Nothing here for you yet.</div>'}`;
   m.querySelectorAll('[data-ad]').forEach(b => b.onclick = () => { S.adminTab = b.dataset.ad; renderTeam(m); scrollTo(0, 0); });
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
