@@ -557,11 +557,12 @@ async function enter(name) {
   await loadAll();
   if (!S.me) return renderBlocked('removed');
   const dbx = new URLSearchParams(location.search).get('dropbox');
+  const startHash = dbx ? '' : location.hash;
   if (dbx) { S.tab = 'team'; S.adminTab = 'app'; history.replaceState(null, '', location.pathname); }
-  renderShell();
+  S.popping = true; try { renderShell(); } finally { S.popping = false; }
   chatRefresh(true);
   if (dbx) toast({ connected: 'Dropbox connected. Photo calls start the morning after each event.', cancelled: 'Dropbox connection cancelled', expired: 'That link expired. Tap Connect Dropbox again.' }[dbx] || 'Dropbox could not connect. Try again.');
-  const hash = location.hash.slice(1); if (hash.startsWith('event/')) openEvent(hash.slice(6));
+  if (startHash) { S.popping = true; try { applyRoute(startHash); } finally { S.popping = false; } }
 }
 
 function renderNeedName() {
@@ -624,7 +625,7 @@ function renderShell() {
     </div><div class="hz"></div></header>
     <nav class="tabs"><div class="tabs-in" id="tabs"></div></nav>
     <main class="wrap" id="main"></main>`;
-  $('#brand').onclick = () => { S.tab = 'home'; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); };
+  $('#brand').onclick = () => { document.body.classList.remove('chatting'); S.tab = 'home'; S.view = null; render(); scrollTo(0, 0); };
   $('#menu').onclick = openMenu; $('#qr').onclick = openQR; $('#pk').onclick = openPack;
   render();
 }
@@ -641,15 +642,43 @@ function renderTabs() {
   const tabs = TABS.filter(([k]) => k !== 'team' || onTeam());
   const tc = teamCount(); const wc = upcoming().filter(isWaiting).length; const cc = (S.chat && S.chat.unread) || 0;
   $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab ${S.tab === k && (!S.view || (k === 'chat' && document.body.classList.contains('chatting'))) ? 'on' : ''}" data-t="${k}">${ICON[k]}<span>${l}</span>${k === 'team' && tc ? `<b class="badge">${tc}</b>` : ''}${k === 'home' && wc ? `<b class="badge pulse" title="${wc} waiting on your answer">${wc}</b>` : ''}${k === 'chat' && cc ? `<b class="badge" title="${cc} chat${cc === 1 ? '' : 's'} with new messages">${cc}</b>` : ''}</button>`).join('');
-  $('#tabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { document.body.classList.remove('chatting'); S.tab = b.dataset.t; S.view = null; history.replaceState(null, '', location.pathname); render(); scrollTo(0, 0); });
+  $('#tabs').querySelectorAll('.tab').forEach(b => b.onclick = () => { document.body.classList.remove('chatting'); S.tab = b.dataset.t; S.view = null; render(); scrollTo(0, 0); });
 }
 function render() {
   renderTabs();
   const m = $('#main');
   if (S.view) return S.view();
   ({ home: renderHome, events: renderEvents, me: renderMine, chat: renderChat, crew: renderCrew, team: renderTeam })[S.tab](m);
+  syncUrl();
 }
-function show(fn) { S.view = () => fn($('#main')); render(); scrollTo(0, 0); }
+// Other screens (editors, profiles) have no address of their own and keep their tab's.
+function show(fn, route) { S.viewRoute = route || null; S.view = () => fn($('#main')); render(); syncUrl(); scrollTo(0, 0); }
+
+/* ---------- addresses ----------
+   Each screen has its own address (#crew, #admin/media, #event/<id>, #chat/rookies), so a refresh keeps you where you
+   were, the phone's back button goes to the previous screen, and any screen can be linked. */
+function routeNow() {
+  if (S.view) return S.viewRoute || (S.tab === 'team' ? 'admin/' + S.adminTab : S.tab === 'home' ? '' : S.tab);
+  return S.tab === 'team' ? 'admin/' + (S.adminTab || '') : S.tab === 'home' ? '' : S.tab;
+}
+function syncUrl() {
+  const h = routeNow() ? '#' + routeNow().replace(/\/$/, '') : '';
+  if (location.hash === h || (!h && !location.hash)) return;
+  if (S.popping) history.replaceState(history.state, '', location.pathname + h); else history.pushState({ b: 1 }, '', location.pathname + h);
+}
+// In-app Back buttons step back through the phone's history when there is a Busters screen to go back to.
+function goBack(fallback) { if (history.state && history.state.b) history.back(); else fallback(); }
+function applyRoute(hash) {
+  const [a, b] = decodeURIComponent((hash || '').replace(/^#/, '')).split('/');
+  document.body.classList.remove('chatting');
+  S.view = null;
+  if (a === 'event' && b && S.events.some(e => e.id === b)) { S.tab = S.tab || 'home'; return openEvent(b); }
+  if (a === 'chat' && b) return openChat(b === 'rookies' ? null : b);
+  if (a === 'admin' && onTeam()) { S.tab = 'team'; if (b) S.adminTab = b; }
+  else S.tab = ['chat', 'crew', 'me'].includes(a) ? a : 'home';
+  render();
+}
+window.addEventListener('popstate', () => { if (!S.me || !$('#main')) return; closeSheet && closeSheet(); S.popping = true; try { applyRoute(location.hash); } finally { S.popping = false; } scrollTo(0, 0); });
 
 /* ---------- event helpers ---------- */
 const upcoming = () => S.events.filter(e => (e.end_date || e.event_date) >= todayISO() && e.status !== 'proposed');
@@ -889,8 +918,7 @@ function renderCal(box) {
 function openEvent(id) {
   const e = S.events.find(x => x.id === id);
   if (!e) return toast('That event is not available.');
-  history.replaceState(null, '', '#event/' + id);
-  show(m => renderBrief(m, e));
+  show(m => renderBrief(m, e), 'event/' + id);
 }
 const gsv = d => `<svg class="gc-ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const GI = {
@@ -982,7 +1010,7 @@ function renderBrief(m, e) {
     ${S.chat.events.has(e.id) ? `<div class="btns" style="margin-top:18px"><button class="btn" id="evchat">${ICON.chat} Event chat</button></div>` : ''}
     ${canEdit ? `<div class="btns" style="margin:18px 0 30px"><button class="btn primary" id="edit">Edit event</button>${e.status === 'scheduled' ? '<button class="btn" id="todc">Post to Discord</button>' : ''}${e.status === 'scheduled' ? '<button class="btn danger" id="cancel">Cancel event</button>' : e.status === 'cancelled' ? '<button class="btn" id="restore">Put back on</button>' : ''}</div>` : '<div style="height:30px"></div>'}
   </div>`;
-  $('#bk').onclick = () => { S.view = null; history.replaceState(null, '', location.pathname); render(); };
+  $('#bk').onclick = () => goBack(() => { S.view = null; render(); });
   const ec = $('#evchat'); if (ec) ec.onclick = () => openChat(e.id);
   wireRows(m);
   m.querySelectorAll('[data-person]').forEach(x => x.onclick = ev => { ev.preventDefault(); openPerson(x.dataset.person); });
@@ -1274,7 +1302,7 @@ function openChat(eventId) {
   S.tab = 'chat';
   const e = eventId ? S.events.find(x => x.id === eventId) : null;
   const known = (S.chat.list || []).find(c => (c.event_id || null) === (eventId || null));
-  show(m => chatView(m, e, known ? known.channel : null));
+  show(m => chatView(m, e, known ? known.channel : null), 'chat/' + (eventId || 'rookies'));
 }
 
 async function chatView(m, e, channel) {
@@ -1293,7 +1321,7 @@ async function chatView(m, e, channel) {
   renderTabs();
   const box = $('#msgs', m);
   const stop = () => { st.alive = false; clearTimeout(st.timer); document.body.classList.remove('chatting'); };
-  $('#bk', m).onclick = () => { stop(); S.view = null; S.tab = 'chat'; render(); scrollTo(0, 0); };
+  $('#bk', m).onclick = () => { stop(); goBack(() => { S.view = null; S.tab = 'chat'; render(); scrollTo(0, 0); }); };
   const br = $('#brief', m); if (br) br.onclick = () => { stop(); openEvent(e.id); };
   if (!channel) {
     try { const j = await chatCall({ action: 'overview', events: e ? [e.id] : [] }); const k = j.chats.find(c => (c.event_id || null) === (e ? e.id : null)); channel = k && k.channel; } catch (x) { /* shown below */ }
@@ -1519,8 +1547,8 @@ function scheduleCard(box) {
       <div class="sched-row"><span>Quiet from</span><select class="in sm" id="ds-qf">${hrs(d.quiet_from)}</select><span>to</span><select class="in sm" id="ds-qt">${hrs(d.quiet_to)}</select><span class="tiny dim">no posts in between; they wait for morning</span></div>
       <div class="sched-row"><span>At most</span><select class="in sm" id="ds-max">${opt([3, 4, 6, 8, 10, 12, 15], d.max_posts, v => v + ' posts')}</select><span>per event</span></div>
       <button class="btn sm primary" id="ds-save" style="margin-top:8px">Save schedule</button>
-      <div class="gc-lbl" style="margin-top:16px">Next Discord posts</div>
-      <div class="tiny dim" style="margin:2px 0 4px">When the next card for each event goes out. The event's own date is next to its name.</div>
+      <h3 class="msub" style="margin-top:20px;padding-top:14px;border-top:1px solid var(--line)">Next Discord posts</h3>
+      <div class="tiny dim" style="margin:-2px 0 6px">When the next card for each event goes out. The event's own date is next to its name.</div>
       <div id="ds-up">${(d.upcoming || []).length ? d.upcoming.map(u => `<div class="schedup"><span class="swhen">${esc(whenTxt(u.due_at))}</span><span class="grow small"><b>${esc(u.title)}</b> <span class="muted">${esc(fmtDay(u.event_date))}</span><br><span class="muted">${u.label ? esc(u.label) : 'No more posts planned'}${u.card_at ? ' · card in channel' : ''}</span></span></div>`).join('') : '<div class="small muted">No upcoming events in the next few weeks.</div>'}</div>
     </div>`;
     box.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => b.classList.toggle('on'));
@@ -1738,7 +1766,7 @@ function renderTeam(m) {
 </div>
     ${dash.length > 1 ? `<div class="chips adtabs" id="adtabs">${dash.map(([k, l, n]) => `<button class="chip ${k === at ? 'on' : ''}" data-ad="${k}">${l}${n ? ` <b class="badge" style="position:static;display:inline-grid;margin-left:4px">${n}</b>` : ''}</button>`).join('')}</div>` : ''}
     ${dash.length ? body[at]() : '<div class="empty">Nothing here for you yet.</div>'}`;
-  m.querySelectorAll('[data-ad]').forEach(b => b.onclick = () => { S.adminTab = b.dataset.ad; renderTeam(m); scrollTo(0, 0); });
+  m.querySelectorAll('[data-ad]').forEach(b => b.onclick = () => { S.adminTab = b.dataset.ad; renderTeam(m); syncUrl(); scrollTo(0, 0); });
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
   if ($('#dcsched')) scheduleCard($('#dcsched'));
   if ($('#mediabox')) mediaCard($('#mediabox'));
