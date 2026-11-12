@@ -539,20 +539,20 @@ function renderNeedName() {
     <button class="btn primary block" style="margin-top:14px">Ask to join</button></form>
     <button class="btn ghost block" id="out" style="margin-top:8px">Sign out</button></div></div>`;
   $('#f').onsubmit = e => { e.preventDefault(); enter(e.target.n.value.trim()); };
-  $('#out').onclick = () => sb.auth.signOut();
+  $('#out').onclick = () => sb.auth.signOut({ scope: 'local' });
 }
 function renderWaiting(crew) {
   $('#app').innerHTML = `<div class="gate">${BRAND}
     <div class="card"><h2>Waiting for approval</h2>
     <p class="muted">Your request to join ${esc(crew || 'the crew')} is in. You'll get access as soon as an admin approves it.</p>
     <div class="btns" style="margin-top:12px"><button class="btn" id="re">Check again</button><button class="btn ghost" id="out">Sign out</button></div></div></div>`;
-  $('#re').onclick = () => enter(); $('#out').onclick = () => sb.auth.signOut();
+  $('#re').onclick = () => enter(); $('#out').onclick = () => sb.auth.signOut({ scope: 'local' });
 }
 function renderBlocked(st) {
   $('#app').innerHTML = `<div class="gate"><div class="card"><h2>No access</h2>
     <p class="muted">${st === 'retired' ? 'This account belongs to a retired member. Ask Personnel if you want to come back.' : "This account doesn't have access to the crew."}</p>
     <button class="btn" id="out">Sign out</button></div></div>`;
-  $('#out').onclick = () => sb.auth.signOut();
+  $('#out').onclick = () => sb.auth.signOut({ scope: 'local' });
 }
 
 /* ---------- data ---------- */
@@ -1862,7 +1862,7 @@ function openProfile() {
     $('#pm-me', s).onclick = () => { closeSheet(); S.tab = 'me'; S.view = null; render(); scrollTo(0, 0); };
     $('#pm-alerts', s).onclick = () => { closeSheet(); openAlerts(); };
     s.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => { await rpc('set_maps_app', { p_app: b.dataset.m }); S.profile.maps_app = b.dataset.m; s.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); toast('Saved'); });
-    $('#out', s).onclick = () => { closeSheet(); sb.auth.signOut(); };
+    $('#out', s).onclick = () => { closeSheet(); sb.auth.signOut({ scope: 'local' }); };
   });
 }
 /* ---------- alerts ---------- */
