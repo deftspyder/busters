@@ -141,6 +141,7 @@ h2{font-size:26px}h3{font-size:20px}
 .btn.block{width:100%}
 .btn:disabled{opacity:.5;cursor:default}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns.sheetacts{justify-content:flex-end}.sheetacts [data-close].ghost{order:-1}.sheetacts .danger{order:0}.sheetacts .primary{order:1}
 label.f{display:block;margin:12px 0 0}
 label.f>span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
 .in,select.in,textarea.in{width:100%;background:#07080b;border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}
@@ -2101,7 +2102,7 @@ async function openAlerts() {
     </div>
     <label class="check"><input type="checkbox" id="al-last" ${last ? 'checked' : ''}><span><b>48-hour last call</b><div class="small muted">Two days out, if it still needs Busters</div></span></label>
     <p class="tiny dim">You only get these for events you haven't said Going or No to. Each event alerts you once per kind.</p>
-    <div class="btns" style="margin-top:12px">${on ? '<button class="btn sm" id="al-test">Send a test alert</button>' : ''}<button class="btn sm ghost" data-close>Done</button></div>`, s => {
+    <div class="btns" style="margin-top:12px">${on ? '<button class="btn sm" id="al-test">Send a test alert</button>' : ''}<button class="btn sm" data-close>Done</button></div>`, s => {
     const save = async () => {
       const p = { p_short: $('#al-short', s).checked, p_days: parseInt($('#al-days', s).value), p_lastcall: $('#al-last', s).checked };
       await rpc('set_alert_prefs', p);
@@ -2158,6 +2159,9 @@ function sheet(html, wire, onClose, drop) {
   const s = $('#layer .sheet');
   $('#layer .scrim').onclick = e => { if (e.target.classList.contains('scrim')) closeSheet(); };
   s.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheet);
+  // The pop-up's closing row of buttons sits on the right: Cancel first, the main action last.
+  const rows = s.querySelectorAll('.btns'), lastRow = rows[rows.length - 1];
+  if (lastRow) { let el = lastRow, end = true; while (el && el !== s) { if (el.nextElementSibling) { end = false; break; } el = el.parentElement; } if (end) lastRow.classList.add('sheetacts'); }
   if (wire) wire(s);
 }
 function closeSheet() { $('#layer').innerHTML = ''; const f = onSheetClose; onSheetClose = null; if (f) f(); }
