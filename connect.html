@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connect Google Drive</title>
+<meta name="theme-color" content="#000000">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icons/favicon-64.png?v=4" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,700&display=swap" rel="stylesheet">
+<!-- One-time Google Drive connect for event photos. Opened from a link a webmaster sends; no Busters account needed. -->
+<style>
+:root{--bg:#000;--panel:#0d0f14;--line:#232a36;--ink:#f3f5f8;--muted:#9aa4b2;--cyan:#35b2e8;--hazard:#ffd400;--good:#4ade80;--bad:#f87171}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:440px;margin:0 auto;padding:48px 16px}
+.mark{font-family:"Bebas Neue",Impact,sans-serif;font-size:44px;letter-spacing:.06em;line-height:1}
+.stripe{height:8px;margin:8px 0 28px;width:120px;background:repeating-linear-gradient(135deg,var(--hazard) 0 10px,#000 10px 20px)}
+h1{font-family:"Bebas Neue",Impact,sans-serif;font-weight:400;font-size:30px;letter-spacing:.04em;margin:0 0 10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+p{margin:0 0 12px}.muted{color:var(--muted);font-size:14px}
+ul{margin:0 0 14px;padding-left:20px;color:var(--muted);font-size:14px}li{margin:4px 0}
+a.btn{display:block;text-align:center;text-decoration:none;font-weight:700;background:var(--cyan);color:#001018;border-radius:12px;padding:14px;margin-top:6px}
+.ok{color:var(--good)}.bad{color:var(--bad)}
+</style>
+</head>
+<body>
+<main>
+  <div class="mark">BUSTERS</div><div class="stripe"></div>
+  <div class="card" id="box"><p class="muted">Loading…</p></div>
+</main>
+<script>
+const FN = 'https://fwptdvoifkfljblyziva.supabase.co/functions/v1/busters-google';
+const SB = 'https://fwptdvoifkfljblyziva.supabase.co/rest/v1/rpc/media_google_link_info';
+const KEY = 'sb_publishable_Cq_YmHplQQL1xqIE6HhCwg_JYSMIFKp';
+const box = document.getElementById('box');
+const q = new URLSearchParams(location.search);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const done = q.get('done');
+if (done) {
+  const msg = {
+    ok: ['<h1 class="ok">All set, thank you!</h1><p>Event photos will now land in <b>Busters Photo Drop</b> in that Google Drive, one folder per event.</p><p class="muted">You can close this page. To stop it any time, remove Busters at <a href="https://myaccount.google.com/connections">myaccount.google.com/connections</a>.</p>'],
+    cancelled: ['<h1>No problem</h1><p class="muted">Nothing was connected. If you change your mind, open the link you were sent again.</p>'],
+    noscope: ['<h1 class="bad">One box was unticked</h1><p class="muted">Google needs the Drive box ticked on its screen. Open the link you were sent again and leave everything ticked.</p>'],
+    expired: ['<h1 class="bad">This link has expired</h1><p class="muted">Ask for a fresh one. Links work for 7 days and only once.</p>'],
+  }[done] || ['<h1 class="bad">Something went wrong</h1><p class="muted">Nothing was connected. Try the link again, or let the person who sent it know.</p>'];
+  box.innerHTML = msg[0];
+} else {
+  const t = q.get('t') || '';
+  fetch(SB, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_token: t }) })
+    .then(r => r.json()).then(d => {
+      if (!d || !d.ok) { box.innerHTML = '<h1 class="bad">This link has expired</h1><p class="muted">Ask for a fresh one. Links work for 7 days and only once.</p>'; return; }
+      box.innerHTML = `<h1>Connect Google Drive</h1>
+        <p>${esc(d.crew)} event photos and videos will be saved to your Google Drive, in a folder called <b>${esc(d.folder)}</b>.</p>
+        <ul><li>Busters can only see the folder and files it makes itself, nothing else in your Drive.</li>
+        <li>It only adds photos, and you can disconnect any time.</li>
+        <li>Pick the Google account the photos should go to, then tap Allow.</li></ul>
+        <a class="btn" href="${FN}?t=${encodeURIComponent(t)}">Continue with Google</a>`;
+    }).catch(() => { box.innerHTML = '<h1 class="bad">Could not load</h1><p class="muted">Check your connection and try again.</p>'; });
+}
+</script>
+</body>
+</html>

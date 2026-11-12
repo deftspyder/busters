@@ -1323,12 +1323,28 @@ function mediaCard(box) {
          <div class="btns" style="margin-top:10px"><a class="btn sm" href="https://www.dropbox.com/home${encodeURI(d.root)}" target="_blank" rel="noopener">Open in Dropbox</a><button class="btn sm ghost" id="m-off">Disconnect</button></div></div>`
       : `<div class="card"><div class="small">Connect the Dropbox account where event photos and videos should go. Busters makes a folder and an upload link for each event, and nobody needs a Dropbox account to send photos.</div>
          <button class="btn sm primary" id="m-con" style="margin-top:10px" ${d.has_app ? '' : 'disabled'}>Connect Dropbox</button>${d.has_app ? '' : '<div class="tiny dim" style="margin-top:6px">Waiting on a crew admin to add the app keys.</div>'}</div>`;
+    // Google Drive: optional final home for photos. Dropbox stays as the upload-link relay.
+    const g = d.google || {}, qd = d.queue || {};
+    const gkeys = d.is_admin && !g.has_app ? `<div class="card" style="margin-top:10px"><div class="small muted">To use Google Drive, a crew admin first pastes the Client ID and Client secret of the Busters Google app (console.cloud.google.com, APIs and Services, Clients).</div>
+        <label class="f"><span>Client ID</span><input class="in" id="gk-id" autocomplete="off"></label>
+        <label class="f"><span>Client secret</span><input class="in" id="gk-sec" type="password" autocomplete="off"></label>
+        <button class="btn sm" id="gk-save" style="margin-top:10px">Save Google keys</button></div>` : '';
+    const gdrive = g.connected
+      ? `<div class="card" style="margin-top:10px"><div class="small">🗂️ Photos go to Google Drive as <b>${esc(g.email || 'Google')}</b>, into <b>${esc(g.root)}</b>, one folder per event. Files sent through the upload link are copied over, then cleared out of Dropbox.</div>
+         <div class="small muted" style="margin-top:6px">${qd.copied || 0} copied${qd.waiting ? ` · ${qd.waiting} waiting` : ''}${qd.failed ? ` · <span style="color:var(--bad)">${qd.failed} could not be copied</span>` : ''}</div>
+         <div class="btns" style="margin-top:10px">${g.root_id ? `<a class="btn sm" href="https://drive.google.com/drive/folders/${encodeURIComponent(g.root_id)}" target="_blank" rel="noopener">Open in Drive</a>` : ''}<button class="btn sm ghost" id="g-off">Disconnect Drive</button></div></div>`
+      : `<div class="card" style="margin-top:10px"><div class="small">🗂️ Want photos to end up in a Google Drive instead? Make a one-time link and send it to whoever has that Google account. They don't need Busters, they just tap Allow.</div>
+         ${g.link_open ? `<div class="tiny dim" style="margin-top:6px">A link is out, good until ${new Date(g.link_expires).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Making a new one cancels it.</div>` : ''}
+         <button class="btn sm${d.connected ? ' primary' : ''}" id="g-link" style="margin-top:10px" ${g.has_app ? '' : 'disabled'}>Copy connect link</button>${g.has_app ? '' : '<div class="tiny dim" style="margin-top:6px">Waiting on a crew admin to add the Google keys.</div>'}</div>`;
     const rows = (d.events || []).map(e => {
       const st = e.completed_at ? '✅ Complete' : !e.called_at ? (d.connected ? 'Photo call not posted yet' : 'Not started') : `${e.answered} of ${e.went} answered`;
       return `<div class="row" data-me="${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="small muted">${day(e.event_date)} · ${st}${e.files ? ` · ${e.files} file${e.files == 1 ? '' : 's'}` : ''}</div></div><span class="btn sm">Open</span></div>`;
     }).join('');
-    box.innerHTML = `<h2>Event photos</h2>${conn}${keys}
+    box.innerHTML = `<h2>Event photos</h2>${conn}${keys}${gdrive}${gkeys}
       <h2 style="margin-top:16px">Past events</h2>${rows || '<div class="empty">No past events with Busters in the last 90 days.</div>'}`;
+    const gs = $('#gk-save'); if (gs) gs.onclick = async () => { await rpc('media_set_google_app', { p_crew: S.crew.id, p_id: $('#gk-id').value, p_secret: $('#gk-sec').value }); toast('Google keys saved'); mediaCard(box); };
+    const gl = $('#g-link'); if (gl) gl.onclick = async () => { const url = await rpc('media_google_link', { p_crew: S.crew.id }); try { await navigator.clipboard.writeText(url); toast('Connect link copied. It works once, for 7 days.'); } catch (e) { prompt('Connect link', url); } mediaCard(box); };
+    const go = $('#g-off'); if (go) go.onclick = async () => { if (!confirmBox('Disconnect Google Drive? Photos already copied stay there. New photos stay in Dropbox until Drive is connected again.')) return; await rpc('media_google_disconnect', { p_crew: S.crew.id }); toast('Drive disconnected'); mediaCard(box); };
     const ms = $('#mk-save'); if (ms) ms.onclick = async () => { await rpc('media_set_app', { p_crew: S.crew.id, p_key: $('#mk-key').value, p_secret: $('#mk-sec').value }); toast('Keys saved'); mediaCard(box); };
     const mc = $('#m-con'); if (mc) mc.onclick = async () => { location.href = await rpc('media_connect_url', { p_crew: S.crew.id }); };
     const mo = $('#m-off'); if (mo) mo.onclick = async () => { if (!confirmBox('Disconnect Dropbox? Photos already saved stay in Dropbox. New photo calls stop until it is connected again.')) return; await rpc('media_disconnect', { p_crew: S.crew.id }); toast('Disconnected'); mediaCard(box); };
@@ -1346,7 +1362,8 @@ async function mediaEvent(ev, connected, after) {
       ${m.called_at && !m.completed_at ? '<button class="btn sm" id="me-rem">Send reminder</button>' : ''}
       ${m.called_at ? `<button class="btn sm" id="me-done">${m.completed_at ? 'Reopen' : 'Mark complete'}</button>` : ''}
       ${m.request_url ? '<button class="btn sm" id="me-link">Copy upload link</button>' : ''}
-      ${m.folder_path ? `<a class="btn sm" href="https://www.dropbox.com/home${encodeURI(m.folder_path)}" target="_blank" rel="noopener">Open folder</a>` : ''}
+      ${m.g_folder_id ? `<a class="btn sm" href="https://drive.google.com/drive/folders/${encodeURIComponent(m.g_folder_id)}" target="_blank" rel="noopener">Open in Drive</a>`
+        : m.folder_path ? `<a class="btn sm" href="https://www.dropbox.com/home${encodeURI(m.folder_path)}" target="_blank" rel="noopener">Open folder</a>` : ''}
       <button class="btn sm ghost" data-close>Close</button></div>`, s => {
     const on2 = (id, f) => { const b = $(id, s); if (b) b.onclick = f; };
     on2('#me-call', async () => { const st = await rpc('media_call_now', { p_event: ev.id }); toast(st >= 200 && st < 300 ? 'Photo call posted in the event thread' : st === -2 ? 'Dropbox said no. Try reconnecting it.' : st === -3 ? 'Could not open the event thread in Discord' : 'Discord said no (code ' + st + ')'); closeSheet(); after(); });
