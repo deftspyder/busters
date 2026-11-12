@@ -1731,11 +1731,11 @@ const hasRole = (p, r) => r[3].some(a => (p.abilities || []).includes(a));
 const fullRole = (p, r) => r[3].every(a => (p.abilities || []).includes(a));
 const roleTags = p => (p.abilities || []).includes('crew_admin') ? '<span class="rtag adm">Crew admin</span>'
   : ROLES.filter(r => r[0] !== 'admin' && fullRole(p, r)).map(r => `<span class="rtag">${r[1]}</span>`).join('');
-// Dues, in Personnel's own words: N/A (nothing on record), Paid, Not paid, Extension (given more time), Exempt
-// (doesn't owe). "PAID in 2024" counts as Paid.
-const DUES = [['', 'N/A', ''], ['PAID', 'Paid', 'good'], ['UNPAID', 'Not paid', 'warn'], ['EXTENSION', 'Extension', 'cyan'], ['EXEMPT', 'Exempt', 'cream']];
-const duesKey = s => !s ? '' : /^paid/i.test(s) ? 'PAID' : /exempt/i.test(s) ? 'EXEMPT' : /extension|grace/i.test(s) ? 'EXTENSION' : /unpaid|not paid/i.test(s) ? 'UNPAID' : s;
-const duesPill = s => { const k = duesKey(s), d = DUES.find(x => x[0] === k) || [k, s, '']; return k ? `<span class="pill ${d[2]}">${esc(d[1])}</span>` : '<span class="pill na">N/A</span>'; };
+// Dues, in Personnel's own words: Paid, Not paid, Extension (given more time), Exempt (doesn't owe). A year with
+// nothing entered shows "Not set". "PAID in 2024" counts as Paid; an old "N/A" counts as Exempt.
+const DUES = [['', 'Not set', ''], ['PAID', 'Paid', 'good'], ['UNPAID', 'Not paid', 'warn'], ['EXTENSION', 'Extension', 'cyan'], ['EXEMPT', 'Exempt', 'cream']];
+const duesKey = s => !s ? '' : /^paid/i.test(s) ? 'PAID' : /exempt|^n\/?a$/i.test(s) ? 'EXEMPT' : /extension|grace/i.test(s) ? 'EXTENSION' : /unpaid|not paid/i.test(s) ? 'UNPAID' : s;
+const duesPill = s => { const k = duesKey(s), d = DUES.find(x => x[0] === k) || [k, s, '']; return k ? `<span class="pill ${d[2]}">${esc(d[1])}</span>` : '<span class="pill na">Not set</span>'; };
 
 async function personnelList(box) {
   try { rosterData = await rpc('personnel_roster', { p_crew: S.crew.id }); } catch (e) { box.innerHTML = '<div class="empty">The Personnel list could not load right now.</div>'; return; }
