@@ -197,6 +197,18 @@ input.in{min-width:0}
 .lbrow{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
 .lbrow .rk{width:22px;text-align:center;color:var(--muted);font-weight:700}
 .lbrow.me{background:rgba(56,217,232,.08);border-radius:10px}
+.mehead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.mehead h2{margin-right:4px}
+.stats{padding:4px 14px}
+.stat{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none}
+.stat:last-child{border-bottom:0}
+.stat .grow{flex:1;min-width:0}.stat .ch{width:10px;flex:0 0 auto;text-align:right}
+.stat .sv{font-family:"Bebas Neue",Impact,sans-serif;font-size:26px;line-height:1;letter-spacing:.03em}
+.stat.go{cursor:pointer}.stat.go:active{opacity:.7}
+.stat .pips{display:inline-flex;gap:3px;margin-right:7px;vertical-align:1px}
+.stat .pips i{width:9px;height:9px;border-radius:50%;border:1.5px solid #3a4352;box-sizing:border-box}
+.stat .pips i.r{border-color:var(--cyan)}
+.stat .pips i.f{background:var(--warn);border-color:var(--warn)}
+.stats.met .pips i.f{background:var(--good);border-color:var(--good)}
 .mystripe{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;justify-content:flex-end}
 .mystripe.me{justify-content:flex-start;margin-top:14px}
 .mystripe .gbpill{margin-left:0;height:32px;padding:0 12px;font-size:13px}
@@ -1024,34 +1036,35 @@ function editEvent(e, propose = false) {
 }
 
 /* ---------- My Busters ---------- */
-// Personal stats row for the Me tab: events this year (with yearly minimum pips), money raised, and the crew's Give Back standing.
-function myStripe() {
+// Personal stats list for the Me tab: this year against the yearly minimum, lifetime counts, money raised, and the crew's Give Back standing.
+function myStats(past, hosp) {
   const yr = todayISO().slice(0, 4);
   const myYr = S.events.filter(e => e.status !== 'cancelled' && e.event_date.startsWith(yr) && (myRsvp(e.id) || {}).answer === 'going');
   const done = myYr.filter(e => e.event_date < todayISO()).length, soon = myYr.length - done, MIN = 2;
   const pips = Array.from({ length: MIN }, (_, i) => `<i class="${i < done ? 'f' : i < done + soon ? 'r' : ''}"></i>`).join('');
-  return `
-    <div class="mystripe me">
-      <a href="#" class="mypill${done >= MIN ? ' met' : ''}" id="myev" style="cursor:default" title="${done} event${done === 1 ? '' : 's'} done in ${yr}${soon ? ', ' + soon + ' signed up' : ''}. Members do at least ${MIN} a year."><span class="pips">${pips}</span><b>${done}</b> event${done === 1 ? '' : 's'} in ${yr}${soon ? `<span class="muted"> +${soon}</span>` : ''}</a>
-      <a href="#" class="mypill" id="myraised" title="Fundraising credited to you in ${yr}. Tap for the leaderboard."><span style="color:#f87171">&#9829;</span>${myRaised() ? `<b>${money0(myRaised())}</b>` : '<b class="muted">$0</b>'} raised</a>
-      ${gbPill()}
-    </div>`;
+  const g = S.gb, raised = myRaised();
+  const gbSub = g && g.amount != null ? [`#${g.rank} of ${g.groups} crews`, g.goal ? Math.round(100 * g.amount / g.goal) + '% of the ' + money0(g.goal) + ' goal' : ''].filter(Boolean).join(' · ') : 'Waiting on Sony\'s numbers';
+  const row = (k, sub, v, id) => `<${id ? `a href="#" id="${id}"` : 'div'} class="stat${id ? ' go' : ''}"><div class="grow"><div>${k}</div>${sub ? `<div class="small muted">${sub}</div>` : ''}</div><div class="sv">${v}</div><span class="muted ch">${id ? '›' : ''}</span></${id ? 'a' : 'div'}>`;
+  return `<div class="card stats${done >= MIN ? ' met' : ''}">
+    ${row(`Events in ${yr}`, `<span class="pips">${pips}</span>${done >= MIN ? 'Yearly minimum met' : `${MIN} a year minimum`}${soon ? ` · ${soon} more signed up` : ''}`, done)}
+    ${row('All events', '', past.length)}
+    ${row('Hospital visits', '', hosp.length)}
+    ${row(`Raised in ${yr}`, 'Fundraising credited to you', money0(raised), 'myraised')}
+    ${row(`${esc(S.crew.short || 'Crew')} on Give Back`, gbSub, g && g.amount != null ? money0(g.amount) : '-', 'mygb')}
+  </div>`;
 }
 function renderMine(m) {
   const t = todayISO();
   const mineUp = S.events.filter(e => (e.end_date || e.event_date) >= t && e.status !== 'proposed' && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer));
   const past = S.events.filter(e => e.event_date < t && e.status !== 'cancelled' && (myRsvp(e.id) || {}).answer === 'going');
   const yr = t.slice(0, 4);
-  const thisYear = past.filter(e => e.event_date.startsWith(yr));
   const hosp = past.filter(e => e.category === 'Hospital');
   const me = S.me;
   const asTab = S.tab === 'me' && !S.view;
   m.innerHTML = `${asTab ? '' : `<button class="back" id="bk">${ICON.back} Back</button>`}
-    <div class="sec" style="display:flex;gap:14px;align-items:center"><div class="avatar" style="width:58px;height:58px;font-size:22px;cursor:default">${esc(initials(me.full_name))}</div>
-      <div><h2>${esc(me.full_name)}</h2><div class="muted small">${esc([me.callsign, me.title].filter(Boolean).join(' · '))}</div>
-      <div class="pills">${me.status === 'rookie' ? '<span class="pill cream">Rookie</span>' : '<span class="pill good">Active member</span>'}${me.member_since ? `<span class="pill">Since ${fmtDay(me.member_since, { month: 'short', year: 'numeric' })}</span>` : ''}</div></div></div>
-    <div class="tiles"><div class="tile"><div class="k">${yr} events</div><div class="v">${thisYear.length}</div></div><div class="tile"><div class="k">All events</div><div class="v">${past.length}</div></div><div class="tile"><div class="k">Hospital visits</div><div class="v">${hosp.length}</div></div></div>
-    ${myStripe()}
+    <div class="sec"><div class="mehead"><h2>${esc(me.full_name)}</h2>${me.status === 'rookie' ? '<span class="pill cream">Rookie</span>' : '<span class="pill good">Active</span>'}${me.member_since ? `<span class="pill">Since ${fmtDay(me.member_since, { month: 'short', year: 'numeric' })}</span>` : ''}</div>
+      ${me.callsign || me.title ? `<div class="muted small">${esc([me.callsign, me.title].filter(Boolean).join(' · '))}</div>` : ''}</div>
+    <div class="sec">${myStats(past, hosp)}</div>
     <p class="tiny dim">Counts start from Busters sign-ups. Check-in attendance arrives in a later update.</p>
     <div class="sec"><h2>Coming up</h2>${mineUp.length ? mineUp.map(eventRow).join('') : '<div class="empty">Nothing yet. Answer Going on an event and it shows here.</div>'}</div>
     <div class="sec"><h2>Dues</h2><div class="card">${Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span><span class="pill ${/paid|exempt/i.test(s) ? 'good' : 'warn'}">${esc(s)}</span></div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
@@ -1072,7 +1085,7 @@ function renderMine(m) {
   wireRows(m);
   if (!asTab) $('#bk').onclick = () => { S.view = null; render(); scrollTo(0, 0); };
   $('#myraised').onclick = ev => { ev.preventDefault(); openBoard(); };
-  $('#myev').onclick = ev => ev.preventDefault();
+  $('#mygb').onclick = ev => { ev.preventDefault(); openQR(); };
   $('#mf').onsubmit = async ev => {
     ev.preventDefault(); const f = ev.target;
     await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked, share_phone: f.share_phone.checked } });
