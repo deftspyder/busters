@@ -1973,7 +1973,8 @@ async function personnelList(box) {
         ${line('Role in crew', esc(p.title || ''))}${line('Member since', p.member_since ? esc(fmtDay(p.member_since, { month: 'short', year: 'numeric' })) : '')}
         ${p.status === 'rookie' ? line('Rookie', `${(p.rookie_events_before || 0) + p.events_done} of 4 events${p.eligible_date ? ', eligible ' + esc(p.eligible_date) : ''}`) : line('Rookie since', esc(p.rookie_since || ''))}
         ${line(`Events in ${yr}`, String(p.events_year || 0))}
-        <div class="kv"><span>Dues</span><b>${yr - 1} ${duesPill(p.dues[yr - 1])} &nbsp; ${yr} ${duesPill(p.dues[yr])}</b></div></div>
+        <div class="kv"><span>Dues ${yr}</span><b>${duesPill(p.dues[yr])}</b></div>
+        <div class="kv"><span>Dues ${yr - 1}</span><b>${duesPill(p.dues[yr - 1])}</b></div></div>
     </div>`;
   const draw = () => {
     const q = rosterQ.toLowerCase();
