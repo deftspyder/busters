@@ -290,6 +290,7 @@ input.in{min-width:0}
 .kv dt{color:var(--muted)}.kv dd{margin:0}
 .people{display:flex;flex-wrap:wrap;gap:6px}
 .missing{border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.06)}
+.needsfill{outline:2px solid rgba(251,191,36,.7);outline-offset:2px;border-radius:8px}
 .back{display:inline-flex;align-items:center;gap:6px;margin:14px 0 4px;color:var(--muted);cursor:pointer;background:none;border:0;padding:0}
 
 /* calendar */
@@ -1028,6 +1029,19 @@ function pickSpots(e, going) {
 }
 
 /* ---------- Event editor ---------- */
+// Finish (Admin, then Events): open the editor with the still-missing details outlined, scrolled to the first one.
+const MISSING_FIELD = { 'Point of contact': 'poc_id', 'Event contact': 'contact_name', 'Call time': 'call_time', 'Start time': 'start_time', 'Wrap time': 'wrap_time', 'Minimum Busters': 'min_busters', 'Goal': 'goal_busters' };
+function finishEvent(id) {
+  const e = S.events.find(x => x.id === id); if (!e) return;
+  editEvent(e);
+  setTimeout(() => {
+    const els = (e.missing || []).map(k => k === 'Address' ? $('#pls') : (document.querySelector(`[name="${MISSING_FIELD[k]}"]`) || {}).closest?.('.f')).filter(Boolean);
+    els.forEach(el => el.classList.add('needsfill'));
+    const top = els.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0];
+    if (top) top.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast('Fill in the outlined details, then save');
+  }, 60);
+}
 function editEvent(e, propose = false) {
   const isNew = !e; e = e || { title: '', event_date: todayISO() };
   const pocs = S.people.filter(p => ['active', 'rookie'].includes(p.status) && (p.abilities.includes('poc') || p.abilities.includes('crew_admin')));
@@ -1372,7 +1386,7 @@ async function drawMemberMap() {
 }
 function renderCrew(m) {
   const list = S.people.filter(p => ['active', 'rookie'].includes(p.status));
-  m.innerHTML = `<div class="sec"><h2>The crew <span class="muted" style="font-family:'DM Sans';font-size:14px;letter-spacing:0">${list.filter(p => p.status === 'active').length} members, ${list.filter(p => p.status === 'rookie').length} rookies</span></h2>
+  m.innerHTML = `<div class="sec"><h2>Crew <span class="muted" style="font-family:'DM Sans';font-size:14px;letter-spacing:0">${list.filter(p => p.status === 'active').length} members, ${list.filter(p => p.status === 'rookie').length} rookies</span></h2>
     <input class="in" id="cq" placeholder="Search names, callsigns, roles" value="${esc(crewQ)}"></div>
     ${S.settings && S.settings.members_map_mid ? `<div class="card" style="padding:0;overflow:hidden"><iframe class="mmap gmap" title="Crew map" loading="lazy" src="https://www.google.com/maps/d/embed?mid=${encodeURIComponent(S.settings.members_map_mid)}&ehbc=000000"></iframe>
       <div class="small" style="padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="muted" style="flex:1;min-width:180px">Members, meetup spots and film locations. Open it once in Google Maps and it stays under Saved, Maps.</span><a class="btn sm primary" href="https://www.google.com/maps/d/viewer?mid=${encodeURIComponent(S.settings.members_map_mid)}" target="_blank" rel="noopener">Open in Google Maps</a></div></div>` : `<div class="card" style="padding:0;overflow:hidden"><div id="mmap" class="mmap"></div>
@@ -1655,7 +1669,7 @@ function renderTeam(m) {
     events: () => `<div class="sec">${list([...proposals.map(e => item('Proposed event', e.title, fmtDay(e.event_date) + ' · suggested by ' + esc(nameOf(personById(e.proposed_by))), `data-prop="${e.id}"`, 'Review')),
         ...short.map(e => item('Short on Busters', e.title, `${fmtDay(e.event_date)} · ${e.going} of ${e.min_busters} minimum`, `data-ev="${e.id}"`, 'Open')),
         ...limited.map(e => item('Pick who is In', e.title, `${fmtDay(e.event_date)} · ${e.going} want in, ${e.max_busters} spots`, `data-ev="${e.id}"`, 'Pick')),
-        ...incomplete.map(e => item('Details coming', e.title, `${fmtDay(e.event_date)} · needs ${esc(e.missing.join(', '))}`, `data-ev="${e.id}"`, 'Finish'))])}</div>
+        ...incomplete.map(e => item('Details coming', e.title, `${fmtDay(e.event_date)} · needs ${esc(e.missing.join(', '))}`, `data-fin="${e.id}"`, 'Finish'))])}</div>
       ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}`,
     personnel: () => can('manage_recruits') ? `<div class="sec" id="plist"><div class="empty">Loading...</div></div>`
       : `<div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>`,
@@ -1693,6 +1707,7 @@ function renderTeam(m) {
   const lg = $('#log'); if (lg) lg.onclick = () => show(renderLog);
   wireRows(m);
   m.querySelectorAll('[data-join]').forEach(r => r.onclick = () => reviewJoin(personById(r.dataset.join)));
+  m.querySelectorAll('[data-fin]').forEach(r => r.onclick = () => finishEvent(r.dataset.fin));
   m.querySelectorAll('[data-prop]').forEach(r => r.onclick = () => reviewProposal(S.events.find(e => e.id === r.dataset.prop)));
 }
 // Roles: bundles of abilities, each opening one Admin section. Personnel sets them from Edit on the Personnel list.
