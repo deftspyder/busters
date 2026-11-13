@@ -1322,11 +1322,13 @@ function renderMine(m) {
       </form></div></div>
     <div class="sec"><h2>Settings</h2><div class="card" style="padding:4px 14px">
       <a class="menuitem" id="pm-alerts"><span class="grow">Alerts<div class="small muted">Short-staffed events and last calls</div></span><span class="muted">›</span></a>
+      ${can('webmaster') || can('crew_admin') ? `<label class="menuitem" style="cursor:pointer"><span class="grow">Join every event thread<div class="small muted">Get added to every event's Discord thread, not just the ones you're going to</div></span><input type="checkbox" id="pm-threads" ${S.priv.join_all_threads ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--cyan)"></label>` : ''}
       ${isIOS() ? `<div class="menuitem" style="display:block"><div style="margin-bottom:8px">Navigate with</div><div class="seg" id="maps">${[['google', 'Google Maps'], ['apple', 'Apple Maps'], ['waze', 'Waze']].map(([k, l]) => `<button type="button" class="${(S.profile.maps_app || 'google') === k ? 'on' : ''}" data-m="${k}">${l}</button>`).join('')}</div></div>` : ''}
       <div class="menuitem" style="display:block"><div class="small muted">Signed in as ${esc((S.session.user || {}).email || '')}</div></div>
       <a class="menuitem" id="out"><span class="grow" style="color:var(--bad)">Sign out</span></a></div></div>
     <div style="height:30px"></div>`;
   $('#pm-alerts', m).onclick = openAlerts;
+  const pt = $('#pm-threads', m); if (pt) pt.onchange = async () => { try { await rpc('save_my_details', { p_crew: S.crew.id, p: { join_all_threads: pt.checked } }); S.priv.join_all_threads = pt.checked; toast(pt.checked ? 'You\'ll be added to every event thread' : 'Only threads for events you\'re going to'); } catch (e) { pt.checked = !pt.checked; } };
   m.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => { await rpc('set_maps_app', { p_app: b.dataset.m }); S.profile.maps_app = b.dataset.m; m.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b)); toast('Saved'); });
   $('#out', m).onclick = () => sb.auth.signOut({ scope: 'local' });
   wireRows(m);
