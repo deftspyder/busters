@@ -189,6 +189,9 @@
 .pk .more{position:absolute;right:6px;bottom:calc(60px + env(safe-area-inset-bottom));z-index:7;padding:8px;display:none;flex-direction:column;gap:6px;min-width:min(86vw,320px);background:#010806}
 .pk .more.open{display:flex}
 .pk .more select,.pk .more button{font:inherit;color:var(--ph);background:#000;border:1px solid color-mix(in srgb,var(--ph) 50%,transparent);border-radius:8px;min-height:42px;padding:6px 10px;text-align:left;cursor:pointer}
+.pk .tp{display:inline-flex;margin-top:4px;border:1px solid color-mix(in srgb,var(--ph) 55%,transparent);border-radius:5px;overflow:hidden}
+.pk .tp button{font:inherit;font-size:.7em;letter-spacing:.12em;padding:3px 10px;min-height:24px;background:#000c;color:var(--ph);border:0;cursor:pointer}
+.pk .tp button.on{background:color-mix(in srgb,var(--ph) 25%,#000);color:#fff}
 .pk .tip{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:#ff9a3c;color:#000;border-radius:8px;padding:6px 10px;font:600 13px system-ui,sans-serif;z-index:8;max-width:92%;text-align:center}
 .pk.edit .art{cursor:crosshair}
 /* wide screens: three columns */
@@ -274,6 +277,21 @@
     const who = S.me ? S.me.id : (crew[0] || {}).id;
     let view = 'pack'; try { view = localStorage.getItem('pk-view') || 'pack'; } catch (e) { /* ignore */ }
     const oos = {};
+    const crewShort = String((S.crew && S.crew.short) || 'LAGB').toUpperCase();
+    // The ECU (containment unit) monitor lives behind the PACK | ECU switch; the pack is always what opens first.
+    let ecu = null;
+    const ecuOK = () => !ctx.sim && !!(window.BustersECU || ctx.loadECU);
+    async function openECU() {
+      if (ecu) return;
+      try { if (!window.BustersECU && ctx.loadECU) await ctx.loadECU(); } catch (e) { return toast('Could not load the containment unit. Check your connection.'); }
+      if (!window.BustersECU || !el.isConnected) return;
+      try {
+        ecu = window.BustersECU.mount({ S, esc, todayISO }, { back: closeECU, exit: close, sound: () => !!audio,
+          setSound: on => { if (on && !audio) startAudio(); else if (!on && audio) stopAudio(); frame(); } });
+      } catch (e) { console.error(e); ecu = null; return toast('The containment unit hit an error: ' + e.message); }
+      tone();
+    }
+    function closeECU() { if (!ecu) return; ecu.destroy(); ecu = null; tone(); }
     let cur = who, edit = null, timers = [], lock = null, mode = 0, firing = false, audio = null, logLines = [];
     const V = {}; Object.keys(R).forEach(k => { V[k] = 0; });
 
@@ -285,7 +303,7 @@
     function frame() {
       const p = person();
       el.innerHTML = `<div class="hd box"><img class="emb" id="pkemb" alt="">
-        <div style="min-width:0"><div class="ttl gl">LAGB // PROTON PACK</div><div class="sub">${ctx.sim ? 'PACK INTEGRITY SIMULATION' : 'LOS ANGELES DIVISION'}</div></div>
+        <div style="min-width:0"><div class="ttl gl">${esc(crewShort)} // PROTON PACK</div><div class="sub">${ctx.sim ? 'PACK INTEGRITY SIMULATION' : 'LOS ANGELES DIVISION'}</div>${ecuOK() ? '<div class="tp"><button class="on">PACK</button><button id="pkecu">ECU</button></div>' : ''}</div>
         <div class="who"><div class="nm">${esc(shortName(p))}</div><div class="md gl"><i></i><span id="pkmode">${MODES[mode]}</span><span id="pkclk" style="opacity:.7">${clock()}</span></div></div></div>
       <button class="x" id="pkx2" aria-label="Exit">&#10005;</button>
       <div class="bd">
@@ -417,7 +435,7 @@
       on('bm', () => $('#pkmore', el).classList.toggle('open'));
       on('pkx', close); on('pkx2', close);
       on('pkfs', () => (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()).catch(() => toast('Full screen is not available here. On iPhone, add Busters to your home screen.')));
-      on('pkset', setup); on('pkskip', advance);
+      on('pkset', setup); on('pkskip', advance); on('pkecu', openECU);
       const bf = $('#bf', el);
       bf.onpointerdown = e => { e.preventDefault(); startFire(); }; bf.onpointerup = bf.onpointerleave = bf.onpointercancel = () => stopFire();
       bf.oncontextmenu = e => e.preventDefault();
@@ -532,19 +550,20 @@
     }
     function stopAudio() { if (!audio) return; try { audio.g.gain.value = 0; audio.o1.stop(); audio.o2.stop(); } catch (e) { /* ignore */ } try { audio.ac.close(); } catch (e) { /* ignore */ } audio = null; }
     function tone() {
-      if (!audio) return; const now = audio.ac.currentTime, base = [0, 55, 70, 92][mode] + (firing ? 40 : 0);
+      if (!audio) return; if (ecu) return ecu.tone(audio); const now = audio.ac.currentTime, base = [0, 55, 70, 92][mode] + (firing ? 40 : 0);
       audio.o1.frequency.setTargetAtTime(base || 40, now, .3); audio.o2.frequency.setTargetAtTime((base || 40) * 2.01 + (mode === 3 ? Math.sin(now * 9) * 20 : 0), now, .3);
       audio.f.frequency.setTargetAtTime(firing ? 2200 : 500 + mode * 200, now, .2); audio.g.gain.setTargetAtTime(mode ? (firing ? .12 : .06) : 0, now, .3);
     }
-    const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* ignore */ } };
+    const buzz = p => { if (ecu) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* ignore */ } };
 
     const onVis = () => { if (!audio) return; if (document.hidden) audio.ac.suspend().catch(() => {}); else if (el.isConnected) audio.ac.resume().catch(() => {}); };
     const onHide = () => close();
     document.addEventListener('visibilitychange', onVis); addEventListener('pagehide', onHide);
-    function close() { if (window.__pkClose === close) window.__pkClose = null; if (ctx.onClose) setTimeout(ctx.onClose, 0); document.removeEventListener('visibilitychange', onVis); removeEventListener('pagehide', onHide); timers.forEach(clearInterval); clearTimeout(ventTimer); clearInterval(booting); cancelAnimationFrame(raf); stopAudio(); if (lock) lock.release().catch(() => {}); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); removeEventListener('resize', onResize); }
+    function close() { if (window.__pkClose === close) window.__pkClose = null; closeECU(); if (ctx.onClose) setTimeout(ctx.onClose, 0); document.removeEventListener('visibilitychange', onVis); removeEventListener('pagehide', onHide); timers.forEach(clearInterval); clearTimeout(ventTimer); clearInterval(booting); cancelAnimationFrame(raf); stopAudio(); if (lock) lock.release().catch(() => {}); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', keyUp); removeEventListener('resize', onResize); }
     const key = e => {
       if (e.repeat) return;
       const k = e.key.toLowerCase();
+      if (ecu) { if (k === 'escape') closeECU(); return; }
       if (k === 'escape' && !document.fullscreenElement && !edit) close();
       else if (k === 'p') setMode(mode ? 0 : 1); else if (k === '1') setMode(1); else if (k === '2') setMode(2);
       else if (k === 'f') startFire();

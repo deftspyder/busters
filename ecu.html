@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#5e0e09">
+<title>Containment Unit Monitor</title>
+<meta name="description" content="A demo of the Busters containment unit monitor.">
+<link rel="icon" href="icons/favicon-64.png?v=4">
+<style>
+  html,body{margin:0;min-height:100%;background:#2a0604;color:#ffcf8a;font-family:"Share Tech Mono",ui-monospace,Menlo,monospace}
+  .again{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding:24px}
+  .again button{font:inherit;font-size:16px;letter-spacing:.12em;color:#ffcf8a;background:#000;border:1px solid #ffb347;border-radius:10px;padding:14px 22px;cursor:pointer;box-shadow:0 0 14px #ffb34755}
+  .again p{opacity:.7;font-size:13px;letter-spacing:.08em;margin-top:14px}
+  .pitch{display:none;min-height:100vh;box-sizing:border-box;padding:28px 16px 40px;justify-content:center}
+  .pitch.on{display:flex;align-items:flex-start}
+  .pitch .card{width:min(460px,100%);border:1px solid #ffb34788;border-radius:8px;overflow:hidden;box-shadow:0 0 22px #ffb34733,inset 0 0 26px #ffb34714;background:#120403}
+  .pitch .bz{height:8px;background:repeating-linear-gradient(-45deg,#f2b705 0 8px,transparent 8px 16px);opacity:.85}
+  .pitch .in{padding:20px 18px 22px}
+  .pitch .tag{font-size:12px;letter-spacing:.2em;opacity:.75}
+  .pitch h1{font-size:26px;line-height:1.15;letter-spacing:.06em;color:#fff;text-shadow:0 0 8px #ff8a00,0 0 20px #ff8a00;margin:10px 0 14px;font-weight:700}
+  .pitch p{font-family:system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;color:#ffe9d0;margin:0 0 14px}
+  .pitch a.btn{display:block;text-decoration:none;color:#120403;background:#ffb347;border-radius:8px;padding:14px 16px;margin-top:12px;box-shadow:0 0 14px #ffb34755}
+  .pitch .btn b{display:block;font-size:16px;letter-spacing:.06em}
+  .pitch .btn span{display:block;font-family:system-ui,-apple-system,sans-serif;font-size:13px;opacity:.8;margin-top:2px}
+  .pitch .btn.alt{background:transparent;color:#ffcf8a;border:1px solid #ffb34788;box-shadow:none}
+  .pitch .ghost{background:none;border:0;color:#ffcf8a;font:inherit;letter-spacing:.12em;opacity:.8;margin:18px auto 0;display:block;cursor:pointer;padding:8px}
+</style>
+</head>
+<body>
+<div class="again" id="start"><div><button id="go">OPEN CONTAINMENT UNIT</button><p id="sub">REMOTE LINK DEMO // TAP TO START, SOUND ON</p></div></div>
+<div class="pitch" id="pitch"><div class="card"><div class="bz"></div><div class="in">
+  <div class="tag">REMOTE LINK CLOSED // UNIT STILL RUNNING</div>
+  <h1>This unit runs on donations.</h1>
+  <p id="pt">Ghostbusters fan crews are volunteers who suit up for parades, conventions and charity events. Ask the Busters who sent you how to support their crew.</p>
+  <div id="links"></div>
+  <button class="ghost" id="again">OPEN THE UNIT AGAIN</button>
+</div><div class="bz"></div></div></div>
+<script src="ecu.js?v=1"></script>
+<script>
+// Public demo of the Busters containment unit monitor: no sign-in and no member data, made-up crew and events.
+// Crew agnostic: ecu.html shows a generic pitch at the end; ecu.html?c=<crew> uses that crew's own donate links
+// from the CREWS list below, when it has one.
+(() => {
+  const CREWS = {
+    lagb: { short: 'LAGB', text: 'The Los Angeles Ghostbusters are volunteers who suit up for parades, conventions and charity events all over LA. A donation of any size helps.',
+      links: [['DONATE TO STARLIGHT FOR LAGB', "Starlight Children's Foundation", 'https://donate.starlight.org/fundraiser/7718546'],
+        ['DONATE TO LAGB WITH ZELLE', 'Our nonprofit, 310 Young Professionals', 'https://enroll.zellepay.com/qr-codes/?data=eyJuYW1lIjoiMzEwIFlPVU5HIFBST0ZFU1NJT05BTFMiLCJ0b2tlbiI6ImxhZ2hvc3RidXN0ZXJzIiwiYWN0aW9uIjoicGF5bWVudCJ9']] }
+  };
+  const q = new URLSearchParams(location.search), crew = CREWS[(q.get('c') || '').toLowerCase()];
+  const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const $ = s => document.querySelector(s);
+  // made-up crew and a year of made-up events
+  const names = ['Jordan Alvarez', 'Kim Nguyen', 'Marcus Brooks', 'Tayo Okafor', 'Sam Patel', 'Riley Chen', 'Dana Ruiz', 'Lee Walsh'];
+  const people = names.map((n, i) => ({ id: 'p' + i, full_name: n, status: 'active' }));
+  const titles = ['Downtown Holiday Parade', 'Comic Con booth', 'Charity 5K', "Children's Hospital visit", 'Library story time', 'Car show', 'Pride parade',
+    'Toy drive', 'Haunted house night', 'Food bank shift', 'Fan convention', 'Beach cleanup', 'Movie night', 'Street fair'];
+  const iso = d => d.toISOString().slice(0, 10), events = [], rsvps = [];
+  titles.forEach((t, i) => { const d = new Date(); d.setDate(d.getDate() - 6 - i * 19); const id = 'e' + i;
+    events.push({ id, title: t, event_date: iso(d), status: 'scheduled', category: /Hospital/.test(t) ? 'Hospital' : 'Community' });
+    people.forEach((p, k) => { if ((i + k) % 3) rsvps.push({ event_id: id, person_id: p.id, answer: 'going' }); }); });
+  const S = { crew: { short: crew ? crew.short : 'DEMO' }, me: null, people, events, rsvps };
+  if (crew) { $('#pt').textContent = crew.text; $('#links').innerHTML = crew.links.map(([b, s, u], i) => `<a class="btn${i ? ' alt' : ''}" href="${esc(u)}" target="_blank" rel="noopener"><b>${esc(b)}</b><span>${esc(s)}</span></a>`).join(''); }
+  const start = $('#start'), pitch = $('#pitch');
+  let ecu = null;
+  const run = () => {
+    pitch.classList.remove('on'); start.style.display = '';
+    let audioCtx = null; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume().catch(() => {}); } catch (e) { /* no sound */ }
+    ecu = window.BustersECU.mount({ S, esc, demo: true }, { audioCtx, exit: () => { ecu.destroy(); start.style.display = 'none'; pitch.classList.add('on'); window.scrollTo(0, 0); } });
+  };
+  $('#go').onclick = run; $('#again').onclick = run;
+})();
+</script>
+</body>
+</html>
