@@ -615,7 +615,7 @@ async function loadAll() {
     rpc('my_session', { p_crew: c }),
     sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
     sb.from('places').select('*').eq('crew_id', c).order('name'),
-    sb.from('people').select('id,full_name,callsign,title,status,abilities,member_since,rookie_since,eligible_date,city,show_on_map,user_id,created_at').eq('crew_id', c).order('full_name'),
+    sb.from('people').select('id,full_name,callsign,title,status,honorary,abilities,member_since,rookie_since,eligible_date,city,show_on_map,user_id,created_at').eq('crew_id', c).order('full_name'),
     sb.from('rsvps').select('*').eq('crew_id', c),
     sb.from('event_places').select('*').eq('crew_id', c).order('sort'),
     sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10),
@@ -1279,8 +1279,9 @@ function myStats(past, hosp) {
   const g = S.gb, raised = myRaised();
   const gbSub = g && g.amount != null ? [`#${g.rank} of ${g.groups} crews`, g.goal ? Math.round(100 * g.amount / g.goal) + '% of the ' + money0(g.goal) + ' goal' : ''].filter(Boolean).join(' · ') : 'Waiting on Sony\'s numbers';
   const row = (k, sub, v, id) => `<${id ? `a href="#" id="${id}"` : 'div'} class="stat${id ? ' go' : ''}"><div class="grow"><div>${k}</div>${sub ? `<div class="small muted">${sub}</div>` : ''}</div><div class="sv">${v}</div><span class="muted ch">${id ? '›' : ''}</span></${id ? 'a' : 'div'}>`;
-  return `<div class="card stats${done >= MIN ? ' met' : ''}">
-    ${row(`Events in ${yr}`, `<span class="pips">${pips}</span>${done >= MIN ? 'Yearly minimum met' : `${MIN} a year minimum`}${soon ? ` · ${soon} more signed up` : ''}`, done)}
+  return `<div class="card stats${done >= MIN || (S.me && S.me.honorary) ? ' met' : ''}">
+    ${S.me && S.me.honorary ? row(`Events in ${yr}`, `Honorary member, no yearly minimum${soon ? ` · ${soon} more signed up` : ''}`, done)
+      : row(`Events in ${yr}`, `<span class="pips">${pips}</span>${done >= MIN ? 'Yearly minimum met' : `${MIN} a year minimum`}${soon ? ` · ${soon} more signed up` : ''}`, done)}
     ${row('All events', '', past.length)}
     ${row('Hospital visits', '', hosp.length)}
     ${row(`Raised in ${yr}`, 'Fundraising credited to you', money0(raised), 'myraised')}
@@ -1301,7 +1302,7 @@ function renderMine(m) {
     <div class="sec">${myStats(past, hosp)}</div>
     <p class="tiny dim">Counts start from Busters sign-ups. Check-in attendance arrives in a later update.</p>
     <div class="sec"><h2>Coming up</h2>${mineUp.length ? byMonth(mineUp, e => e.event_date, eventRow) : '<div class="empty">Nothing yet. Answer Going on an event and it shows here.</div>'}</div>
-    <div class="sec"><h2>Dues</h2><div class="card">${Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span>${duesPill(s)}</div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
+    <div class="sec"><h2>Dues</h2><div class="card">${me.honorary ? `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Honorary member</span>${duesPill('EXEMPT')}</div>` : Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span>${duesPill(s)}</div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
     <div class="sec"><h2>My details</h2><div class="card">
       <p class="muted small" style="margin-top:0">Only you, Personnel and the crew admin see these.</p>
       <form id="mf">
@@ -1978,7 +1979,9 @@ function reviewProposal(e) {
 // Status is where someone is in membership; roles are what they can do. Both are set from Edit.
 let rosterData = [], rosterQ = '', rosterF = 'current', rosterOpen = new Set();
 const STATUS = [['pending', 'Waiting', 'cyan'], ['rookie', 'Rookie', 'cream'], ['active', 'Member', 'good'], ['retired', 'Retired', ''], ['removed', 'Removed', 'bad']];
-const statusPill = s => { const x = STATUS.find(t => t[0] === s) || [s, s, '']; return `<span class="pill ${x[2]}">${esc(x[1])}</span>`; };
+const statusPill = (s, hon) => { if (hon && s === 'active') return '<span class="pill cream">Honorary</span>'; const x = STATUS.find(t => t[0] === s) || [s, s, '']; return `<span class="pill ${x[2]}">${esc(x[1])}</span>`; };
+// Honorary members are exempt from dues: their dues show Exempt whatever is stored.
+const duesFor = (p, y) => p && p.honorary ? 'EXEMPT' : (p && p.dues ? p.dues[y] : undefined);
 const hasRole = (p, r) => r[3].some(a => (p.abilities || []).includes(a));
 const fullRole = (p, r) => r[3].every(a => (p.abilities || []).includes(a));
 const roleTags = p => (p.abilities || []).includes('crew_admin') ? '<span class="rtag adm">Crew admin</span>'
@@ -2019,8 +2022,8 @@ async function personnelList(box) {
         ${line('Role in crew', esc(p.title || ''))}${line('Member since', p.member_since ? esc(fmtDay(p.member_since, { month: 'short', year: 'numeric' })) : '')}
         ${p.status === 'rookie' ? line('Rookie', `${(p.rookie_events_before || 0) + p.events_done} of 4 events${p.eligible_date ? ', eligible ' + esc(p.eligible_date) : ''}`) : line('Rookie since', esc(p.rookie_since || ''))}
         ${line(`Events in ${yr}`, String(p.events_year || 0))}
-        <div class="kv"><span>Dues ${yr}</span><b>${duesPill(p.dues[yr])}</b></div>
-        <div class="kv"><span>Dues ${yr - 1}</span><b>${duesPill(p.dues[yr - 1])}</b></div>
+        <div class="kv"><span>Dues ${yr}</span><b>${duesPill(duesFor(p, yr))}</b></div>
+        <div class="kv"><span>Dues ${yr - 1}</span><b>${duesPill(duesFor(p, yr - 1))}</b></div>
         ${megans(p)}</div>
     </div>`;
   const draw = () => {
@@ -2031,9 +2034,9 @@ async function personnelList(box) {
       + rows.map(p => `<div class="prow${rosterOpen.has(p.id) ? ' open' : ''}" data-pr="${p.id}">
         <div class="pgrid"><button class="pexp" data-px="${p.id}" aria-expanded="${rosterOpen.has(p.id)}" aria-label="Show details for ${esc(p.full_name)}">›</button>
           <div data-px="${p.id}" style="cursor:pointer;min-width:0"><div class="pname">${esc(p.full_name)}</div>${roleTags(p) ? `<div class="ptags pc-roles-m">${roleTags(p)}</div>` : ''}</div>
-          <div>${statusPill(p.status)}${p.status === 'pending' ? (regChecks[p.id] ? (regChecks[p.id].outcome === 'clear' ? '<div class="tiny" style="color:var(--good);margin-top:3px">Megan\'s: pass</div>' : '<div class="tiny" style="color:var(--bad);margin-top:3px">Megan\'s: fail</div>') : '<div class="tiny" style="color:var(--warn);margin-top:3px">Megan\'s: check</div>') : ''}</div>
+          <div>${statusPill(p.status, p.honorary)}${p.status === 'pending' ? (regChecks[p.id] ? (regChecks[p.id].outcome === 'clear' ? '<div class="tiny" style="color:var(--good);margin-top:3px">Megan\'s: pass</div>' : '<div class="tiny" style="color:var(--bad);margin-top:3px">Megan\'s: fail</div>') : '<div class="tiny" style="color:var(--warn);margin-top:3px">Megan\'s: check</div>') : ''}</div>
           <div class="ptags pc-roles">${roleTags(p) || '<span class="dim tiny">None</span>'}</div>
-          <div>${duesPill(p.dues[yr])}</div>
+          <div>${duesPill(duesFor(p, yr))}</div>
           <button class="xedit" data-pe="${p.id}" title="Edit" aria-label="Edit ${esc(p.full_name)}">${PEN}</button></div>
         ${rosterOpen.has(p.id) ? detail(p) : ''}</div>`).join('') || '<div class="empty">Nobody matches.</div>';
     $('#pcnt').textContent = rows.length + ' shown';
@@ -2070,13 +2073,16 @@ function editPerson(p, after) {
   const isNew = !p; p = p || { status: 'active', dues: {}, abilities: [], aliases: [] };
   const yr = +todayISO().slice(0, 4);
   const v = k => esc(p[k] == null ? '' : p[k]);
-  const statuses = STATUS.filter(([k]) => k === p.status || k !== 'pending');
+  // Honorary is shown as its own status choice; it is a Member with dues and the yearly minimum waived.
+  const statuses = STATUS.filter(([k]) => k === p.status || k !== 'pending').flatMap(x => x[0] === 'active' ? [x, ['honorary', 'Honorary', 'cream']] : [x]);
+  const curSt = p.status === 'active' && p.honorary ? 'honorary' : p.status;
   const roleOpts = ROLES.map(r => `<label class="rsw"><input type="checkbox" data-role="${r[0]}" ${fullRole(p, r) ? 'checked' : ''}><span><b>${r[1]}</b>${!fullRole(p, r) && hasRole(p, r) ? ' <span class="dim">(some)</span>' : ''}<span class="tiny muted">${esc(r[2])}</span></span></label>`).join('');
   sheet(`<h3>${isNew ? 'Add a person' : esc(p.full_name)}</h3>
     <p class="muted small">${isNew ? 'Adding someone with an email pre-approves them: they get straight in the first time they sign in.' : 'Changes are saved and logged.'}</p>
     <form id="pf">
       <div class="gc-lbl" style="margin-top:6px">Status</div>
-      <div class="seg" id="pst">${statuses.map(([k, l]) => `<button type="button" class="${p.status === k ? 'on' : ''}" data-st="${k}">${l}</button>`).join('')}</div>
+      <div class="seg" id="pst">${statuses.map(([k, l]) => `<button type="button" class="${curSt === k ? 'on' : ''}" data-st="${k}">${l}</button>`).join('')}</div>
+      <div class="tiny dim" style="margin-top:4px">Honorary members are exempt from dues and the yearly event minimum. Their events still count.</div>
       <div class="gc-lbl" style="margin-top:14px">Roles</div><div class="rsws">${roleOpts}</div>
       <div class="gc-lbl" style="margin-top:14px">Names and accounts</div>
       <div class="grid2"><label class="f"><span>Real name</span><input class="in" name="full_name" required value="${v('full_name')}"></label><label class="f"><span>Callsign</span><input class="in" name="callsign" value="${v('callsign')}"></label></div>
@@ -2093,7 +2099,7 @@ function editPerson(p, after) {
       ${isNew ? '' : `<div class="gc-lbl" style="margin-top:14px">Dues</div><div class="grid2">${[yr - 1, yr].map(y => `<label class="f"><span>${y}</span><select class="in" data-dues="${y}">${DUES.map(([k, l]) => `<option value="${k}" ${duesKey(p.dues[y]) === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div>`}
       <div class="btns" style="margin-top:16px"><button class="btn primary">Save</button><button type="button" class="btn ghost" data-close>Cancel</button></div>
     </form>`, s => {
-    let st = p.status;
+    let st = curSt;
     s.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { st = b.dataset.st; s.querySelectorAll('[data-st]').forEach(x => x.classList.toggle('on', x === b)); });
     s.querySelectorAll('[data-dues]').forEach(sel => sel.onchange = async () => { await rpc('set_dues', { p_person: p.id, p_year: +sel.dataset.dues, p_status: sel.value }); p.dues[sel.dataset.dues] = sel.value; toast('Dues saved'); });
     $('#pf', s).onsubmit = async ev => {
@@ -2109,6 +2115,7 @@ function editPerson(p, after) {
           && !confirmBox(regChecks[p.id] ? `${p.full_name}'s Megan's status is Fail. Approve anyway?` : `${p.full_name} hasn't been checked on Megan's Law yet. Approve anyway?`)) return;
       if (st === 'removed' && p.status !== 'removed' && !confirmBox(`Mark ${body.full_name} as removed? They lose access to Busters.`)) return;
       const aliases = $('#pal', s).value.split(',').map(x => x.trim()).filter(Boolean);
+      const hon = st === 'honorary'; if (hon) st = 'active';
       try {
         if (isNew) body.status = st === 'rookie' ? 'rookie' : 'active'; else body.id = p.id;
         const id = await rpc('save_person', { p_crew: S.crew.id, p: body });
@@ -2119,6 +2126,7 @@ function editPerson(p, after) {
             else { await rpc('decide_member', { p_person: pid, p_approve: true, p_preset: 'member' }); if (st !== 'active') await rpc('set_status', { p_person: pid, p_status: st }); }
           } else await rpc('set_status', { p_person: pid, p_status: st });
         }
+        if (pid && hon !== !!p.honorary) await rpc('set_honorary', { p_person: pid, p_on: hon });
         if (pid && abil.join() !== [...(p.abilities || [])].sort().join()) await rpc('set_abilities', { p_person: pid, p_abilities: abil });
         if (pid && aliases.join('|') !== (p.aliases || []).join('|')) await rpc('set_aliases', { p_person: pid, p_aliases: aliases });
       } catch (e) { return; }
