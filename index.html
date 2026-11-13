@@ -378,6 +378,7 @@ input.in{min-width:0}
 .attrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.attrow img,.attrow .attic{width:48px;height:48px;border-radius:8px;object-fit:cover;flex:0 0 48px;background:var(--panel2);display:grid;place-items:center;font-size:11px;color:var(--cyan);font-weight:600}
 .tgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}@media (max-width:420px){.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .tlbl{display:flex;align-items:center;justify-content:space-between;gap:6px}.trm{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:0 2px}
+.medit{background:none;border:0;color:var(--muted);cursor:pointer;padding:2px;display:inline-grid;place-items:center}.medit svg{width:15px;height:15px}.medit:hover{color:var(--cyan)}
 .mseg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}.mseg button{background:none;border:0;color:var(--muted);font:inherit;font-size:12px;padding:3px 10px;cursor:pointer}.mseg button+button{border-left:1px solid var(--line)}.mseg button.on.pass{background:rgba(74,222,128,.15);color:var(--good)}.mseg button.on.fail{background:rgba(248,113,113,.15);color:var(--bad)}.mseg button.on.check{background:rgba(251,191,36,.15);color:var(--warn)}
 .regbox{margin:10px 14px 0;padding:12px 14px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:var(--panel2)}
 .okbox{align-items:flex-start;margin:8px 0 14px;padding:12px 14px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:var(--panel)}.okbox input{margin-top:3px}
@@ -1956,7 +1957,7 @@ const DUES = [['', 'Not set', ''], ['PAID', 'Paid', 'good'], ['UNPAID', 'Not pai
 const duesKey = s => !s ? '' : /^paid/i.test(s) ? 'PAID' : /exempt|^n\/?a$/i.test(s) ? 'EXEMPT' : /extension|grace/i.test(s) ? 'EXTENSION' : /unpaid|not paid/i.test(s) ? 'UNPAID' : s;
 const duesPill = s => { const k = duesKey(s), d = DUES.find(x => x[0] === k) || [k, s, '']; return k ? `<span class="pill ${d[2]}">${esc(d[1])}</span>` : '<span class="pill na">Not set</span>'; };
 
-let regChecks = {};
+let regChecks = {}; const megEdit = new Set();
 async function personnelList(box) {
   try { rosterData = await rpc('personnel_roster', { p_crew: S.crew.id }); } catch (e) { box.innerHTML = '<div class="empty">The Personnel list could not load right now.</div>'; return; }
   // Registry checks for applicants (Waiting). Only the outcome, who and when are kept, never what was found.
@@ -1967,8 +1968,11 @@ async function personnelList(box) {
   // Megan's (registry) status: Pass, Fail, or Check (not looked up yet). Only the result, who and when are kept.
   const megans = p => { const r = regChecks[p.id]; const k = !r ? 'check' : r.outcome === 'clear' ? 'pass' : 'fail';
     const meta = !r ? 'Not checked yet' : r.before_busters ? 'Before Busters' : esc(new Date(r.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) + ' by ' + esc(r.checked_by || 'Personnel');
-    return `<div class="kv" style="align-items:center"><span>Megan's</span><b><span class="mseg">${[['pass', 'Pass'], ['fail', 'Fail'], ['check', 'Check']].map(([v, l]) => `<button type="button" class="${k === v ? 'on ' + v : ''}" data-meg="${p.id}:${v}">${l}</button>`).join('')}</span></b></div>
-      <div class="tiny ${k === 'check' ? '' : 'dim'}" style="text-align:right;${k === 'check' ? 'color:var(--warn)' : ''}">${meta}${k === 'check' ? ' · Check copies the name and opens the search. Also check <a href="https://www.nsopw.gov/search-public-sex-offender-registries" target="_blank" rel="noopener">NSOPW</a>.' : ''}</div>`; };
+    const pill = `<span class="pill ${k === 'pass' ? 'good' : k === 'fail' ? 'bad' : 'warn'}">${k === 'pass' ? 'Pass' : k === 'fail' ? 'Fail' : 'Check'}</span>`;
+    return `<div class="kv" style="align-items:center"><span>Megan's</span><b style="display:inline-flex;align-items:center;gap:6px">${megEdit.has(p.id)
+        ? `<span class="mseg">${[['pass', 'Pass'], ['fail', 'Fail'], ['check', 'Check']].map(([v, l]) => `<button type="button" class="${k === v ? 'on ' + v : ''}" data-meg="${p.id}:${v}">${l}</button>`).join('')}</span><button type="button" class="medit" data-megx="${p.id}" aria-label="Done">&#10005;</button>`
+        : `${pill}<button type="button" class="medit" data-megx="${p.id}" title="Change Megan's status" aria-label="Change Megan's status">${PEN}</button>`}</b></div>
+      <div class="tiny ${k === 'check' ? '' : 'dim'}" style="text-align:right;${k === 'check' ? 'color:var(--warn)' : ''}">${meta}${megEdit.has(p.id) ? ' · Check copies the name and opens the search. Also check <a href="https://www.nsopw.gov/search-public-sex-offender-registries" target="_blank" rel="noopener">NSOPW</a>.' : ''}</div>`; };
   const detail = p => `<div class="pdet">
       <div class="pgrp"><div class="gc-lbl">Names and accounts</div>
         ${line('Real name', esc(p.full_name))}${line('Callsign', esc(p.callsign || ''))}
@@ -2003,19 +2007,20 @@ async function personnelList(box) {
     $('#pcnt').textContent = rows.length + ' shown';
     box.querySelectorAll('[data-px]').forEach(b => b.onclick = () => { const id = b.dataset.px; rosterOpen.has(id) ? rosterOpen.delete(id) : rosterOpen.add(id); draw(); });
     box.querySelectorAll('[data-pe]').forEach(b => b.onclick = () => editPerson(rosterData.find(x => x.id === b.dataset.pe), () => personnelList(box)));
+    box.querySelectorAll('[data-megx]').forEach(b => b.onclick = () => { const id = b.dataset.megx; megEdit.has(id) ? megEdit.delete(id) : megEdit.add(id); draw(); });
     box.querySelectorAll('[data-meg]').forEach(b => b.onclick = async () => { const [id, v] = b.dataset.meg.split(':'); const p = rosterData.find(x => x.id === id); const r = regChecks[id];
       if (v === 'check') {
         if (r && !confirmBox(`Check ${p.full_name} again? This clears the current result.`)) return;
         try { navigator.clipboard.writeText(p.full_name).catch(() => {}); } catch (e) { }
         window.open('https://meganslaw.ca.gov/', '_blank', 'noopener');
         if (r) { await rpc('set_registry_check', { p_person: id, p_outcome: null }); delete regChecks[id]; }
-        toast('Name copied. Accept the site\'s terms, then paste it into the search.'); draw(); return;
+        megEdit.delete(id); toast('Name copied. Accept the site\'s terms, then paste it into the search.'); draw(); return;
       }
       const out = v === 'pass' ? 'clear' : 'review';
-      if (r && r.outcome === out) return;
+      if (r && r.outcome === out) { megEdit.delete(id); draw(); return; }
       await rpc('set_registry_check', { p_person: id, p_outcome: out });
       regChecks[id] = { person_id: id, outcome: out, checked_at: new Date().toISOString(), checked_by: nameOf(S.me), before_busters: false };
-      toast(v === 'pass' ? 'Marked Pass' : 'Marked Fail'); draw(); });
+      megEdit.delete(id); toast(v === 'pass' ? 'Marked Pass' : 'Marked Fail'); draw(); });
   };
   const waiting = rosterData.filter(p => p.status === 'pending').length;
   box.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px"><input class="in" id="rq" placeholder="Search names, Discord, email, nicknames" style="flex:1;min-width:180px" value="${esc(rosterQ)}"><button class="btn sm primary" id="padd">+ Add person</button><button class="btn sm" id="pexp">Download</button></div>
