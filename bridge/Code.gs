@@ -6,27 +6,35 @@
  *   - Every 5 minutes: syncs LAGB Calendar Ops with Busters, both ways.
  *   - Every hour: copies sign-up names and new event tabs from the sheet into Busters.
  *
- * Setup: paste this file into a new Apps Script project, put the bridge key in BRIDGE_TOKEN,
- * then run setup() once and approve the permissions.
+ * Setup: paste this file into a new Apps Script project. Under Project Settings, Script properties, add
+ * BRIDGE_TOKEN (the bridge key), CALENDAR_ID and SHEET_ID. Then run setup() once and approve the permissions.
+ * The key and the two ids live only in Script properties, never in this file, because this file is public.
  */
 
-const BRIDGE_TOKEN = 'PASTE_THE_BRIDGE_KEY_HERE';
+const PROPS = PropertiesService.getScriptProperties();
+const BRIDGE_TOKEN = (PROPS.getProperty('BRIDGE_TOKEN') || '').trim();
+const CALENDAR_ID = (PROPS.getProperty('CALENDAR_ID') || '').trim();   // the crew's calendar
+const SHEET_ID = (PROPS.getProperty('SHEET_ID') || '').trim();         // the yearly events sheet (read only)
 
 const SUPABASE_URL = 'https://fwptdvoifkfljblyziva.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Cq_YmHplQQL1xqIE6HhCwg_JYSMIFKp';   // public app key; the bridge key above is what proves it is you
-const CALENDAR_ID = '0d14ca2f6434b00fa9d10b4fdf801c6b295ae77d21d0692bdc1b2ee823e7c35b@group.calendar.google.com';
-const SHEET_ID = '13vQjX7M1gBI049-3jwIj5dnJcnCL6lAsDnDLzXqP2oY';   // 2026 Master Events List (read only)
 const TZ = 'America/Los_Angeles';
 
 /** Run once. Creates the two timers and runs both syncs so you can see they work. */
 function setup() {
-  if (!BRIDGE_TOKEN || BRIDGE_TOKEN.indexOf('PASTE') === 0) throw new Error('Paste the bridge key into BRIDGE_TOKEN at the top first.');
+  need_();
   ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('syncCalendar').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('syncSheet').timeBased().everyHours(1).create();
   const a = syncSheet();
   const b = syncCalendar();
   console.log('Setup done. Sheet: ' + JSON.stringify(a) + ' Calendar: ' + JSON.stringify(b));
+}
+
+/** Stops with a clear message when a Script property is missing. */
+function need_() {
+  const missing = [['BRIDGE_TOKEN', BRIDGE_TOKEN], ['CALENDAR_ID', CALENDAR_ID], ['SHEET_ID', SHEET_ID]].filter(function (x) { return !x[1]; }).map(function (x) { return x[0]; });
+  if (missing.length) throw new Error('Missing Script properties: ' + missing.join(', ') + '. Add them under Project Settings, Script properties.');
 }
 
 /** Stops the bridge (removes the timers). */
@@ -38,6 +46,7 @@ function stop() {
 /* ---------------- sheet ---------------- */
 
 function syncSheet() {
+  need_();
   return withLock_(function () {
     const ss = SpreadsheetApp.openById(SHEET_ID);
     const year = Number((ss.getName().match(/(20\d\d)/) || [])[1]) || Number(Utilities.formatDate(new Date(), TZ, 'yyyy'));
@@ -151,6 +160,7 @@ function pad_(n) { return ('0' + Number(n)).slice(-2); }
 /* ---------------- calendar ---------------- */
 
 function syncCalendar() {
+  need_();
   return withLock_(function () {
     const cal = CalendarApp.getCalendarById(CALENDAR_ID);
     if (!cal) throw new Error('Calendar not found: ' + CALENDAR_ID);
