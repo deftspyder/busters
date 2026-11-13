@@ -1843,6 +1843,36 @@ async function mediaDetail(el, ev, connected, after) {
   on2('#me-done', async () => { await rpc('media_complete', { p_event: ev.id, p_done: !m.completed_at }); toast(m.completed_at ? 'Reopened' : 'Marked complete'); if (!m.completed_at) mediaOpen.delete(ev.id); after(); });
   on2('#me-link', async () => { try { await navigator.clipboard.writeText(m.request_url); toast('Upload link copied'); } catch (e) { prompt('Upload link', m.request_url); } });
 }
+// Saved places: rename, fix, retire or bring back the venues and spots the editor suggests.
+let placesShowRetired = false;
+function placesCard(box) {
+  const KINDS = ['Event', 'Parking', 'Staging', 'Meeting point', 'Dinner spot'];
+  const use = id => { const evs = S.eplaces.filter(x => x.place_id === id).map(x => S.events.find(e => e.id === x.event_id)).filter(Boolean).sort((a, b) => a.event_date < b.event_date ? 1 : -1); return { n: evs.length, last: evs[0] }; };
+  const live = S.places.filter(p => !p.retired_at), gone = S.places.filter(p => p.retired_at);
+  const row = p => { const u = use(p.id);
+    return `<div class="row" style="cursor:default"><div class="grow" style="min-width:0"><div class="t">${esc(p.name)}</div>
+      <div class="small muted ell">${esc([p.kind, p.address].filter(Boolean).join(' · ') || 'No address')}</div>
+      <div class="tiny dim">${u.n ? `Used ${u.n} time${u.n === 1 ? '' : 's'}, last ${esc(fmtDay(u.last.event_date, { month: 'short', day: 'numeric', year: 'numeric' }))}` : 'Not used by any event'}</div></div>
+      <div class="xside"><button class="xedit" data-pled="${p.id}" title="Edit place" aria-label="Edit ${esc(p.name)}">${PEN}</button></div></div>`; };
+  box.innerHTML = `<h2 style="margin-top:18px">Saved places</h2>
+    <div class="tiny dim" style="margin:-4px 0 8px">The venues and spots the event editor suggests. Retire ones you don't use anymore; events that already use them keep them.</div>
+    ${live.length ? live.map(row).join('') : '<div class="empty">No saved places yet.</div>'}
+    ${gone.length ? `<button class="btn sm ghost" id="pl-ret" style="margin-top:6px">${placesShowRetired ? 'Hide' : 'Show'} retired (${gone.length})</button>${placesShowRetired ? `<div style="margin-top:8px;opacity:.75">${gone.map(row).join('')}</div>` : ''}` : ''}`;
+  const pr = $('#pl-ret', box); if (pr) pr.onclick = () => { placesShowRetired = !placesShowRetired; placesCard(box); };
+  box.querySelectorAll('[data-pled]').forEach(b => b.onclick = () => { const p = S.places.find(x => x.id === b.dataset.pled); if (!p) return;
+    sheet(`<h3>Edit place</h3><form id="plf">
+      <label class="f"><span>Name</span><input class="in" name="name" required maxlength="120" value="${esc(p.name)}"></label>
+      <label class="f"><span>Address</span><input class="in" name="address" value="${esc(p.address || '')}" placeholder="Street, city"></label>
+      <label class="f"><span>Type</span><select class="in" name="kind">${[...new Set([...KINDS, p.kind].filter(Boolean))].map(k => `<option ${p.kind === k ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select></label>
+      <div class="tiny dim">A new name or address shows on every event that uses this place, including its Discord card.</div>
+      <div class="btns" style="margin-top:12px"><button type="button" class="btn sm ${p.retired_at ? '' : 'danger'}" id="plr">${p.retired_at ? 'Bring back this place' : 'Retire this place'}</button></div>
+      <div class="btns" style="margin-top:14px"><button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary">Save</button></div></form>`, sh => {
+      $('#plr', sh).onclick = async () => { await rpc('save_place', { p_place: p.id, p: { retired: !p.retired_at } }); await refresh(); closeSheet(); toast(p.retired_at ? 'Brought back' : 'Retired'); };
+      $('#plf', sh).onsubmit = async ev => { ev.preventDefault(); const f = ev.target;
+        await rpc('save_place', { p_place: p.id, p: { name: f.elements.name.value, address: f.elements.address.value, kind: f.elements.kind.value } });
+        await refresh(); closeSheet(); toast('Place saved'); };
+    }); });
+}
 function renderTeam(m) {
   const pending = can('approve_members') ? S.people.filter(p => p.status === 'pending') : [];
   const ev = can('add_events') || can('edit_events');
@@ -1876,7 +1906,7 @@ function renderTeam(m) {
         return eventRow(e, { admin: true, pills, line: k.has('details') ? `<div class="small" style="color:var(--warn)">Needs details: ${esc(e.missing.join(', '))}</div>` : '' }); };
       const xs = [...need.values()].sort((a, b) => a.e.event_date < b.e.event_date ? -1 : a.e.event_date > b.e.event_date ? 1 : 0);
       return `<div class="sec">${xs.length ? byMonth(xs, x => x.e.event_date, tile) : list([])}</div>
-      ${can('edit_events') ? '<div class="sec" id="dcsched"></div>' : ''}`; },
+      ${can('edit_events') ? '<div class="sec" id="dcsched"></div><div class="sec" id="placesbox"></div>' : ''}`; },
     personnel: () => can('manage_recruits') ? `<div class="sec" id="plist"><div class="empty">Loading...</div></div>`
       : `<div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
@@ -1892,6 +1922,7 @@ function renderTeam(m) {
   m.querySelectorAll('[data-ad]').forEach(b => b.onclick = () => { S.adminTab = b.dataset.ad; renderTeam(m); syncUrl(); scrollTo(0, 0); });
   const nw = $('#new'); if (nw) nw.onclick = () => editEvent(null);
   if ($('#dcsched')) scheduleCard($('#dcsched'));
+  if ($('#placesbox')) placesCard($('#placesbox'));
   if ($('#mediabox')) mediaCard($('#mediabox'));
   if ($('#plist')) personnelList($('#plist'));
   if ($('#mediasetup')) mediaCard($('#mediasetup'), 'setup');
