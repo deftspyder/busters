@@ -546,6 +546,7 @@ function renderGate(step = 'email', email = '') {
         <button class="btn ghost block" id="again" style="margin-top:8px">Use a different email</button>`}
     </div>
     <p class="dim tiny" style="text-align:center;margin-top:18px">Busters is for members of official Ghostbusters franchise crews. New here? Sign in and a crew admin will approve you.</p>
+    <p class="dim tiny" style="text-align:center;margin-top:6px">By signing in you agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of use</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy</a> page.</p>
   </div>`;
   $('#f').onsubmit = async e => {
     e.preventDefault();
@@ -2278,7 +2279,8 @@ function openMenu() {
     <a class="menuitem" id="how"><span class="grow">How to use Busters</span><span class="muted">›</span></a>
     <a class="menuitem" id="shareapp"><span class="grow">Share Busters<div class="small muted">Send someone the app link</div></span><span class="muted">↗</span></a>
     <a class="menuitem" href="mailto:hello@busters.app?subject=Busters%20feedback"><span class="grow">Send feedback</span><span class="muted">↗</span></a>
-    <p class="tiny dim" style="margin-top:14px">Busters beta for ${esc(S.crew.short)}. Ghostbusters and the No-Ghost logo are trademarks of Columbia Pictures.</p></div>`, s => {
+    <p class="tiny dim" style="margin-top:14px">Busters beta for ${esc(S.crew.short)}. Ghostbusters and the No-Ghost logo are trademarks of Columbia Pictures.</p>
+    <p class="tiny" style="margin-top:6px"><a href="terms.html" target="_blank" rel="noopener">Terms of use</a> · <a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p></div>`, s => {
     s.parentNode.classList.add('right');
     $('#pp', s).onclick = () => { closeSheet(); openPack(); };
     $('#shareapp', s).onclick = async () => {
