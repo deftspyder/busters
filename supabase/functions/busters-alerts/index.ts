@@ -61,6 +61,10 @@ Deno.serve(async (req) => {
       return json({ sent: r.filter(x => x === "ok").length, results: r });
     }
 
+    // Everything past here is the scheduled run: only the database's timer, which sends the key, may start it.
+    const { data: k } = await sb.from("app_keys").select("value").eq("name", "alerts_secret").maybeSingle();
+    if (!k?.value || body?.secret !== k.value) return json({ error: "not allowed" }, 403);
+
     const { data: plan, error } = await sb.rpc("alert_plan");
     if (error) throw error;
     const rows = (plan || []) as { user_id: string; person_id: string; event_id: string; kind: string; title: string; body: string; url: string }[];
