@@ -437,7 +437,7 @@ body.chatting .fab{display:none}
 <div id="app"></div>
 <div id="layer"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="lib/supabase-2.45.4.js"></script>
 <script>
 (() => {
 'use strict';
@@ -572,7 +572,11 @@ async function enter(name) {
   if (res.status === 'pending') return renderWaiting(res.crew);
   if (res.status === 'declined' || res.status === 'removed' || res.status === 'retired') return renderBlocked(res.status);
   S.crew = { id: res.crew_id, short: res.crew };
-  await loadAll();
+  try { await loadAll(); } catch (e) {
+    $('#app').innerHTML = `<div class="gate"><div class="card"><h2>Couldn't load Busters</h2><p class="muted">Check your connection and try again.</p><button class="btn primary" id="re">Try again</button></div></div>`;
+    $('#re').onclick = () => enter(name);
+    return;
+  }
   if (!S.me) return renderBlocked('removed');
   const dbx = new URLSearchParams(location.search).get('dropbox');
   const startHash = dbx ? '' : location.hash;
@@ -608,6 +612,16 @@ function renderBlocked(st) {
 }
 
 /* ---------- data ---------- */
+// Supabase returns at most 1,000 rows per request, so long lists are read a page at a time.
+async function allRows(query) {
+  const rows = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await query().range(from, from + 999);
+    if (error) return { data: null, error };
+    rows.push(...data);
+    if (data.length < 1000) return { data: rows, error: null };
+  }
+}
 async function loadAll() {
   const c = S.crew.id;
   const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
@@ -616,7 +630,9 @@ async function loadAll() {
     sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
     sb.from('places').select('*').eq('crew_id', c).order('name'),
     sb.from('people').select('id,full_name,callsign,title,status,honorary,abilities,member_since,rookie_since,eligible_date,city,show_on_map,user_id,created_at').eq('crew_id', c).order('full_name'),
-    sb.from('rsvps').select('*').eq('crew_id', c),
+    // Answers for the events loaded above only (same window), with a plain read of everything as the fallback.
+    allRows(() => sb.from('rsvps').select('*,events!inner(event_date)').eq('crew_id', c).gte('events.event_date', since).order('event_id').order('person_id'))
+      .then(r => r.error ? allRows(() => sb.from('rsvps').select('*').eq('crew_id', c).order('event_id').order('person_id')) : r),
     sb.from('event_places').select('*').eq('crew_id', c).order('sort'),
     sb.from('announcements').select('*').eq('crew_id', c).order('created_at', { ascending: false }).limit(10),
     sb.rpc('giveback_for_crew', { p_crew: c }),
@@ -625,11 +641,14 @@ async function loadAll() {
     sb.rpc('crew_settings', { p_crew: c }),
     sb.from('event_files').select('*').eq('crew_id', c).order('created_at')
   ]);
+  // A list that failed to load must not look like an empty crew.
+  const failed = [ev, pl, pe, rs, ep].find(r => r.error);
+  if (failed) throw new Error(failed.error.message || 'load failed');
   S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
   if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
   S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.files = (ef && ef.data) || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.settings = (cs && cs.data) || {}; S.contacts = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x])); S.phones = Object.fromEntries(Object.values(S.contacts).filter(x => x.phone).map(x => [x.person_id, x.phone]));
 }
-async function refresh() { await loadAll(); render(); }
+async function refresh() { try { await loadAll(); } catch (e) { toast("Couldn't refresh. Check your connection and try again."); return; } render(); }
 
 /* ---------- shell ---------- */
 const TABS = [['home', 'Home'], ['chat', 'Chat'], ['crew', 'Crew'], ['me', 'Me'], ['team', 'Admin']];
