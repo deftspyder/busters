@@ -72,7 +72,7 @@
   const BOLTS = 'radial-gradient(circle at 50% 50%,#f0c7bd 0 1px,#8a3328 1.6px 2.7px,#0000 3px)';
   const CSS = `
 .ecu{position:fixed;inset:0;z-index:101;color:#ffcf8a;font-family:"Share Tech Mono",ui-monospace,Menlo,monospace;font-size:clamp(11px,1.6vh,15px);
-  background:#8c1a10;
+  background:#5c0e09;
   display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);-webkit-user-select:none;user-select:none;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
 .ecu *{box-sizing:border-box}
@@ -138,7 +138,7 @@
 .ecu .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:currentColor;box-shadow:0 0 6px currentColor;vertical-align:1px}
 /* lists */
 .ecu .lst{min-height:220px;display:flex;flex-direction:column}
-.ecu .lst .seg{align-self:flex-start;margin-bottom:7px}
+.ecu #esvc{font-size:.9em}
 .ecu .lb{overflow-y:auto;flex:1;min-height:0;font-size:.85em;line-height:1.45;position:relative;z-index:1}
 .ecu .dr{padding:6px 0 7px;border-bottom:1px solid #ffcf8a22}
 .ecu .dr .dh{display:flex;justify-content:space-between;gap:8px;color:#fff;letter-spacing:.06em}
@@ -207,7 +207,7 @@
     // simulated state
     const st = { field: 99.2, temp: 31, kpa: 410, kw: 0, batt: 100, grid: true, brownEnd: 0, nextBrown: rnd(40, 80), agit: 0, calming: false,
       faults: {}, insp: null, nextInsp: ctx.demo ? rnd(55, 85) : rnd(150, 330), inspDone: false, lvl: 0 };
-    let logLines = [], list = 'cap', sel = null, timers = [], raf = 0, lastEgg = -999, lastLine = '', ownAudio = null;
+    let logLines = [], sel = null, timers = [], raf = 0, lastEgg = -999, lastLine = '', ownAudio = null;
 
     // 24 hours of power history in 15 minute steps, the last point is now.
     const baseKW = 9.5 + Math.min(30, totalMJ * 0.12);
@@ -258,8 +258,9 @@
             ${last ? `<div class="rw"><span>LOADED BY</span><b class="g">${esc(upName(last.by))}</b></div>` : ''}
             <div class="rw"><span>ENTITIES CONTAINED</span><b class="g">${spirits.length}</b></div>
             <div class="rw"><span>CONTAINED ENERGY</span><b class="g">${fmt(totalMJ, 1)} MJ</b></div></div></div>
+          <div class="pl"><div class="lbl">SERVICE // MAINTENANCE</div><div class="scr" id="esvc"></div></div>
         </div>
-        <div class="col c3"><div class="pl lst"><div class="seg" id="eseg"><button data-l="cap">CAPTURES</button><button data-l="flt">FAULTS</button><button data-l="svc">SERVICE</button></div>
+        <div class="col c3"><div class="pl lst"><div class="lbl">CAPTURES // TRAP DROP-OFFS</div>
           <div class="scr lb" id="elist"></div></div></div>
       </div>
       <div class="insp" id="einsp"><div class="bx"><div class="haz"></div><div class="in">
@@ -278,43 +279,52 @@
 
     // lists
     function renderList() {
-      el.querySelectorAll('#eseg button').forEach(b => b.classList.toggle('on', b.dataset.l === list));
-      const box = $('#elist'); if (!box) return;
-      if (list === 'cap') {
+      const box = $('#elist');
+      if (box) {
         box.innerHTML = `<div class="rw" style="margin-bottom:2px"><span>DROP-OFFS ${drops.length}</span><b class="g">ENTITIES ${spirits.length}</b></div>` + (drops.length ? drops.map(d => `<div class="dr">
           <div class="dh"><span>${day(d.date)}</span><span>${d.spirits.length} ${d.spirits.length === 1 ? 'SPIRIT' : 'SPIRITS'}</span></div>
           <div class="g">TRAP DROP-OFF // ${esc(upName(d.by))}</div><div class="ev">${esc(d.event)}</div>
           <div>${d.spirits.map(s => `<span class="chip" data-sp="${esc(s.id)}" style="--c:${CLS_C[s.cls]}">CL ${CLS[s.cls]} ${esc(s.kind)}</span>`).join('')}</div></div>`).join('')
           : '<div style="padding:10px 0;opacity:.75">NO TRAPS LOADED YET. CAPTURES APPEAR HERE AFTER THE CREW WORKS AN EVENT.</div>');
         box.querySelectorAll('[data-sp]').forEach(c => c.onclick = () => pick(c.dataset.sp));
-      } else if (list === 'flt') {
-        box.innerHTML = logLines.length ? logLines.map(x => `<div class="lc-${x.c}">&gt; ${esc(x.t)}</div>`).join('') : '<div style="opacity:.7">NO EVENTS LOGGED</div>';
-      } else {
+      }
+      renderSvc();
+    }
+    function renderSvc() {
+      const box = $('#esvc'); if (!box) return;
         const sd = d => d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase().replace(',', '');
         const row = (a, b, c = 'g') => `<div class="rw"><span>${a}</span><b class="${c}">${b}</b></div>`;
         box.innerHTML = row('NEXT INSPECTION', sd(nextInspection)) + row('GRID FILTER CHANGE', filterIn <= 2 ? 'DUE IN ' + filterIn + ' DAYS' : 'IN ' + filterIn + ' DAYS', filterIn <= 2 ? 'wn' : 'g') +
           row('SEAL CHECK', 'IN ' + sealIn + ' DAYS') + row('COOLANT TOP-OFF', dom <= 7 ? 'DONE THIS MONTH' : 'DUE ' + sd(new Date(now0.getFullYear(), now0.getMonth() + 1, 7))) +
           row('LAMP BULBS', 'CHECKED ' + sd(lastSat)) + row('LAST SERVICED', sd(lastSat)) + row('SERVICED BY', tech ? esc(upName(tech)) : 'UNASSIGNED') +
           row('UNIT HOURS', fmt(41000 + (hash(short) % 9000) + Math.floor(now0 / 36e5) % 9000)) + `<div style="margin-top:8px;opacity:.6;font-size:.9em">SERVICE NOTES: FILTERS ARE CHANGED FROM THE OUTSIDE PANEL ONLY. NEVER OPEN THE PORT TO CHECK ON AN ENTITY.</div>`;
-      }
     }
 
     function log(t) { logLines.unshift({ t: clock() + '  ' + t, c: lineClass(t) }); logLines = logLines.slice(0, 80);
       const k = $('#etick'); if (k) { // rolling status log, newest first, as many lines as fit
         k.innerHTML = logLines.slice(0, 14).map(x => `<div class="lc-${x.c}">&gt; ${esc(x.t)}</div>`).join('');
         while (k.children.length > 1 && k.scrollHeight > k.clientHeight + 1) k.lastElementChild.remove(); }
-      if (list === 'flt') renderList(); }
+    }
 
     // viewport: wisps for the newest 40 entities
     const shown = spirits.slice(0, 40);
     const W = shown.map((s, i) => { const h = hash(s.id); return { s, x: ((h % 100) / 100 - .5) * 1.2, y: (((h >>> 8) % 100) / 100 - .5) * 1.2, a: (h % 628) / 100, z: .7, ph: (h % 1000) / 160, f1: .3 + (h % 50) / 100, f2: .9 + ((h >>> 5) % 50) / 60, sp: .1 + (s.cls * .03) + ((h >>> 9) % 20) / 200, tr: [] }; });
     const cv = $('#evp');
-    let geo = { cx: 0, cy: 0, Rg: 1 }, lastT = performance.now();
+    let geo = { dpr: 1 }, lastT = performance.now(), rips = [], lastHitLog = -99;
+    const t0r = () => performance.now() / 1000;
+    function hit(p, hx0, hy0, side, t) {
+      if (rips.some(q => q.id === p.s.id && t - q.t0 < .5)) return;
+      rips.push({ id: p.s.id, x: hx0, y: hy0, t0: t, c: CLS_C[p.s.cls] });
+      st.field = Math.max(70, st.field - (p.s.cls === 6 ? 1.6 : .9)); buzz(p.s.cls === 6 ? [40, 30, 60] : 25);
+      if (t - lastHitLog > 3) { lastHitLog = t; log(`WARN: CLASS ${CLS[p.s.cls]} IMPACT // ${side} WALL // FIELD FLUCTUATION`); }
+    }
     function draw() {
       const nowT = performance.now(), dt = Math.min(.05, (nowT - lastT) / 1000); lastT = nowT;
       const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
       if (!w || !h) { raf = requestAnimationFrame(draw); return; }
       if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      const shk = rips.length ? Math.max(...rips.map(q => 1 - (t0r() - q.t0) / .9)) : 0;
+      cv.style.transform = shk > 0 ? `translate(${((Math.random() - .5) * 6 * shk).toFixed(1)}px,${((Math.random() - .5) * 6 * shk).toFixed(1)}px)` : '';
       const x = cv.getContext('2d'), cx = w / 2, cy = h / 2, hx = w / 2 * .9, hy = h / 2 * .86, U = Math.min(w, h) / 2, t = nowT / 1000; geo = { dpr };
       x.globalCompositeOperation = 'source-over';
       let g = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * .6); g.addColorStop(0, '#0b1d18'); g.addColorStop(1, '#010403'); x.fillStyle = g; x.fillRect(0, 0, w, h);
@@ -327,7 +337,11 @@
         const sp = p.sp * (1 + ag * 3) * (st.calming ? .35 : 1);
         p.x += Math.cos(p.a) * sp * dt; p.y += Math.sin(p.a) * sp * dt;
         if (ag > .3) { p.x += (Math.random() - .5) * ag * .012; p.y += (Math.random() - .5) * ag * .012; }
-        if (Math.abs(p.x) > 1 || Math.abs(p.y) > 1) { p.a = Math.atan2(-p.y, -p.x) + (Math.random() - .5) * 1.4; p.x = clamp(p.x, -1, 1); p.y = clamp(p.y, -1, 1); }
+        const strong = p.s.cls >= 5;
+        if (strong && !st.calming) { const out = Math.atan2(p.y, p.x), d = Math.atan2(Math.sin(out - p.a), Math.cos(out - p.a)); p.a += d * dt * .9; }
+        if (Math.abs(p.x) > 1 || Math.abs(p.y) > 1) {
+          if (strong) hit(p, cx + clamp(p.x, -1, 1) * w / 2, cy + clamp(p.y, -1, 1) * h / 2, Math.abs(p.x) > 1 ? (p.x > 0 ? 'EAST' : 'WEST') : (p.y > 0 ? 'SOUTH' : 'NORTH'), t);
+          p.a = Math.atan2(-p.y, -p.x) + (Math.random() - .5) * 1.4; p.x = clamp(p.x, -1, 1); p.y = clamp(p.y, -1, 1); }
         p.z += ((.62 + ag * .55 + .12 * Math.sin(t * p.f2 + p.ph)) - p.z) * dt * 2;
         const px = cx + p.x * hx, py = cy + p.y * hy, size = U * (.08 + p.s.cls * .016) * p.z * (1 + .08 * Math.sin(t * 5 + p.ph));
         p.tr.unshift([px, py]); if (p.tr.length > 9) p.tr.pop();
@@ -335,6 +349,12 @@
         x.globalAlpha = clamp(.55 + .35 * p.z + (ag > .5 ? (Math.random() - .5) * .4 : 0), 0, 1); x.drawImage(sprites[p.s.cls], px - size, py - size, size * 2, size * 2);
         p.px = px; p.py = py; p.size = size;
       });
+      // wall impacts: a bright bulge in the field, expanding rings and a burst of interference lines
+      rips = rips.filter(q => t - q.t0 < .9);
+      rips.forEach(q => { const k = (t - q.t0) / .9, a = 1 - k;
+        x.globalAlpha = .9 * a; let gg = x.createRadialGradient(q.x, q.y, 0, q.x, q.y, U * .55 * (.4 + k)); gg.addColorStop(0, q.c + 'cc'); gg.addColorStop(.35, q.c + '44'); gg.addColorStop(1, q.c + '00'); x.fillStyle = gg; x.fillRect(0, 0, w, h);
+        x.strokeStyle = q.c; x.lineWidth = 2 * dpr; for (let n = 0; n < 3; n++) { const rr = U * (.08 + k * .5) * (1 + n * .35); x.globalAlpha = a * (1 - n * .3) * .8; x.beginPath(); x.arc(q.x, q.y, rr, 0, 7); x.stroke(); }
+        x.globalAlpha = .5 * a; x.fillStyle = q.c; for (let n = 0; n < 6; n++) { const yy = q.y + (Math.random() - .5) * U * .7; x.fillRect(0, yy, w, (1 + Math.random() * 2) * dpr); } });
       x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
       const sw = sel && W.find(p => p.s.id === sel);
       if (sw) { x.strokeStyle = CLS_C[sw.s.cls]; x.lineWidth = 1.5 * dpr; x.setLineDash([4 * dpr, 4 * dpr]); x.beginPath(); x.arc(sw.px, sw.py, sw.size * 1.15 + 6 * dpr, 0, 7); x.stroke(); x.setLineDash([]); }
@@ -436,7 +456,6 @@
     if (api.back) $('#ebk').onclick = () => api.back();
     $('#esnd').onclick = () => { const on = !soundOn(); if (api.setSound) api.setSound(on); else if (on) startOwn(); else stopOwn(); try { on ? localStorage.removeItem('pk-sound') : localStorage.setItem('pk-sound', 'off'); } catch (e) { /* ignore */ } paintSnd(); };
     $('#edeny').onclick = () => { if (!st.insp) return; st.insp = null; log('OK: SHUTDOWN ORDER DENIED BY ' + (S.me ? upName(S.me) : 'OPERATOR')); buzz([30, 30, 30]); };
-    el.querySelectorAll('#eseg button').forEach(b => b.onclick = () => { list = b.dataset.l; renderList(); });
     if (!api.sound) { let off = false; try { off = localStorage.getItem('pk-sound') === 'off'; } catch (e) { /* ignore */ } if (!off) startOwn();
       const wake = () => { if (ownAudio && ownAudio.ac.state === 'suspended') ownAudio.ac.resume().catch(() => {}); }; ['pointerdown', 'click', 'keydown'].forEach(t => el.addEventListener(t, wake, { capture: true })); }
     let lock = null; if (!api.back && navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { lock = l; }).catch(() => {});
