@@ -107,7 +107,9 @@
 .ecu .vpw{position:relative;width:100%;aspect-ratio:4/3;max-height:46vh;margin:0 auto;touch-action:manipulation;background:#030806;border-radius:5px;box-shadow:inset 0 2px 12px #000,inset 0 0 0 1px #000;overflow:hidden}
 .ecu .vpw canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
 .ecu .vpl{text-align:center;font-size:.72em;letter-spacing:.16em;color:#ffe9d0;opacity:.85;margin-top:6px}
-.ecu .tick{font-size:.85em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:7px}
+.ecu .elog{margin-top:7px;height:calc(8 * 1.45em + 14px);font-size:.85em;line-height:1.45}
+.ecu .elog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:1}
+.ecu .elog div:nth-child(n+3){opacity:.85}.ecu .elog div:nth-child(n+6){opacity:.6}
 .ecu .card{position:absolute;left:8%;right:8%;bottom:9%;z-index:2;background:#0b0504ee;border:1px solid var(--c,#ffb347);border-radius:6px;padding:7px 10px;font-size:.82em;line-height:1.45;box-shadow:0 0 14px color-mix(in srgb,var(--c,#ffb347) 45%,transparent);display:none}
 .ecu .card.on{display:block}
 .ecu .card b{color:#fff;font-weight:400;text-shadow:0 0 6px var(--c)}
@@ -161,6 +163,7 @@
   .ecu .col{overflow-y:auto;min-height:0}
   .ecu .c1{order:2}.ecu .c2{order:1}.ecu .c3{order:3}
   .ecu .c3 .lst{height:100%}
+  .ecu .c1 .pl{display:flex;flex-direction:column;min-height:100%}.ecu .c1 .elog{flex:1;height:auto;min-height:calc(6 * 1.45em + 14px)}
   .ecu .vpw{max-height:calc(100vh - 190px)}
 }
 @media (min-aspect-ratio:1/1) and (min-width:700px) and (max-height:500px){.ecu .eh{margin:4px 6px;padding:4px 8px}.ecu .vpw{max-height:calc(100vh - 150px)}}`;
@@ -235,7 +238,7 @@
         <div class="col c1"><div class="pl">
           <div class="vpw" id="evw"><canvas id="evp"></canvas><div class="card" id="ecard"></div></div>
           <div class="vpl">CHAMBER FEED // TAP AN ENTITY // HOLD TO CALM</div>
-          <div class="scr tick" id="etick"></div></div></div>
+          <div class="scr elog" id="etick"></div></div></div>
         <div class="col c2">
           <div class="pl"><div class="lbl">FIELD // CORE</div><div class="scr gg"><div class="big">${gauge('efld', G.fld)}</div><div>${gauge('etmp', G.tmp)}</div><div>${gauge('eprs', G.prs)}</div></div></div>
           <div class="pl"><div class="lbl">POWER // GRID FEED</div><div class="scr">
@@ -297,7 +300,9 @@
     }
 
     function log(t) { logLines.unshift({ t: clock() + '  ' + t, c: lineClass(t) }); logLines = logLines.slice(0, 80);
-      const k = $('#etick'); if (k) { k.textContent = '> ' + logLines[0].t; k.className = 'scr tick lc-' + logLines[0].c; }
+      const k = $('#etick'); if (k) { // rolling status log, newest first, as many lines as fit
+        k.innerHTML = logLines.slice(0, 14).map(x => `<div class="lc-${x.c}">&gt; ${esc(x.t)}</div>`).join('');
+        while (k.children.length > 1 && k.scrollHeight > k.clientHeight + 1) k.lastElementChild.remove(); }
       if (list === 'flt') renderList(); }
 
     // viewport: wisps for the newest 40 entities
@@ -404,7 +409,7 @@
       if (L1) L1.className = 'lamp ' + (lvl === 2 || st.insp ? 'rd bl' : lvl === 1 ? '' : 'gr');
       if (L2) L2.className = 'lamp ' + (!st.grid ? 'bl' : nf ? '' : 'dim');
       // routine lines and the occasional sign on the wall
-      if (t - lastRoutine > 6 && !st.insp) { lastRoutine = t; let line;
+      if (t - lastRoutine > 4 && t > 2.5 && !st.insp) { lastRoutine = t; let line;
         if (Math.random() < 1 / 12 && t - lastEgg > 120) { line = LORE[Math.floor(Math.random() * LORE.length)]; lastEgg = t; }
         else { do { line = TECH[Math.floor(Math.random() * TECH.length)]; } while (line === lastLine); }
         lastLine = line; log(line); }
@@ -436,7 +441,9 @@
       const wake = () => { if (ownAudio && ownAudio.ac.state === 'suspended') ownAudio.ac.resume().catch(() => {}); }; ['pointerdown', 'click', 'keydown'].forEach(t => el.addEventListener(t, wake, { capture: true })); }
     let lock = null; if (!api.back && navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { lock = l; }).catch(() => {});
 
-    log('LINK: ' + short + ' CONTAINMENT UNIT'); log('BOOT: FIELD GENERATORS ONLINE'); log('BOOT: ' + spirits.length + ' ENTITIES ACCOUNTED FOR');
+    const BOOT = ['LINK: ' + short + ' CONTAINMENT UNIT', 'BOOT: REMOTE LINK AUTHENTICATED', 'BOOT: GRID FEED ONLINE', 'BOOT: FIELD GENERATORS ONLINE', 'BOOT: COOLANT LOOP PRIMED',
+      'BOOT: TRAP PORT SEALED // INTERLOCK ENGAGED', 'BOOT: BACKUP CELLS ON STANDBY', 'BOOT: ' + spirits.length + ' ENTITIES ACCOUNTED FOR', 'BOOT: UNIT READY'];
+    let bi = 0; const boot = setInterval(() => { if (bi < BOOT.length) log(BOOT[bi++]); else clearInterval(boot); }, 220); timers.push(boot);
     spark(); renderList(); paintSnd(); draw();
     timers.push(setInterval(tick, 150), setInterval(spark, 5000));
     tick();
