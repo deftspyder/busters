@@ -119,10 +119,10 @@
 .ecu .elog{margin-top:7px;height:calc(8 * 1.45em + 14px);font-size:.85em;line-height:1.45}
 .ecu .elog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:1}
 .ecu .elog div:nth-child(n+3){opacity:.85}.ecu .elog div:nth-child(n+6){opacity:.6}
-.ecu .card{position:absolute;left:8%;right:8%;top:12%;z-index:2;background:#0b0504ee;border:1px solid var(--c,#ffb347);border-radius:6px;padding:7px 10px;font-size:.82em;line-height:1.45;box-shadow:0 0 14px color-mix(in srgb,var(--c,#ffb347) 45%,transparent);display:none}
+.ecu .card{position:absolute;left:6px;top:5px;max-width:calc(100% - 12px);z-index:2;background:#000a;border-left:2px solid var(--c,#ffb347);border-radius:3px;padding:2px 7px;font-size:.72em;line-height:1.35;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;display:none}
 .ecu .card.on{display:block}
 .ecu .card b{color:#fff;font-weight:400;text-shadow:0 0 6px var(--c)}
-.ecu .card .x{position:absolute;right:6px;top:4px;opacity:.7}
+.ecu .card i{font-style:normal;opacity:.7;font-size:.9em}
 /* gauges */
 .ecu .gg{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;align-items:end}
 .ecu .gg .big{grid-column:1/-1}
@@ -373,7 +373,7 @@
       if (st.field < 90 || st.insp) { x.fillStyle = `rgba(255,30,10,${.07 + .07 * Math.sin(t * 8)})`; x.fillRect(0, 0, w, h); }
       for (let yy = 0; yy < h; yy += 3 * dpr) { x.fillStyle = '#0000002a'; x.fillRect(0, yy, w, dpr); }
       g = x.createRadialGradient(cx, cy, U * .8, cx, cy, Math.max(w, h) * .75); g.addColorStop(0, '#0000'); g.addColorStop(1, '#0009'); x.fillStyle = g; x.fillRect(0, 0, w, h);
-      x.fillStyle = '#ffcf8aaa'; x.font = `${Math.round(U * .065)}px "Share Tech Mono",monospace`; x.textAlign = 'left'; x.fillText(`CHAMBER FEED // ${spirits.length} ENTITIES`, 8 * dpr, 16 * dpr);
+      x.fillStyle = '#ffcf8aaa'; x.font = `${Math.round(U * .065)}px "Share Tech Mono",monospace`; x.textAlign = 'left'; if (!sel) x.fillText(`CHAMBER FEED // ${spirits.length} ENTITIES`, 8 * dpr, 16 * dpr);
       if (shown.length < spirits.length) { x.textAlign = 'right'; x.fillText(`+${spirits.length - shown.length} IN DEEP STORAGE`, w - 8 * dpr, h - 8 * dpr); }
       raf = requestAnimationFrame(draw);
     }
@@ -381,7 +381,7 @@
     function pick(id) {
       sel = id; const s = spirits.find(z => z.id === id), c = $('#ecard'); if (!s || !c) return;
       c.style.setProperty('--c', CLS_C[s.cls]); c.classList.add('on');
-      c.innerHTML = `<span class="x">&#10005;</span><b>CLASS ${CLS[s.cls]} // ${esc(s.kind)}</b><br>${esc(s.code)} &nbsp; ${fmt(s.mj, 1)} MJ<br>CAPTURED ${day(s.date)}<br>BY ${esc(upName(s.by))}<br><span style="opacity:.7">${esc(s.event)}</span>${W.some(p => p.s.id === id) ? '' : '<br><span style="opacity:.7">IN DEEP STORAGE</span>'}`;
+      c.innerHTML = `<b>CL ${CLS[s.cls]} // ${esc(s.kind)}</b><br><i>${esc(s.code)} // ${day(s.date)} // ${esc(upName(s.by))}${W.some(p => p.s.id === id) ? '' : ' // IN DEEP STORAGE'}</i>`;
       c.onclick = () => { c.classList.remove('on'); sel = null; };
       buzz(8);
     }
