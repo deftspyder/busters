@@ -355,7 +355,9 @@ input.in{min-width:0}
 .pgrid.mgrid{grid-template-columns:20px minmax(0,1fr) 88px 56px}.pgrid.mgrid.up{grid-template-columns:20px minmax(0,1fr) minmax(0,1.1fr)}@media (min-width:640px){.pgrid.mgrid{grid-template-columns:28px minmax(0,1fr) 110px 70px}.pgrid.mgrid.up{grid-template-columns:28px minmax(0,1fr) minmax(0,1fr)}}
 .mdet-foot{padding:0 14px 12px}.mact{display:flex;align-items:center;gap:10px;margin-top:8px}.mact .btn{flex:0 0 230px;justify-content:center}.mact span{line-height:1.3}@media (max-width:480px){.mact{flex-direction:column;align-items:stretch;gap:3px}.mact .btn{flex-basis:auto}}
 .msub{font-size:12px;color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 6px;font-weight:600}
-@media (min-width:700px){.pdet{grid-template-columns:1fr 1fr 1fr}}
+.prow{container-type:inline-size}
+@container (min-width:520px){.pdet{grid-template-columns:1fr 1fr 1fr}.pdet.ppl{grid-template-columns:1fr 1fr;column-gap:28px;align-items:start}.pdet.ppl>.pgrp:nth-child(3){grid-column:2;grid-row:1/span 2}}
+@container (min-width:900px){.pdet.ppl{grid-template-columns:1fr 1fr 1fr}.pdet.ppl>.pgrp:nth-child(3){grid-column:auto;grid-row:auto}}
 .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0}.kv span{color:var(--muted);flex:0 0 auto}.kv b{font-weight:500;text-align:right;overflow-wrap:anywhere}
 .rsws{display:grid;gap:6px}.rsw{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
 .rsw input{margin-top:3px;accent-color:var(--cyan);width:18px;height:18px;flex:0 0 auto}.rsw span{display:flex;flex-direction:column;gap:1px}
@@ -2029,7 +2031,7 @@ async function personnelList(box) {
         ? `<span class="mseg">${[['pass', 'Pass'], ['fail', 'Fail'], ['check', 'Check']].map(([v, l]) => `<button type="button" class="${k === v ? 'on ' + v : ''}" data-meg="${p.id}:${v}">${l}</button>`).join('')}</span><button type="button" class="medit" data-megx="${p.id}" aria-label="Done">&#10005;</button>`
         : `${pill}<button type="button" class="medit" data-megx="${p.id}" title="Change Megan's status" aria-label="Change Megan's status">${PEN}</button>`}</b></div>
       <div class="tiny ${k === 'check' ? '' : 'dim'}" style="text-align:right;${k === 'check' ? 'color:var(--warn)' : ''}">${meta}${megEdit.has(p.id) ? ' · Check copies the name and opens the search. Also check <a href="https://www.nsopw.gov/search-public-sex-offender-registries" target="_blank" rel="noopener">NSOPW</a>.' : ''}</div>`; };
-  const detail = p => `<div class="pdet">
+  const detail = p => `<div class="pdet ppl">
       <div class="pgrp"><div class="gc-lbl">Names and accounts</div>
         ${line('Real name', esc(p.full_name))}${line('Callsign', esc(p.callsign || ''))}
         ${line('Discord', p.discord ? esc(p.discord) + (p.discord_linked ? ' <span class="tiny" style="color:var(--good)">linked</span>' : ' <span class="tiny dim">not linked</span>') : '<span class="dim">none</span>')}
