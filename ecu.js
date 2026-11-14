@@ -103,21 +103,31 @@
 .ecu .ib.on{color:#fff;border-color:#ffb347;box-shadow:0 0 8px #ffb34766}
 /* body: phone first, one scrolling column */
 .ecu .eb{overflow-y:auto;overflow-x:hidden;padding:8px 8px calc(12px + env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr);gap:9px;align-content:start;-webkit-overflow-scrolling:touch}
-.ecu .col{display:grid;gap:9px;min-width:0;align-content:start}
+.ecu .col{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;min-width:0;align-content:start}
 .ecu .vpw{position:relative;width:100%;aspect-ratio:4/3;max-height:46vh;margin:0 auto;touch-action:manipulation;background:#030806;border-radius:5px;box-shadow:inset 0 2px 12px #000,inset 0 0 0 1px #000;overflow:hidden}
 .ecu .vpw canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+.ecu .fov{position:absolute;left:8px;right:118px;bottom:8px;z-index:2;background:#000b;border:1px solid #ffcf8a55;border-radius:5px;padding:5px 8px 6px;pointer-events:none}
+.ecu .fov .fl{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:.72em;letter-spacing:.14em;white-space:nowrap}
+.ecu .fov .fl b{font-weight:400;font-size:1.9em;letter-spacing:.04em;line-height:1;color:#fff;text-shadow:0 0 8px var(--fc,#3dff7a)}
+.ecu .fov .fb{position:relative;height:7px;margin-top:5px;border-radius:2px;background:linear-gradient(90deg,#ff3b2f55 0 60%,#ffb00055 60% 83.3%,#3dff7a55 83.3%)}
+.ecu .fov .fb u{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--fc,#3dff7a);box-shadow:0 0 8px var(--fc,#3dff7a);transition:width .2s}
+.ecu .aux{position:absolute;right:8px;bottom:8px;z-index:3;width:102px;min-height:54px;font:inherit;font-size:.78em;letter-spacing:.1em;line-height:1.25;color:#ffcf8a;background:#140a02e6;border:1px solid #ffb347;border-radius:6px;cursor:pointer;touch-action:manipulation}
+.ecu .aux small{display:block;font-size:.85em;opacity:.8}
+.ecu .aux.on{color:#03160a;background:#3dff7a;border-color:#3dff7a;box-shadow:0 0 14px #3dff7a99}
+.ecu .aux:disabled{opacity:.45}
 .ecu .vpl{text-align:center;font-size:.72em;letter-spacing:.16em;color:#ffe9d0;opacity:.85;margin-top:6px}
 .ecu .elog{margin-top:7px;height:calc(8 * 1.45em + 14px);font-size:.85em;line-height:1.45}
 .ecu .elog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:1}
 .ecu .elog div:nth-child(n+3){opacity:.85}.ecu .elog div:nth-child(n+6){opacity:.6}
-.ecu .card{position:absolute;left:8%;right:8%;bottom:9%;z-index:2;background:#0b0504ee;border:1px solid var(--c,#ffb347);border-radius:6px;padding:7px 10px;font-size:.82em;line-height:1.45;box-shadow:0 0 14px color-mix(in srgb,var(--c,#ffb347) 45%,transparent);display:none}
+.ecu .card{position:absolute;left:8%;right:8%;top:12%;z-index:2;background:#0b0504ee;border:1px solid var(--c,#ffb347);border-radius:6px;padding:7px 10px;font-size:.82em;line-height:1.45;box-shadow:0 0 14px color-mix(in srgb,var(--c,#ffb347) 45%,transparent);display:none}
 .ecu .card.on{display:block}
 .ecu .card b{color:#fff;font-weight:400;text-shadow:0 0 6px var(--c)}
 .ecu .card .x{position:absolute;right:6px;top:4px;opacity:.7}
 /* gauges */
 .ecu .gg{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;align-items:end}
 .ecu .gg .big{grid-column:1/-1}
-.ecu .gg svg{width:100%;height:auto;display:block;overflow:visible}
+.ecu .gg svg{width:100%;max-width:150px;height:auto;display:block;overflow:visible;margin:0 auto}
+.ecu .fov .fl span{overflow:hidden;text-overflow:ellipsis}
 .ecu svg .ar{fill:none;stroke-width:7}
 .ecu svg .tk{stroke:#ffcf8a88;stroke-width:1}
 .ecu svg .nd{stroke:#fff;stroke-width:2;stroke-linecap:round;filter:drop-shadow(0 0 3px #ff8a00)}
@@ -205,7 +215,7 @@
     const t0 = performance.now(), secs = () => (performance.now() - t0) / 1000;
 
     // simulated state
-    const st = { field: 99.2, temp: 31, kpa: 410, kw: 0, batt: 100, grid: true, brownEnd: 0, nextBrown: rnd(40, 80), agit: 0, calming: false,
+    const st = { field: 99.2, temp: 31, kpa: 410, kw: 0, batt: 100, grid: true, brownEnd: 0, nextBrown: rnd(40, 80), agit: 0, aux: false,
       faults: {}, insp: null, nextInsp: ctx.demo ? rnd(55, 85) : rnd(150, 330), inspDone: false, lvl: 0 };
     let logLines = [], sel = null, timers = [], raf = 0, lastEgg = -999, lastLine = '', ownAudio = null;
 
@@ -236,11 +246,13 @@
       <div class="haz"></div>
       <div class="eb">
         <div class="col c1"><div class="pl">
-          <div class="vpw" id="evw"><canvas id="evp"></canvas><div class="card" id="ecard"></div></div>
-          <div class="vpl">CHAMBER FEED // TAP AN ENTITY // HOLD TO CALM</div>
+          <div class="vpw" id="evw"><canvas id="evp"></canvas><div class="card" id="ecard"></div>
+            <div class="fov" id="efov"><div class="fl"><span>CONTAINMENT FIELD</span><b id="efv">--</b></div><div class="fb"><u id="efb"></u></div><div class="fl" style="margin-top:4px"><span id="efs">STABLE</span></div></div>
+            <button class="aux" id="eaux">AUX POWER<small>TO FIELD</small></button></div>
+          <div class="vpl">CHAMBER FEED // TAP AN ENTITY FOR ITS RECORD</div>
           <div class="scr elog" id="etick"></div></div></div>
         <div class="col c2">
-          <div class="pl"><div class="lbl">FIELD // CORE</div><div class="scr gg"><div class="big">${gauge('efld', G.fld)}</div><div>${gauge('etmp', G.tmp)}</div><div>${gauge('eprs', G.prs)}</div></div></div>
+          <div class="pl"><div class="lbl">CORE</div><div class="scr gg"><div>${gauge('etmp', G.tmp)}</div><div>${gauge('eprs', G.prs)}</div></div></div>
           <div class="pl"><div class="lbl">POWER // GRID FEED</div><div class="scr">
             <div class="rw"><span>GRID DRAW</span><b id="egs" class="ok">ONLINE</b></div>
             <div class="kw" id="ekw">--<small>kW</small></div>
@@ -330,15 +342,15 @@
       let g = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * .6); g.addColorStop(0, '#0b1d18'); g.addColorStop(1, '#010403'); x.fillStyle = g; x.fillRect(0, 0, w, h);
       x.strokeStyle = '#7fffd412'; x.lineWidth = dpr; for (let k = 1; k < 8; k++) { x.beginPath(); x.moveTo(w * k / 8, 0); x.lineTo(w * k / 8, h); x.stroke(); } for (let k = 1; k < 6; k++) { x.beginPath(); x.moveTo(0, h * k / 6); x.lineTo(w, h * k / 6); x.stroke(); }
       if (!shown.length) { x.fillStyle = '#ffcf8a99'; x.font = `${Math.round(U * .09)}px "Share Tech Mono",monospace`; x.textAlign = 'center'; x.fillText('NO ENTITIES IN CONTAINMENT', cx, cy); }
-      const ag = st.agit * (st.calming ? .25 : 1);
+      const ag = st.agit * (st.aux ? .25 : 1);
       x.globalCompositeOperation = 'lighter';
       W.forEach(p => {
         p.a += (Math.sin(t * p.f1 + p.ph) * 1.3 + Math.sin(t * p.f2 + p.ph * 2) * .7) * dt * (1 + ag * 2.5);
-        const sp = p.sp * (1 + ag * 3) * (st.calming ? .35 : 1);
+        const sp = p.sp * (1 + ag * 3) * (st.aux ? .35 : 1);
         p.x += Math.cos(p.a) * sp * dt; p.y += Math.sin(p.a) * sp * dt;
         if (ag > .3) { p.x += (Math.random() - .5) * ag * .012; p.y += (Math.random() - .5) * ag * .012; }
         const strong = p.s.cls >= 5;
-        if (strong && !st.calming) { const out = Math.atan2(p.y, p.x), d = Math.atan2(Math.sin(out - p.a), Math.cos(out - p.a)); p.a += d * dt * .9; }
+        if (strong && !st.aux) { const out = Math.atan2(p.y, p.x), d = Math.atan2(Math.sin(out - p.a), Math.cos(out - p.a)); p.a += d * dt * .9; }
         if (Math.abs(p.x) > 1 || Math.abs(p.y) > 1) {
           if (strong) hit(p, cx + clamp(p.x, -1, 1) * w / 2, cy + clamp(p.y, -1, 1) * h / 2, Math.abs(p.x) > 1 ? (p.x > 0 ? 'EAST' : 'WEST') : (p.y > 0 ? 'SOUTH' : 'NORTH'), t);
           p.a = Math.atan2(-p.y, -p.x) + (Math.random() - .5) * 1.4; p.x = clamp(p.x, -1, 1); p.y = clamp(p.y, -1, 1); }
@@ -373,14 +385,12 @@
       c.onclick = () => { c.classList.remove('on'); sel = null; };
       buzz(8);
     }
-    // tap an entity for its record, hold the glass to calm them
-    let downAt = 0, holdT = null, moved = 0, sx = 0, sy = 0;
-    cv.onpointerdown = e => { e.preventDefault(); downAt = performance.now(); moved = 0; sx = e.clientX; sy = e.clientY;
-      holdT = setTimeout(() => { st.calming = true; log('CALMING PULSE // ENTITIES SETTLING'); buzz(12); }, 320); };
+    // tap an entity for its record
+    let downAt = 0, moved = 0, sx = 0, sy = 0;
+    cv.onpointerdown = e => { e.preventDefault(); downAt = performance.now(); moved = 0; sx = e.clientX; sy = e.clientY; };
     cv.onpointermove = e => { moved = Math.max(moved, Math.hypot(e.clientX - sx, e.clientY - sy)); };
-    const up = e => { clearTimeout(holdT);
-      if (st.calming) { st.calming = false; if (st.agit < .2) log('OK: ENTITIES SETTLED'); return; }
-      if (e.type !== 'pointerup' || performance.now() - downAt > 320 || moved > 12) return;
+    const up = e => {
+      if (e.type !== 'pointerup' || performance.now() - downAt > 600 || moved > 12) return;
       const r = cv.getBoundingClientRect(), px = (e.clientX - r.left) * geo.dpr, py = (e.clientY - r.top) * geo.dpr;
       let best = null, bd = 1e9; W.forEach(p => { const d = Math.hypot(p.px - px, p.py - py); if (d < p.size * 1.1 + 14 * geo.dpr && d < bd) { bd = d; best = p; } });
       if (best) pick(best.s.id); else { const c = $('#ecard'); if (c) c.classList.remove('on'); sel = null; } };
@@ -393,7 +403,8 @@
       // brownouts: the grid drops out now and then, backup cells carry the unit
       if (st.grid && t > st.nextBrown) { st.grid = false; st.brownEnd = t + rnd(10, 16); log('GRID: VOLTAGE DROP DETECTED'); log('BACKUP: CELLS ENGAGED'); buzz([60, 40, 60]); }
       if (!st.grid && t > st.brownEnd) { st.grid = true; st.nextBrown = t + rnd(180, 360); log('OK: GRID RESTORED'); log('BACKUP: CELLS RECHARGING'); buzz(20); }
-      st.batt = clamp(st.batt + (st.grid ? .25 : -1.8) * dt, 0, 100);
+      st.batt = clamp(st.batt + ((st.aux ? -1.1 : 0) + (st.grid ? (st.aux ? 0 : .25) : -1.8)) * dt, 0, 100);
+      if (st.aux && st.batt < 15) { st.aux = false; log('AUX: CELLS LOW // DISENGAGED'); buzz([40, 40]); }
       // the inspector shows up once
       if (!st.inspDone && !st.insp && t > st.nextInsp) { st.insp = { until: t + 20 }; st.inspDone = true; log('INSPECTOR: SHUTDOWN ORDER RECEIVED'); buzz([120, 60, 120, 60, 120]); }
       if (st.insp && t > st.insp.until) { st.insp = null; log('OK: ORDER EXPIRED // INSPECTOR LEFT THE PREMISES'); }
@@ -404,24 +415,29 @@
         if (f) { st.faults[f[0]] = t + rnd(4, 9); log((f[1] === 'fail' ? 'FAULT: ' : 'WARN: ') + f[0]); buzz(15); } }
       // field
       const nf = Object.keys(st.faults).length, brown = st.grid ? 0 : clamp((st.brownEnd - t) < 3 ? 2 : 6, 0, 6);
-      const target = 99.3 + .25 * Math.sin(t / 7) + .15 * Math.sin(t * 1.7) - nf * .9 - brown - (st.insp ? 13 : 0) + (st.calming ? .8 : 0);
+      const target = 99.3 + .25 * Math.sin(t / 7) + .15 * Math.sin(t * 1.7) - nf * .9 - brown - (st.insp ? 13 : 0) + (st.aux ? 3 : 0);
       st.field += (clamp(target, 70, 99.9) - st.field) * (st.insp ? .02 : .05);
       st.agit = clamp((99 - st.field) / 10, 0, 1);
       const lvl = st.field < 90 ? 2 : st.field < 95 ? 1 : 0;
-      if (lvl > st.lvl) { st.lvl = lvl; if (lvl === 2) { log('CRITICAL: FIELD BELOW 90% // HOLD FEED TO CALM'); buzz([200, 80, 200]); } else { log('WARN: CONTAINMENT FIELD ' + fmt(st.field, 1) + '%'); buzz(40); } }
+      if (lvl > st.lvl) { st.lvl = lvl; if (lvl === 2) { log('CRITICAL: FIELD BELOW 90% // ROUTE AUX POWER TO FIELD'); buzz([200, 80, 200]); } else { log('WARN: CONTAINMENT FIELD ' + fmt(st.field, 1) + '%'); buzz(40); } }
       else if (lvl < st.lvl && (lvl > 0 || st.field > 96)) { st.lvl = lvl; if (!lvl) log('OK: CONTAINMENT FIELD STABLE'); } // calls it stable once back above 96
-      const ag = st.agit * (st.calming ? .3 : 1);
+      const ag = st.agit * (st.aux ? .3 : 1);
       st.temp += ((31 + 22 * ag + .8 * Math.sin(t / 5)) - st.temp) * .08;
       st.kpa += ((410 + 260 * ag + 6 * Math.sin(t / 3)) - st.kpa) * .08;
-      st.kw = baseKW + 1.3 * Math.sin(t / 9) + 5 * ag + (st.insp ? 3 : 0) + Math.random() * .25;
+      st.kw = baseKW + 1.3 * Math.sin(t / 9) + 5 * ag + (st.insp ? 3 : 0) + (st.aux ? 6 : 0) + Math.random() * .25;
       hist[hist.length - 1] = st.kw;
-      needle(el, 'fld', st.field, 1); needle(el, 'tmp', st.temp, 0); needle(el, 'prs', st.kpa, 0);
       const set = (id, txt, cls) => { const b = $('#' + id); if (b) { if (txt != null) b.innerHTML = txt; if (cls) b.className = cls; } };
+      const fc = st.field < 88 ? '#ff3b2f' : st.field < 95 ? '#ffb000' : '#3dff7a', fov = $('#efov');
+      if (fov) fov.style.setProperty('--fc', fc);
+      set('efv', fmt(st.field, 1) + '%'); const fb = $('#efb'); if (fb) fb.style.width = (100 * (st.field - 70) / 30).toFixed(1) + '%';
+      set('efs', (st.aux ? 'AUX // ' : '') + (st.field < 88 ? 'CRITICAL' : st.field < 95 ? 'FLUCTUATING' : 'STABLE'));
+      const ax = $('#eaux'); if (ax) { ax.classList.toggle('on', st.aux); ax.disabled = !st.aux && st.batt < 20; ax.innerHTML = st.aux ? `AUX ON<small>CELLS ${fmt(st.batt, 0)}%</small>` : st.batt < 20 ? 'AUX POWER<small>CELLS LOW</small>' : 'AUX POWER<small>TO FIELD</small>'; }
+      needle(el, 'tmp', st.temp, 0); needle(el, 'prs', st.kpa, 0);
       set('ekw', fmt(st.grid ? st.kw : 0, 1) + '<small>kW</small>');
       set('egs', st.grid ? 'ONLINE' : 'BROWNOUT', st.grid ? 'ok' : 'bd');
       const todayKWh = hist.slice(-Math.max(1, Math.floor(mins / 15))).reduce((a, v) => a + v * .25, 0), monthKWh = (dom - 1) * avgDaily + todayKWh;
       set('etd', fmt(todayKWh, 0) + ' kWh'); set('emo', fmt(monthKWh, 0) + ' kWh'); set('ebl', '$' + fmt(monthKWh * RATE, 2));
-      set('ebs', st.grid ? (st.batt < 99.5 ? 'RECHARGING ' + fmt(st.batt, 0) + '%' : 'STANDBY 100%') : 'ON BACKUP ' + fmt(st.batt, 0) + '% // ' + fmt(st.kw, 1) + ' kW', st.grid ? 'ok' : 'wn');
+      set('ebs', st.aux ? 'AUX TO FIELD ' + fmt(st.batt, 0) + '%' : st.grid ? (st.batt < 99.5 ? 'RECHARGING ' + fmt(st.batt, 0) + '%' : 'STANDBY 100%') : 'ON BACKUP ' + fmt(st.batt, 0) + '% // ' + fmt(st.kw, 1) + ' kW', st.grid && !st.aux ? 'ok' : 'wn');
       const bu = $('#ebu'); if (bu) bu.style.width = st.batt.toFixed(1) + '%'; const bb = $('#ebb'); if (bb) bb.classList.toggle('lo', !st.grid || st.batt < 60);
       set('eilk', '<i class="dot"></i>' + (st.insp ? 'PANEL OPEN' : 'ENGAGED'), st.insp ? 'wn' : 'ok');
       set('esub', `ECU REMOTE LINK // ${spirits.length} ENTITIES // ${clock()}`);
@@ -455,6 +471,8 @@
     $('#ex').onclick = () => api.exit();
     if (api.back) $('#ebk').onclick = () => api.back();
     $('#esnd').onclick = () => { const on = !soundOn(); if (api.setSound) api.setSound(on); else if (on) startOwn(); else stopOwn(); try { on ? localStorage.removeItem('pk-sound') : localStorage.setItem('pk-sound', 'off'); } catch (e) { /* ignore */ } paintSnd(); };
+    $('#eaux').onclick = () => { if (!st.aux && st.batt < 20) return; st.aux = !st.aux;
+      log(st.aux ? 'AUX: POWER ROUTED TO CONTAINMENT FIELD' : 'AUX: DISENGAGED // CELLS RECHARGING'); buzz(st.aux ? [20, 30, 40] : 15); };
     $('#edeny').onclick = () => { if (!st.insp) return; st.insp = null; log('OK: SHUTDOWN ORDER DENIED BY ' + (S.me ? upName(S.me) : 'OPERATOR')); buzz([30, 30, 30]); };
     if (!api.sound) { let off = false; try { off = localStorage.getItem('pk-sound') === 'off'; } catch (e) { /* ignore */ } if (!off) startOwn();
       const wake = () => { if (ownAudio && ownAudio.ac.state === 'suspended') ownAudio.ac.resume().catch(() => {}); }; ['pointerdown', 'click', 'keydown'].forEach(t => el.addEventListener(t, wake, { capture: true })); }
@@ -469,7 +487,7 @@
     const ecu = {
       tone,
       test: { brownout: () => { st.nextBrown = 0; }, inspector: () => { st.inspDone = false; st.nextInsp = 0; }, state: st },
-      destroy() { timers.forEach(clearInterval); cancelAnimationFrame(raf); clearTimeout(holdT); stopOwn(); if (lock) lock.release().catch(() => {}); el.remove(); }
+      destroy() { timers.forEach(clearInterval); cancelAnimationFrame(raf); stopOwn(); if (lock) lock.release().catch(() => {}); el.remove(); }
     };
     window.__ecu = ecu;
     return ecu;
