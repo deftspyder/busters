@@ -70,11 +70,9 @@
   }
 
   const BOLTS = 'radial-gradient(circle at 50% 50%,#f0c7bd 0 1px,#8a3328 1.6px 2.7px,#0000 3px)';
-  const NOISE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
-  const SCRATCH = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .25' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .85 0 0 0 0 .8 0 0 0 -3.2 1.15'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E")`;
   const CSS = `
 .ecu{position:fixed;inset:0;z-index:101;color:#ffcf8a;font-family:"Share Tech Mono",ui-monospace,Menlo,monospace;font-size:clamp(11px,1.6vh,15px);
-  background:radial-gradient(ellipse at 50% 35%,#0000 45%,#000a),${SCRATCH},${NOISE},linear-gradient(165deg,#86190f,#5e0e09 45%,#3a0805);
+  background:#8c1a10;
   display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);-webkit-user-select:none;user-select:none;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
 .ecu *{box-sizing:border-box}
@@ -106,7 +104,7 @@
 /* body: phone first, one scrolling column */
 .ecu .eb{overflow-y:auto;overflow-x:hidden;padding:8px 8px calc(12px + env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr);gap:9px;align-content:start;-webkit-overflow-scrolling:touch}
 .ecu .col{display:grid;gap:9px;min-width:0;align-content:start}
-.ecu .vpw{position:relative;width:min(100%,50vh);aspect-ratio:1;margin:0 auto;touch-action:manipulation}
+.ecu .vpw{position:relative;width:100%;aspect-ratio:4/3;max-height:46vh;margin:0 auto;touch-action:manipulation;background:#030806;border-radius:5px;box-shadow:inset 0 2px 12px #000,inset 0 0 0 1px #000;overflow:hidden}
 .ecu .vpw canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
 .ecu .vpl{text-align:center;font-size:.72em;letter-spacing:.16em;color:#ffe9d0;opacity:.85;margin-top:6px}
 .ecu .tick{font-size:.85em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:7px}
@@ -163,9 +161,9 @@
   .ecu .col{overflow-y:auto;min-height:0}
   .ecu .c1{order:2}.ecu .c2{order:1}.ecu .c3{order:3}
   .ecu .c3 .lst{height:100%}
-  .ecu .vpw{width:min(100%,calc(100vh - 150px))}
+  .ecu .vpw{max-height:calc(100vh - 190px)}
 }
-@media (min-aspect-ratio:1/1) and (min-width:700px) and (max-height:500px){.ecu .eh{margin:4px 6px;padding:4px 8px}.ecu .vpw{width:min(100%,calc(100vh - 120px))}}`;
+@media (min-aspect-ratio:1/1) and (min-width:700px) and (max-height:500px){.ecu .eh{margin:4px 6px;padding:4px 8px}.ecu .vpw{max-height:calc(100vh - 150px)}}`;
 
   // Gauges: angles in degrees, 0 is straight up, clockwise positive.
   const P = (cx, cy, r, a) => [cx + r * Math.sin(a * Math.PI / 180), cy - r * Math.cos(a * Math.PI / 180)];
@@ -236,7 +234,7 @@
       <div class="eb">
         <div class="col c1"><div class="pl">
           <div class="vpw" id="evw"><canvas id="evp"></canvas><div class="card" id="ecard"></div></div>
-          <div class="vpl">VIEWPORT // TAP AN ENTITY // HOLD TO CALM</div>
+          <div class="vpl">CHAMBER FEED // TAP AN ENTITY // HOLD TO CALM</div>
           <div class="scr tick" id="etick"></div></div></div>
         <div class="col c2">
           <div class="pl"><div class="lbl">FIELD // CORE</div><div class="scr gg"><div class="big">${gauge('efld', G.fld)}</div><div>${gauge('etmp', G.tmp)}</div><div>${gauge('eprs', G.prs)}</div></div></div>
@@ -309,23 +307,14 @@
     let geo = { cx: 0, cy: 0, Rg: 1 }, lastT = performance.now();
     function draw() {
       const nowT = performance.now(), dt = Math.min(.05, (nowT - lastT) / 1000); lastT = nowT;
-      const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1), Wd = Math.round(r.width * dpr);
-      if (!Wd) { raf = requestAnimationFrame(draw); return; }
-      if (cv.width !== Wd) { cv.width = cv.height = Wd; }
-      const x = cv.getContext('2d'), w = Wd, cx = w / 2, cy = w / 2, R = w / 2 * .985, Rg = R * .8, t = nowT / 1000; geo = { cx, cy, Rg, dpr };
-      x.clearRect(0, 0, w, w); x.globalCompositeOperation = 'source-over';
-      // metal ring and bolts
-      let g = x.createRadialGradient(cx, cy, Rg * .98, cx, cy, R); g.addColorStop(0, '#0c0c0c'); g.addColorStop(.18, '#6a6a6a'); g.addColorStop(.45, '#3a3a3a'); g.addColorStop(.8, '#555'); g.addColorStop(1, '#151515');
-      x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R, 0, 7); x.fill();
-      for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2 + .26, bx = cx + Math.cos(a) * R * .9, by = cy + Math.sin(a) * R * .9, br = R * .035;
-        const bg = x.createRadialGradient(bx - br * .3, by - br * .3, 0, bx, by, br); bg.addColorStop(0, '#e8e8e8'); bg.addColorStop(.5, '#777'); bg.addColorStop(1, '#1a1a1a');
-        x.fillStyle = bg; x.beginPath(); x.arc(bx, by, br, 0, 7); x.fill(); }
-      // inside the glass
-      x.save(); x.beginPath(); x.arc(cx, cy, Rg, 0, 7); x.clip();
-      g = x.createRadialGradient(cx, cy * .9, 0, cx, cy, Rg); g.addColorStop(0, '#0b1d18'); g.addColorStop(1, '#010403'); x.fillStyle = g; x.fillRect(0, 0, w, w);
-      x.strokeStyle = '#7fffd414'; x.lineWidth = 1 * dpr; for (let k = -3; k <= 3; k++) { x.beginPath(); x.moveTo(cx + k * Rg * .28, cy - Rg); x.lineTo(cx + k * Rg * .28, cy + Rg); x.stroke(); }
-      x.beginPath(); x.ellipse(cx, cy + Rg * .55, Rg * .9, Rg * .18, 0, 0, 7); x.stroke();
-      if (!shown.length) { x.fillStyle = '#ffcf8a99'; x.font = `${Math.round(Rg * .075)}px "Share Tech Mono",monospace`; x.textAlign = 'center'; x.fillText('NO ENTITIES IN CONTAINMENT', cx, cy); }
+      const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+      if (!w || !h) { raf = requestAnimationFrame(draw); return; }
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      const x = cv.getContext('2d'), cx = w / 2, cy = h / 2, hx = w / 2 * .9, hy = h / 2 * .86, U = Math.min(w, h) / 2, t = nowT / 1000; geo = { dpr };
+      x.globalCompositeOperation = 'source-over';
+      let g = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * .6); g.addColorStop(0, '#0b1d18'); g.addColorStop(1, '#010403'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+      x.strokeStyle = '#7fffd412'; x.lineWidth = dpr; for (let k = 1; k < 8; k++) { x.beginPath(); x.moveTo(w * k / 8, 0); x.lineTo(w * k / 8, h); x.stroke(); } for (let k = 1; k < 6; k++) { x.beginPath(); x.moveTo(0, h * k / 6); x.lineTo(w, h * k / 6); x.stroke(); }
+      if (!shown.length) { x.fillStyle = '#ffcf8a99'; x.font = `${Math.round(U * .09)}px "Share Tech Mono",monospace`; x.textAlign = 'center'; x.fillText('NO ENTITIES IN CONTAINMENT', cx, cy); }
       const ag = st.agit * (st.calming ? .25 : 1);
       x.globalCompositeOperation = 'lighter';
       W.forEach(p => {
@@ -333,9 +322,9 @@
         const sp = p.sp * (1 + ag * 3) * (st.calming ? .35 : 1);
         p.x += Math.cos(p.a) * sp * dt; p.y += Math.sin(p.a) * sp * dt;
         if (ag > .3) { p.x += (Math.random() - .5) * ag * .012; p.y += (Math.random() - .5) * ag * .012; }
-        const d = Math.hypot(p.x, p.y); if (d > .8) { p.a = Math.atan2(-p.y, -p.x) + (Math.random() - .5) * 1.4; p.x *= .8 / d; p.y *= .8 / d; }
+        if (Math.abs(p.x) > 1 || Math.abs(p.y) > 1) { p.a = Math.atan2(-p.y, -p.x) + (Math.random() - .5) * 1.4; p.x = clamp(p.x, -1, 1); p.y = clamp(p.y, -1, 1); }
         p.z += ((.62 + ag * .55 + .12 * Math.sin(t * p.f2 + p.ph)) - p.z) * dt * 2;
-        const px = cx + p.x * Rg, py = cy + p.y * Rg, size = Rg * (.09 + p.s.cls * .018) * p.z * (1 + .08 * Math.sin(t * 5 + p.ph));
+        const px = cx + p.x * hx, py = cy + p.y * hy, size = U * (.08 + p.s.cls * .016) * p.z * (1 + .08 * Math.sin(t * 5 + p.ph));
         p.tr.unshift([px, py]); if (p.tr.length > 9) p.tr.pop();
         p.tr.forEach(([tx, ty], i) => { if (!i) return; const k = 1 - i / 10; x.globalAlpha = .18 * k; const s2 = size * (.4 + .5 * k); x.drawImage(sprites[p.s.cls], tx - s2, ty - s2, s2 * 2, s2 * 2); });
         x.globalAlpha = clamp(.55 + .35 * p.z + (ag > .5 ? (Math.random() - .5) * .4 : 0), 0, 1); x.drawImage(sprites[p.s.cls], px - size, py - size, size * 2, size * 2);
@@ -344,14 +333,11 @@
       x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
       const sw = sel && W.find(p => p.s.id === sel);
       if (sw) { x.strokeStyle = CLS_C[sw.s.cls]; x.lineWidth = 1.5 * dpr; x.setLineDash([4 * dpr, 4 * dpr]); x.beginPath(); x.arc(sw.px, sw.py, sw.size * 1.15 + 6 * dpr, 0, 7); x.stroke(); x.setLineDash([]); }
-      if (st.field < 90 || st.insp) { x.fillStyle = `rgba(255,30,10,${.07 + .07 * Math.sin(t * 8)})`; x.fillRect(0, 0, w, w); }
-      for (let yy = 0; yy < w; yy += 3 * dpr) { x.fillStyle = '#0000002a'; x.fillRect(0, yy, w, dpr); }
-      g = x.createLinearGradient(cx - Rg, cy - Rg, cx, cy); g.addColorStop(0, '#ffffff1c'); g.addColorStop(.5, '#ffffff05'); g.addColorStop(1, '#fff0');
-      x.fillStyle = g; x.beginPath(); x.ellipse(cx - Rg * .25, cy - Rg * .35, Rg * .55, Rg * .3, -.6, 0, 7); x.fill();
-      g = x.createRadialGradient(cx, cy, Rg * .7, cx, cy, Rg); g.addColorStop(0, '#0000'); g.addColorStop(1, '#000c'); x.fillStyle = g; x.fillRect(0, 0, w, w);
-      x.restore();
-      x.strokeStyle = '#000'; x.lineWidth = 3 * dpr; x.beginPath(); x.arc(cx, cy, Rg, 0, 7); x.stroke();
-      if (shown.length < spirits.length) { x.fillStyle = '#ffcf8acc'; x.font = `${Math.round(R * .045)}px "Share Tech Mono",monospace`; x.textAlign = 'center'; x.fillText(`+${spirits.length - shown.length} IN DEEP STORAGE`, cx, cy + R * .955); }
+      if (st.field < 90 || st.insp) { x.fillStyle = `rgba(255,30,10,${.07 + .07 * Math.sin(t * 8)})`; x.fillRect(0, 0, w, h); }
+      for (let yy = 0; yy < h; yy += 3 * dpr) { x.fillStyle = '#0000002a'; x.fillRect(0, yy, w, dpr); }
+      g = x.createRadialGradient(cx, cy, U * .8, cx, cy, Math.max(w, h) * .75); g.addColorStop(0, '#0000'); g.addColorStop(1, '#0009'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+      x.fillStyle = '#ffcf8aaa'; x.font = `${Math.round(U * .065)}px "Share Tech Mono",monospace`; x.textAlign = 'left'; x.fillText(`CHAMBER FEED // ${spirits.length} ENTITIES`, 8 * dpr, 16 * dpr);
+      if (shown.length < spirits.length) { x.textAlign = 'right'; x.fillText(`+${spirits.length - shown.length} IN DEEP STORAGE`, w - 8 * dpr, h - 8 * dpr); }
       raf = requestAnimationFrame(draw);
     }
 
@@ -397,7 +383,7 @@
       st.field += (clamp(target, 70, 99.9) - st.field) * (st.insp ? .02 : .05);
       st.agit = clamp((99 - st.field) / 10, 0, 1);
       const lvl = st.field < 90 ? 2 : st.field < 95 ? 1 : 0;
-      if (lvl > st.lvl) { st.lvl = lvl; if (lvl === 2) { log('CRITICAL: FIELD BELOW 90% // HOLD VIEWPORT TO CALM'); buzz([200, 80, 200]); } else { log('WARN: CONTAINMENT FIELD ' + fmt(st.field, 1) + '%'); buzz(40); } }
+      if (lvl > st.lvl) { st.lvl = lvl; if (lvl === 2) { log('CRITICAL: FIELD BELOW 90% // HOLD FEED TO CALM'); buzz([200, 80, 200]); } else { log('WARN: CONTAINMENT FIELD ' + fmt(st.field, 1) + '%'); buzz(40); } }
       else if (lvl < st.lvl && (lvl > 0 || st.field > 96)) { st.lvl = lvl; if (!lvl) log('OK: CONTAINMENT FIELD STABLE'); } // calls it stable once back above 96
       const ag = st.agit * (st.calming ? .3 : 1);
       st.temp += ((31 + 22 * ag + .8 * Math.sin(t / 5)) - st.temp) * .08;
