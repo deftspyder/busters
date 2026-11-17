@@ -129,6 +129,7 @@ h2{font-size:26px}h3{font-size:20px}
 .qa .qb{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);font:700 16px "DM Sans",sans-serif;cursor:pointer;padding:0;display:grid;place-items:center}
 .qa .qb.y{border-color:var(--good);color:var(--good)}.qa .qb.m{border-color:var(--warn);color:var(--warn)}.qa .qb.n{color:var(--muted)}
 .qa .qb:active{transform:scale(.94)}
+.noic{width:1em;height:1em;vertical-align:-.15em;display:inline-block}.qa .qb .noic{width:18px;height:18px}
 .qa .qsp{flex:1}
 .empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
 
@@ -467,6 +468,8 @@ async function rpc(fn, args) { const { data, error } = await sb.rpc(fn, args); i
 const nice = m => /not allowed/.test(m) ? "You don't have the ability to do that." : /point of contact/.test(m) ? 'That person cannot be point of contact yet.' : m;
 
 const ICON = {
+  // "No" answer: a circle with a slash, so it doesn't read as a close button.
+  no: '<svg class="noic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M6 18L18 6"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
   events: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   me: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c.9-4.2 4-6.5 8-6.5s7.1 2.3 8 6.5"/></svg>',
@@ -753,14 +756,14 @@ function staffPill(e) {
   return `<span class="pill ${cls}" title="${e.max_busters ? e.going + ' want in, ' + e.max_busters + ' spots' : 'Busters going' + (e.min_busters != null ? ', minimum ' + e.min_busters : '') + (e.goal_busters ? ', goal ' + e.goal_busters : '')}">${staffText(e)}</span>`;
 }
 function ansSummary(e, r) {
-  const t = r.answer === 'going' ? (e.max_busters ? (r.spot === 'in' ? "&#10003; You're in" : r.spot === 'reserve' ? "You're on reserve" : '&#10003; You want in') : "&#10003; You're going") : r.answer === 'maybe' ? '? Maybe' : '&#10005; Not going';
+  const t = r.answer === 'going' ? (e.max_busters ? (r.spot === 'in' ? "&#10003; You're in" : r.spot === 'reserve' ? "You're on reserve" : '&#10003; You want in') : "&#10003; You're going") : r.answer === 'maybe' ? '? Maybe' : ICON.no + ' Not going';
   return `<button class="ans-sum ${r.answer}" data-chg="${e.id}"><span>${t}</span><span class="ch-l">Change</span></button>`;
 }
 S.chg = {};
 function myStatus(e, r) {
   if (!r || !r.answer) return '';
   if (r.answer === 'going') return e.max_busters ? (r.spot === 'in' ? '<span class="pill good">&#10003; You\'re in</span>' : r.spot === 'reserve' ? '<span class="pill warn">You\'re on reserve</span>' : '<span class="pill good">&#10003; You want in</span>') : '<span class="pill good">&#10003; You\'re going</span>';
-  return r.answer === 'maybe' ? '<span class="pill warn">? Maybe</span>' : '<span class="pill">&#10005; Not going</span>';
+  return r.answer === 'maybe' ? '<span class="pill warn">? Maybe</span>' : '<span class="pill">' + ICON.no + ' Not going</span>';
 }
 function answerPill(eid) { const r = myRsvp(eid); if (!r) return ''; return { going: '<span class="pill good">You: Going</span>', maybe: '<span class="pill warn">You: Maybe</span>', no: '<span class="pill">You: No</span>' }[r.answer]; }
 function durText(e) {
@@ -796,7 +799,7 @@ function eventRow(e, opts = {}) {
     ${dateBox(e)}
     <div class="grow"><div class="t">${esc(e.title)}</div>
       ${opts.line != null ? opts.line : ''}${opts.line ? '' : `<div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc([e.date_tbd ? 'Date TBD' : '', tl, where].filter(Boolean).join(' · ')) || 'Times and place coming'}</div>`}
-      ${opts.admin ? (opts.pills ? `<div class="pills">${opts.pills}</div>` : '') : canAns && !r.answer && !open ? `<div class="qa${w ? ' hot' : ''}"><span class="qal">${e.max_busters ? 'Want in?' : 'Are you in?'}</span><button class="qb y" data-qa="going" aria-label="${e.max_busters ? 'Count me in' : 'Going'}" title="${e.max_busters ? 'Count me in' : 'Going'}">&#10003;</button><button class="qb m" data-qa="maybe" aria-label="Maybe" title="Maybe">?</button><button class="qb n" data-qa="no" aria-label="Not going" title="Not going">&#10005;</button><span class="qsp"></span>${staffPill(e)}</div>`
+      ${opts.admin ? (opts.pills ? `<div class="pills">${opts.pills}</div>` : '') : canAns && !r.answer && !open ? `<div class="qa${w ? ' hot' : ''}"><span class="qal">${e.max_busters ? 'Want in?' : 'Are you in?'}</span><button class="qb y" data-qa="going" aria-label="${e.max_busters ? 'Count me in' : 'Going'}" title="${e.max_busters ? 'Count me in' : 'Going'}">&#10003;</button><button class="qb m" data-qa="maybe" aria-label="Maybe" title="Maybe">?</button><button class="qb n" data-qa="no" aria-label="Not going" title="Not going">${ICON.no}</button><span class="qsp"></span>${staffPill(e)}</div>`
         : `<div class="pills">${myStatus(e, r)}${staffPill(e)}</div>`}
     </div><div class="xside">${can('edit_events') || (e.poc_id && S.me && e.poc_id === S.me.id) ? `<button class="xedit" data-edit="${e.id}" title="Edit event" aria-label="Edit ${esc(e.title)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>` : ''}<span class="chev">${ICON.back}</span></div></div>
     ${open ? `<div class="xb">
@@ -1960,11 +1963,11 @@ function renderTeam(m) {
   if ($('#placesbox')) placesCard($('#placesbox'));
   if ($('#mediabox')) mediaCard($('#mediabox'));
   if ($('#plist')) personnelList($('#plist'));
-  m.querySelectorAll('[data-chg]').forEach(b => b.onclick = async () => {
-    const ok = b.dataset.ok === '1', c = (S.changes || []).find(x => x.id === b.dataset.chg);
+  m.querySelectorAll('[data-pchg]').forEach(b => b.onclick = async () => {
+    const ok = b.dataset.ok === '1', c = (S.changes || []).find(x => x.id === b.dataset.pchg);
     if (!ok && !confirmBox('Decline ' + (c ? c.full_name + "'s" : 'these') + ' changes? Their old info stays.')) return;
     b.disabled = true;
-    try { await rpc('decide_change', { p_id: b.dataset.chg, p_approve: ok }); } catch (_) { b.disabled = false; return; }
+    try { await rpc('decide_change', { p_id: b.dataset.pchg, p_approve: ok }); } catch (_) { b.disabled = false; return; }
     toast(ok ? 'Approved' : 'Declined'); refresh();
   });
   if ($('#mediasetup')) mediaCard($('#mediasetup'), 'setup');
@@ -2025,7 +2028,7 @@ function changesCard() {
   return `<div class="sec"><h2>Changes to approve <span class="badge" style="position:static;display:inline-grid;margin-left:4px">${xs.length}</span></h2>
     ${xs.map(c => `<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b>${esc(c.full_name)}</b><span class="tiny dim">${new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>
       ${Object.entries(c.changes).map(([k, v]) => `<div class="small" style="margin-top:6px"><div class="muted tiny" style="text-transform:uppercase;letter-spacing:.06em">${esc(HELD[k] || k)}</div><span class="dim" style="text-decoration:line-through">${show(k, v.old)}</span> <span class="muted">›</span> <b>${show(k, v.new)}</b></div>`).join('')}
-      <div class="btns" style="margin-top:10px;justify-content:flex-end"><button class="btn sm danger" data-chg="${c.id}" data-ok="0">Decline</button><button class="btn sm primary" data-chg="${c.id}" data-ok="1">Approve</button></div></div>`).join('')}
+      <div class="btns" style="margin-top:10px;justify-content:flex-end"><button class="btn sm danger" data-pchg="${c.id}" data-ok="0">Decline</button><button class="btn sm primary" data-pchg="${c.id}" data-ok="1">Approve</button></div></div>`).join('')}
   </div>`;
 }
 /* ---------- Personnel: one list of everyone, with Expand and Edit ---------- */
