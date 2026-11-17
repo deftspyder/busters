@@ -627,7 +627,7 @@ async function allRows(query) {
 async function loadAll() {
   const c = S.crew.id;
   const since = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
-  const [sess, ev, pl, pe, rs, ep, an, gb, fb, sp, cs, ef] = await Promise.all([
+  const [sess, ev, pl, pe, rs, ep, an, gb, fb, sp, cs, ef, mc, pc] = await Promise.all([
     rpc('my_session', { p_crew: c }),
     sb.from('events_full').select('*').eq('crew_id', c).gte('event_date', since).order('event_date').order('call_time', { nullsFirst: false }),
     sb.from('places').select('*').eq('crew_id', c).order('name'),
@@ -641,12 +641,15 @@ async function loadAll() {
     sb.rpc('fundraising_board', { p_crew: c, p_year: Number(todayISO().slice(0, 4)) }),
     sb.rpc('crew_contacts', { p_crew: c }).then(r => r.error ? sb.rpc('shared_phones', { p_crew: c }) : r),
     sb.rpc('crew_settings', { p_crew: c }),
-    sb.from('event_files').select('*').eq('crew_id', c).order('created_at')
+    sb.from('event_files').select('*').eq('crew_id', c).order('created_at'),
+    sb.rpc('my_pending_change', { p_crew: c }),
+    sb.rpc('pending_changes', { p_crew: c })
   ]);
   // A list that failed to load must not look like an empty crew.
   const failed = [ev, pl, pe, rs, ep].find(r => r.error);
   if (failed) throw new Error(failed.error.message || 'load failed');
   S.appAdmin = sess.app_admin; S.me = sess.person; S.priv = sess.private || {}; S.dues = sess.dues || {}; S.profile = sess.profile || {};
+  S.myChange = (mc && !mc.error && mc.data) || null; S.changes = (pc && !pc.error && pc.data) || [];
   if (S.me && !['active', 'rookie'].includes(S.me.status)) S.me = null;
   S.events = ev.data || []; S.places = pl.data || []; S.people = pe.data || []; S.rsvps = rs.data || []; S.eplaces = ep.data || []; S.files = (ef && ef.data) || []; S.announcements = an.data || []; S.gb = (gb && gb.data) || null; S.board = (fb && fb.data) || []; S.settings = (cs && cs.data) || {}; S.contacts = Object.fromEntries(((sp && sp.data) || []).map(x => [x.person_id, x])); S.phones = Object.fromEntries(Object.values(S.contacts).filter(x => x.phone).map(x => [x.person_id, x.phone]));
 }
@@ -1309,8 +1312,14 @@ function myStats(past, hosp) {
     ${row(`${esc(S.crew.short || 'Crew')} on Give Back`, gbSub, g && g.amount != null ? money0(g.amount) : '-', 'mygb')}
   </div>`;
 }
+// Member edits to these fields wait for Personnel to approve (migration 076). Sharing choices apply right away.
+const HELD = { callsign: 'Callsign', phone: 'Phone', discord: 'Discord name', instagram: 'Instagram', birthday: 'Birthday', city: 'City' };
 function renderMine(m) {
   const t = todayISO();
+  const ch = (S.myChange && S.myChange.changes) || {};
+  // Show what's waiting in the boxes, so saving again keeps it instead of undoing it.
+  const val = (k, live) => k in ch ? (ch[k].new || '') : (live || '');
+  const selfOk = can('manage_recruits');
   const mineUp = S.events.filter(e => (e.end_date || e.event_date) >= t && e.status !== 'proposed' && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer));
   const past = S.events.filter(e => e.event_date < t && e.status !== 'cancelled' && (myRsvp(e.id) || {}).answer === 'going');
   const yr = t.slice(0, 4);
@@ -1325,17 +1334,18 @@ function renderMine(m) {
     <div class="sec"><h2>Coming up</h2>${mineUp.length ? byMonth(mineUp, e => e.event_date, eventRow) : '<div class="empty">Nothing yet. Answer Going on an event and it shows here.</div>'}</div>
     <div class="sec"><h2>Dues</h2><div class="card">${me.honorary ? `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Honorary member</span>${duesPill('EXEMPT')}</div>` : Object.keys(S.dues).length ? Object.entries(S.dues).sort().reverse().map(([y, s]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${y}</span>${duesPill(s)}</div>`).join('') : '<span class="muted small">No dues on record.</span>'}</div></div>
     <div class="sec"><h2>My details</h2><div class="card">
-      <p class="muted small" style="margin-top:0">Only you, Personnel and the crew admin see these.</p>
+      <p class="muted small" style="margin-top:0">Only you, Personnel and the crew admin see these.${selfOk ? '' : ' Changes to your callsign, phone, Discord, Instagram, birthday or city go to Personnel to approve.'}</p>
+      ${Object.keys(ch).length ? `<div class="card" style="border-color:var(--warn);margin:0 0 12px;padding:10px 12px"><div class="small" style="color:var(--warn);font-weight:600">Waiting for Personnel</div><div class="small muted">${Object.keys(ch).map(k => esc(HELD[k] || k)).join(', ')}. Until it's approved, everyone still sees your old info.</div></div>` : ''}
       <form id="mf">
-        <label class="f"><span>Callsign</span><input class="in" name="callsign" value="${esc(me.callsign || '')}"></label>
-        <div class="grid2"><label class="f"><span>Phone</span><input class="in" type="tel" name="phone" value="${esc(S.priv.phone || '')}"></label><label class="f"><span>Discord name</span><input class="in" name="discord" value="${esc(S.priv.discord || '')}"></label></div>
-        <div class="grid2"><label class="f"><span>Instagram</span><input class="in" name="instagram" value="${esc(S.priv.instagram || '')}"></label><label class="f"><span>Birthday (month and day)</span><input class="in" name="birthday" placeholder="MM-DD" pattern="\\d{2}-\\d{2}" value="${esc(S.priv.birthday || '')}"></label></div>
+        <label class="f"><span>Callsign</span><input class="in" name="callsign" value="${esc(val('callsign', me.callsign))}"></label>
+        <div class="grid2"><label class="f"><span>Phone</span><input class="in" type="tel" name="phone" value="${esc(val('phone', S.priv.phone))}"></label><label class="f"><span>Discord name</span><input class="in" name="discord" value="${esc(val('discord', S.priv.discord))}"></label></div>
+        <div class="grid2"><label class="f"><span>Instagram</span><input class="in" name="instagram" value="${esc(val('instagram', S.priv.instagram))}"></label><label class="f"><span>Birthday (month and day)</span><input class="in" name="birthday" placeholder="MM-DD" pattern="\\d{2}-\\d{2}" value="${esc(val('birthday', S.priv.birthday))}"></label></div>
         <div class="gc-lbl" style="margin:6px 0 2px">Contact</div>
         <div class="tiny dim" style="margin-bottom:4px">Shows on your card in the Crew tab. Personnel always sees all of your details.</div>
         <label class="check" style="opacity:.7"><input type="checkbox" checked disabled> Discord (always shown)</label>
         <label class="check"><input type="checkbox" name="share_phone" ${S.priv.share_phone ? 'checked' : ''}> Phone, so members can call or text me</label>
         <label class="check"><input type="checkbox" name="share_email" ${S.priv.share_email ? 'checked' : ''}> Email (${esc(S.priv.email || (S.session.user && S.session.user.email) || 'my sign-in email')})</label>
-        <label class="f"><span>City (for the member map, city level only)</span><input class="in" name="city" placeholder="Redondo Beach" value="${esc(me.city || '')}"></label>
+        <label class="f"><span>City (for the member map, city level only)</span><input class="in" name="city" placeholder="Redondo Beach" value="${esc(val('city', me.city))}"></label>
         <label class="check"><input type="checkbox" name="show_on_map" ${me.show_on_map ? 'checked' : ''}> Show me on the member map</label>
         <div class="tiny dim" style="margin:-4px 0 8px 30px">Only your city shows, at the city's center. New cities appear within about 10 minutes.</div>
         <div class="small muted">Sign-in email: ${esc(S.priv.email || (S.session.user && S.session.user.email) || '')}</div>
@@ -1359,7 +1369,7 @@ function renderMine(m) {
   $('#mf').onsubmit = async ev => {
     ev.preventDefault(); const f = ev.target;
     await rpc('save_my_details', { p_crew: S.crew.id, p: { callsign: f.callsign.value, phone: f.phone.value, discord: f.discord.value, instagram: f.instagram.value, birthday: f.birthday.value, city: f.city.value, show_on_map: f.show_on_map.checked, share_phone: f.share_phone.checked, share_email: f.share_email.checked } });
-    await refresh(); toast('Saved');
+    await refresh(); toast(S.myChange ? 'Saved. Personnel will approve the changes.' : 'Saved');
   };
 }
 
@@ -1910,7 +1920,7 @@ function renderTeam(m) {
   const isEv = ['add_events', 'edit_events', 'manage_proposals', 'pick_attendees', 'take_attendance'].some(can);
   const dash = [
     isEv && ['events', 'Events', proposals.length + short.length + limited.length + incomplete.length],
-    (can('approve_members') || can('manage_recruits')) && ['personnel', 'Personnel', pending.length],
+    (can('approve_members') || can('manage_recruits')) && ['personnel', 'Personnel', pending.length + (can('manage_recruits') ? (S.changes || []).length : 0)],
     can('webmaster') && ['media', 'Media', 0],
     can('crew_admin') && ['crew', 'Fundraising', unpublished.length],
     S.appAdmin && ['app', 'App', 0]
@@ -1931,7 +1941,7 @@ function renderTeam(m) {
       const xs = [...need.values()].sort((a, b) => a.e.event_date < b.e.event_date ? -1 : a.e.event_date > b.e.event_date ? 1 : 0);
       return `<div class="sec">${xs.length ? byMonth(xs, x => x.e.event_date, tile) : list([])}</div>
       ${can('edit_events') ? '<div class="sec" id="dcsched"></div><div class="sec" id="placesbox"></div>' : ''}`; },
-    personnel: () => can('manage_recruits') ? `<div class="sec" id="plist"><div class="empty">Loading...</div></div>`
+    personnel: () => can('manage_recruits') ? `${changesCard()}<div class="sec" id="plist"><div class="empty">Loading...</div></div>`
       : `<div class="sec">${list(pending.map(p => item('Wants to join', p.full_name, 'Asked ' + (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'recently'), `data-join="${p.id}"`, 'Review')))}</div>`,
     media: () => `<div class="sec" id="mediabox"><div class="empty">Loading...</div></div>`,
     // App admin only: how Busters itself is wired up (accounts and keys), not day-to-day crew work.
@@ -1949,6 +1959,13 @@ function renderTeam(m) {
   if ($('#placesbox')) placesCard($('#placesbox'));
   if ($('#mediabox')) mediaCard($('#mediabox'));
   if ($('#plist')) personnelList($('#plist'));
+  m.querySelectorAll('[data-chg]').forEach(b => b.onclick = async () => {
+    const ok = b.dataset.ok === '1', c = (S.changes || []).find(x => x.id === b.dataset.chg);
+    if (!ok && !confirmBox('Decline ' + (c ? c.full_name + "'s" : 'these') + ' changes? Their old info stays.')) return;
+    b.disabled = true;
+    try { await rpc('decide_change', { p_id: b.dataset.chg, p_approve: ok }); } catch (_) { b.disabled = false; return; }
+    toast(ok ? 'Approved' : 'Declined'); refresh();
+  });
   if ($('#mediasetup')) mediaCard($('#mediasetup'), 'setup');
   if ($('#donatecodes')) donateCodesCard($('#donatecodes'));
   const gbs = $('#gb-save'); if (gbs) gbs.onclick = async () => {
@@ -1998,6 +2015,17 @@ function reviewProposal(e) {
 }
 
 /* ---------- Personnel ---------- */
+// Changes to approve: members' own edits to their details, old vs new, waiting for Personnel (migration 076).
+function changesCard() {
+  const xs = S.changes || [];
+  if (!xs.length) return '';
+  const show = (k, v) => v ? esc(k === 'birthday' ? fmtDay('2000-' + v, { month: 'short', day: 'numeric' }) : v) : '<i class="dim">blank</i>';
+  return `<div class="sec"><h2>Changes to approve <span class="badge" style="position:static;display:inline-grid;margin-left:4px">${xs.length}</span></h2>
+    ${xs.map(c => `<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b>${esc(c.full_name)}</b><span class="tiny dim">${new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>
+      ${Object.entries(c.changes).map(([k, v]) => `<div class="small" style="margin-top:6px"><div class="muted tiny" style="text-transform:uppercase;letter-spacing:.06em">${esc(HELD[k] || k)}</div><span class="dim" style="text-decoration:line-through">${show(k, v.old)}</span> <span class="muted">›</span> <b>${show(k, v.new)}</b></div>`).join('')}
+      <div class="btns" style="margin-top:10px;justify-content:flex-end"><button class="btn sm danger" data-chg="${c.id}" data-ok="0">Decline</button><button class="btn sm primary" data-chg="${c.id}" data-ok="1">Approve</button></div></div>`).join('')}
+  </div>`;
+}
 /* ---------- Personnel: one list of everyone, with Expand and Edit ---------- */
 // Status is where someone is in membership; roles are what they can do. Both are set from Edit.
 let rosterData = [], rosterQ = '', rosterF = 'current', rosterOpen = new Set();
