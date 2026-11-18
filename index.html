@@ -1731,7 +1731,7 @@ function discordCard(d) {
       <button class="btn sm primary" id="dc-connect" style="margin-top:10px">Connect</button><div id="dc-msg" class="small" style="margin-top:6px"></div>`;
   return `<h2>Discord posts</h2><div class="card">${head}<div id="dc-link"></div><div id="dc-recent"></div>
     <hr style="border:0;border-top:1px solid var(--line, #222);margin:14px 0">
-    <label class="check"><input type="checkbox" id="dc-changes" ${d.post_changes !== false ? 'checked' : ''}><span>Post what changed when an upcoming event is updated (times, date, places, parking, cancelled)</span></label>
+    <label class="check"><input type="checkbox" id="dc-changes" ${d.post_changes !== false ? 'checked' : ''}><span>Post what changed when an upcoming event is updated (times, date, places, parking, cancelled). Typo fixes and edits that change nothing are skipped.</span></label>
     <label class="check" style="opacity:.55"><input type="checkbox" id="dc-photos" disabled ${d.post_photos ? 'checked' : ''}><span>Ask for photos and videos the day after an event <span class="tiny dim">(coming with Jeff's Dropbox drop)</span></span></label>
     <div class="tiny dim" style="margin-top:6px">When and how often the bot posts is set with the gear next to <b>Discord posting schedule</b> above. Posts never ping @everyone. Editors can also post any event from its page.</div>
     <button class="btn sm" id="dc-save" style="margin-top:10px">Save post settings</button>
