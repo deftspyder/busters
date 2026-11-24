@@ -2,7 +2,8 @@
    Opens from Proton Pack Diagnostics with the PACK | ECU switch (the pack is always the default), or on its own
    from ecu.html (public demo). Crew agnostic: it uses the crew's short name, events and people, and nothing
    about any one charity. Trap drop-offs come from the crew's finished events: one drop-off per event, credited
-   to a Buster who was Going. Hospital and children's visits never produce captures. Everything else
+   to a Buster who was Going. Hospital and children's visits never produce captures. Made-up archive jobs from
+   earlier years top it up (see ARCHIVE), with one Class VII always on hand. Everything else
    (field, power, faults, the inspector) is simulated.
    window.BustersECU.mount(ctx, api) -> { tone(audio), destroy() }
      ctx: { S, esc, todayISO, demo }
@@ -23,6 +24,13 @@
     'ENTITIES ARE NOT PETS // DO NOT NAME THEM', 'EMPTY TRAPS GO BACK ON THE RACK'];
   const TECH = ['PING: TELEMETRY REFRESHED', 'GRID: PHASE BALANCE OK', 'SEALS: PRESSURE HOLDING', 'COOLANT: LOOP NOMINAL',
     'FIELD: HARMONICS WITHIN LIMITS', 'BACKUP: CELLS ON STANDBY', 'PORT: INTERLOCK VERIFIED', 'SCRUBBER: PARTICULATE LOW'];
+  // Archive captures: older jobs, so the unit always holds a crowd. Made up, the same for everyone in the crew.
+  const MIN_GHOSTS = 24, MIN_ARCHIVE = 12, ARCHIVE_FROM = '2019-01-01';
+  const ARCHIVE = ['Haunted house, Disneyland', 'Hotel ballroom, 12th floor', 'Public library, basement stacks', 'Old subway tunnel, platform 3',
+    'Opera house, balcony box 5', 'Abandoned drive-in theater', 'Museum after hours, Egyptian wing', 'Wax museum storage room', 'Lighthouse keeper\'s quarters',
+    'Bowling alley, lane 13', 'Antique shop, the mirror aisle', 'Old firehouse, sleeping quarters', 'Roller rink, closing time', 'Pier arcade, the fortune teller machine',
+    'Movie palace, projection booth', 'Farmhouse cellar', 'City hall, records vault', 'Ghost town saloon', 'Observatory dome after dark', 'Ocean liner, B deck',
+    'Thrift store, haunted armchair', 'Karaoke bar, the back booth', 'Mini golf, hole 9 windmill', 'Parking structure, level P4', 'Diner, the 3 AM booth', 'Corn maze, dead center'];
   const RATE = 0.31; // $ per kWh for the bill estimate
 
   const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; return (h ^ (h >>> 16)) >>> 0; }; // mixed so ids that differ by one letter still spread out
@@ -43,6 +51,8 @@
     return 'routine';
   }
 
+  const mjOf = (c, hi) => +(Math.pow(c + 1, 1.4) * (0.8 + ((hi >>> 11) % 40) / 100)).toFixed(1);
+
   // Trap drop-offs from the crew's finished events (newest first). Codes number each month's spirits in order.
   function captures(S, today) {
     const short = String((S.crew && S.crew.short) || 'CREW').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'CREW';
@@ -59,10 +69,46 @@
       for (let i = 0; i < n; i++) {
         const hi = hash(e.id + ':' + i); let r = hi % 100, c = 0;
         while (c < 6 && r >= CLS_W[c]) { r -= CLS_W[c]; c++; }
-        spirits.push({ id: e.id + ':' + i, cls: c, kind: KINDS[(hi >>> 7) % KINDS.length], mj: +(Math.pow(c + 1, 1.4) * (0.8 + ((hi >>> 11) % 40) / 100)).toFixed(1) });
+        spirits.push({ id: e.id + ':' + i, cls: c, kind: KINDS[(hi >>> 7) % KINDS.length], mj: mjOf(c, hi) });
       }
       drops.push({ id: e.id, date: d, by: going[(h >>> 3) % going.length], event: e.title || 'Event', spirits });
     });
+    // Archive: older made-up jobs on top of the real ones, at least MIN_ARCHIVE of them and enough to reach MIN_GHOSTS.
+    // Credit rotates through the whole crew in a shuffled order so everyone gets some. A signed-in Buster always has
+    // at least two captures of their own. Dates fall after the Buster joined, back to ARCHIVE_FROM.
+    const crew = (S.people || []).filter(p => ['active', 'rookie'].includes(p.status));
+    const arc = [];
+    if (crew.length) {
+      const joined = p => String(p.member_since || p.rookie_since || p.created_at || '').slice(0, 10);
+      const vets = crew.filter(p => p.member_since); // rookies only get archive credit when they are the one looking
+      const order = (vets.length ? vets : crew).slice().sort((a, b) => hash('arc' + a.id) - hash('arc' + b.id) || String(a.id).localeCompare(String(b.id)));
+      const titles = ARCHIVE.map((t, i) => [hash(short + ':t:' + i), t]).sort((a, b) => a[0] - b[0]).map(q => q[1]);
+      const me = S.me && crew.find(p => p.id === S.me.id);
+      const mine = me ? drops.filter(d => d.by && d.by.id === me.id).reduce((a, d) => a + d.spirits.length, 0) : 2;
+      const dayN = iso => Math.floor(Date.parse(iso + 'T12:00:00Z') / 864e5), isoN = n => new Date(n * 864e5).toISOString().slice(0, 10);
+      const end = dayN((+today.slice(0, 4) - 1) + '-12-31');
+      let total = drops.reduce((a, d) => a + d.spirits.length, 0);
+      for (let i = 0; i < titles.length && (i < MIN_ARCHIVE || total < MIN_GHOSTS); i++) {
+        const id = 'arc:' + short + ':' + i, h = hash(id), n = 1 + h % 2;
+        const by = me && mine < 2 && i < 2 ? me : order[i % order.length];
+        const ms = /^\d{4}-\d\d-\d\d$/.test(joined(by)) ? joined(by) : '';
+        const from = dayN(ms > ARCHIVE_FROM ? ms : ARCHIVE_FROM), late = from + (h >>> 4) % 60;
+        const date = from < end - 30 ? isoN(from + (h >>> 4) % (end - from)) : ms && ms < today ? isoN(late < dayN(today) ? late : from) : isoN(dayN(today) - 1);
+        const spirits = [];
+        for (let k = 0; k < n; k++) {
+          const hi = hash(id + ':' + k); let r = hi % 100, c = 0;
+          while (c < 6 && r >= CLS_W[c]) { r -= CLS_W[c]; c++; }
+          spirits.push({ id: id + ':' + k, cls: c, kind: KINDS[(hi >>> 7) % KINDS.length], mj: mjOf(c, hi) });
+        }
+        total += n; arc.push({ id, date, by, event: titles[i], spirits, archive: true });
+      }
+      drops.push(...arc);
+    }
+    // There is always one Class VII in the unit: the red one that rams the walls.
+    if (drops.length && !drops.some(d => d.spirits.some(s => s.cls === 6))) {
+      const pool = arc.length ? arc : drops, d = pool[hash(short + ':angry') % pool.length], s = d.spirits[0];
+      s.cls = 6; s.kind = 'POLTERGEIST'; s.mj = mjOf(6, hash(s.id));
+    }
     drops.sort((a, b) => a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id)));
     const seq = {};
     drops.forEach(dr => dr.spirits.forEach(s => { const ym = dr.date.slice(2, 4) + dr.date.slice(5, 7); seq[ym] = (seq[ym] || 0) + 1; s.code = `${short}-${ym}-${String(seq[ym]).padStart(3, '0')}`; s.date = dr.date; s.by = dr.by; s.event = dr.event; }));
@@ -320,6 +366,10 @@
 
     // viewport: wisps for the newest 40 entities
     const shown = spirits.slice(0, 40);
+    { // the chamber always shows the Class VII and, for a signed-in Buster, two of their own captures
+      const must = [spirits.find(s => s.cls === 6), ...(S.me ? spirits.filter(s => s.by && s.by.id === S.me.id).slice(0, 2) : [])].filter(Boolean);
+      must.filter(s => !shown.includes(s)).forEach(s => { for (let k = shown.length - 1; k >= 0; k--) if (!must.includes(shown[k])) { shown[k] = s; break; } });
+    }
     const W = shown.map((s, i) => { const h = hash(s.id); return { s, x: ((h % 100) / 100 - .5) * 1.2, y: (((h >>> 8) % 100) / 100 - .5) * 1.2, a: (h % 628) / 100, z: .7, ph: (h % 1000) / 160, f1: .3 + (h % 50) / 100, f2: .9 + ((h >>> 5) % 50) / 60, sp: .1 + (s.cls * .03) + ((h >>> 9) % 20) / 200, tr: [] }; });
     const cv = $('#evp');
     let geo = { dpr: 1 }, lastT = performance.now(), rips = [], lastHitLog = -99;
