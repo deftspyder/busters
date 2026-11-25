@@ -2,19 +2,23 @@
  * Busters Google bridge for the Los Angeles Ghostbusters.
  *
  * Runs in the Google account that owns the LAGB Calendar Ops calendar and can open the yearly
- * Master Events List. It never writes to the sheet.
+ * Master Events Lists. It never writes to a sheet.
  *   - Every 5 minutes: syncs LAGB Calendar Ops with Busters, both ways.
- *   - Every hour: copies sign-up names and new event tabs from the sheet into Busters.
+ *   - Every hour: copies sign-up names and new event tabs from the sheets into Busters.
  *
  * Setup: paste this file into a new Apps Script project. Under Project Settings, Script properties, add
  * BRIDGE_TOKEN (the bridge key), CALENDAR_ID and SHEET_ID. Then run setup() once and approve the permissions.
- * The key and the two ids live only in Script properties, never in this file, because this file is public.
+ * SHEET_ID can hold more than one yearly sheet (this year's and next year's): put the ids or the full sheet
+ * links one after another, separated by a comma or a new line.
+ * The key and the ids live only in Script properties, never in this file, because this file is public.
  */
 
 const PROPS = PropertiesService.getScriptProperties();
 const BRIDGE_TOKEN = (PROPS.getProperty('BRIDGE_TOKEN') || '').trim();
 const CALENDAR_ID = (PROPS.getProperty('CALENDAR_ID') || '').trim();   // the crew's calendar
-const SHEET_ID = (PROPS.getProperty('SHEET_ID') || '').trim();         // the yearly events sheet (read only)
+const SHEET_ID = (PROPS.getProperty('SHEET_ID') || '').trim();         // the yearly events sheets (read only), one or more
+const EXTRA_SHEETS = '';   // more yearly sheets (ids or links), filled in only in the live Apps Script copy. Keep it blank here: this file is public.
+const SHEET_IDS = ((SHEET_ID + ' ' + EXTRA_SHEETS).match(/[-\w]{25,}/g) || []).filter(function (id, i, a) { return a.indexOf(id) === i; });   // ids, or ids pulled out of pasted links
 
 const SUPABASE_URL = 'https://fwptdvoifkfljblyziva.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Cq_YmHplQQL1xqIE6HhCwg_JYSMIFKp';   // public app key; the bridge key above is what proves it is you
@@ -48,39 +52,57 @@ function stop() {
 function syncSheet() {
   need_();
   return withLock_(function () {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    const year = Number((ss.getName().match(/(20\d\d)/) || [])[1]) || Number(Utilities.formatDate(new Date(), TZ, 'yyyy'));
     const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
     const tabs = [];
-    ss.getSheets().forEach(function (sh) {
-      const name = sh.getName();
-      const m = name.match(/^\s*(\d{1,2})\s*\/\s*(\d{1,2})/);
-      // "12/XX" tabs: the month is known but not the day. Busters lists them under that month as "Date TBD".
-      const tbd = !m && name.match(/^\s*(\d{1,2})\s*\/\s*XX?(?![a-z0-9])[\s_-]*(.*)$/i);
-      if (!m && !tbd) return;   // template and other tabs
-      const guess = tbd ? year + '-' + pad_(tbd[1]) + '-01' : year + '-' + pad_(m[1]) + '-' + pad_(m[2]);
-      if (guess < (tbd ? today.slice(0, 8) + '01' : today)) return;
-      try {
-        let ev = parseEventTab_(sh.getDataRange().getDisplayValues(), name, year);
-        if (!ev && tbd) ev = { tab: name, title: '', attendees: [], reserve: [] };   // a TBD tab that isn't filled in yet
-        if (ev && tbd) {
-          ev.date = guess; ev.end_date = null; ev.tbd = true;
-          if (!ev.title || ev.title === name) ev.title = String(tbd[2] || name).trim();
-        }
-        if (ev) tabs.push(ev);
-      } catch (e) { console.error('Could not read tab ' + name + ': ' + e.message); }
+    SHEET_IDS.forEach(function (id) {
+      let ss;
+      // One sheet that can't be opened (not shared, deleted) must not stop the others.
+      try { ss = SpreadsheetApp.openById(id); } catch (e) { console.error('Could not open sheet ' + id + ': ' + e.message); return; }
+      const year = Number((ss.getName().match(/(20\d\d)/) || [])[1]) || Number(Utilities.formatDate(new Date(), TZ, 'yyyy'));
+      ss.getSheets().forEach(function (sh) {
+        const name = sh.getName();
+        const m = name.match(/^\s*(\d{1,2})\s*\/\s*(\d{1,2})/);
+        // "12/XX" tabs: the month is known but not the day. Busters lists them under that month as "Date TBD".
+        const tbd = !m && name.match(/^\s*(\d{1,2})\s*\/\s*XX?(?![a-z0-9])[\s_-]*(.*)$/i);
+        if (!m && !tbd) return;   // template, "Future Event", "Happy New Year!" and other tabs without a date
+        const guess = tbd ? year + '-' + pad_(tbd[1]) + '-01' : year + '-' + pad_(m[1]) + '-' + pad_(m[2]);
+        const rng = m && name.match(/^\s*\d{1,2}\s*\/\s*\d{1,2}\s*-\s*(?:(\d{1,2})\s*\/\s*)?(\d{1,2})/);   // "2/5-7": keep reading until the last day
+        const last = rng ? year + '-' + pad_(rng[1] || m[1]) + '-' + pad_(rng[2]) : guess;
+        if ((last > guess ? last : guess) < (tbd ? today.slice(0, 8) + '01' : today)) return;
+        try {
+          let ev = parseEventTab_(sh.getDataRange().getDisplayValues(), name, year);
+          if (!ev && tbd) ev = { tab: name, title: '', attendees: [], reserve: [] };   // a TBD tab that isn't filled in yet
+          if (ev && tbd && !Array.isArray(ev)) {
+            ev.date = guess; ev.end_date = null; ev.tbd = true;
+            if (!ev.title || ev.title === name) ev.title = String(tbd[2] || name).trim();
+          }
+          // Busters remembers each event by its tab name. From 2027 on the year goes in front, so a tab that
+          // repeats next year (same parade, same date) is a new event and not last year's. 2026 keeps its old keys.
+          // A multi-day tab comes back as a list: one event per day.
+          (Array.isArray(ev) ? ev : ev ? [ev] : []).forEach(function (x) {
+            if (year > 2026) { x.tab = year + ' ' + x.tab; if (x.series) x.series = year + ' ' + x.series; }
+            tabs.push(x);
+          });
+        } catch (e) { console.error('Could not read tab ' + name + ': ' + e.message); }
+      });
     });
     return rpc_('bridge_sheet', { p_token: BRIDGE_TOKEN, p_tabs: tabs });
   });
 }
 
-/** One event tab to {tab, title, date, times, text fields, attendees[], reserve[]}. Works by header labels. */
+/** One event tab to {tab, title, date, times, text fields, attendees[], reserve[]}. Works by header labels.
+ *  A multi-day tab (a sign-up column per day) comes back as a list, one event per day: "Title - Day 1", "Title - Day 2". */
 function parseEventTab_(grid, tabName, year) {
   const norm = function (v) { return String(v == null ? '' : v).trim(); };
   let hr = -1;
   for (let r = 0; r < Math.min(grid.length, 30); r++) {
     const row = grid[r].map(function (c) { return norm(c).toLowerCase(); });
     if (row.indexOf('location') >= 0 && row.some(function (c) { return /^attendees?$/.test(c); })) { hr = r; break; }
+  }
+  // Multi-day tabs (conventions) have no Attendees column: each day has its own sign-up column instead.
+  if (hr < 0) for (let r = 0; r < Math.min(grid.length, 30); r++) {
+    const row = grid[r].map(function (c) { return norm(c).toLowerCase(); });
+    if (row.indexOf('location') >= 0 && row.indexOf('time') >= 0) { hr = r; break; }
   }
   if (hr < 0) return null;
   const labels = {
@@ -118,6 +140,47 @@ function parseEventTab_(grid, tabName, year) {
   }
   const schedule = cells('time').join('\n');
   const times = parseTimes_(schedule);
+  // Day columns: "Sign-up" in the header row, or a day like "Saturday 2/6" in the row above it.
+  const days = [];
+  if (col.attendees == null) grid[hr].forEach(function (c, i) {
+    const above = hr > 0 ? norm(grid[hr - 1][i]) : '';
+    const dd = above.match(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+(\d{1,2})\s*\/\s*(\d{1,2})/i);
+    if (!dd || Object.keys(col).some(function (k) { return col[k] === i; })) return;
+    const names = [], shifts = [], seen = {};
+    for (let r = hr + 1; r < end; r++) {
+      const v = norm(grid[r][i]);
+      if (!v) continue;
+      // Shift times in the column ("5:00 P - 8:00P") are not names.
+      if (/\d\s*(?::\d{2}\s*)?[ap]\.?m?\.?\s*(?:-|to|–)\s*\d/i.test(v)) { shifts.push(v.replace(/\s+/g, ' ')); continue; }
+      if (!/[a-z]{2}/i.test(v) || seen[v.toLowerCase()]) continue;
+      seen[v.toLowerCase()] = true; names.push(v);
+    }
+    days.push({ wd: dd[1].toLowerCase(), label: above, date: y + '-' + pad_(dd[2]) + '-' + pad_(dd[3]), names: names, shifts: shifts });
+  });
+  if (days.length > 1) {
+    const lines = schedule.split('\n').map(norm);
+    return days.map(function (d, n) {
+      // This day's own times: a "Fri 5pm" call line, and the line after a "Friday, Feb 5:" heading.
+      let call = null, show = '';
+      lines.forEach(function (l, k) {
+        if (l.toLowerCase().indexOf(d.wd) !== 0) return;
+        const cm = l.match(/^[a-z]+\.?\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m?\.?)$/i);
+        if (cm && call == null) call = hhmm_(toMinutes_(cm[1]));
+        if (/:$/.test(l) && !show) show = lines.slice(k + 1).filter(Boolean)[0] || '';
+      });
+      const t = parseTimes_(show);
+      return {
+        tab: tabName + ' | Day ' + (n + 1), title: title + ' - Day ' + (n + 1),
+        series: tabName,   // the days of one event share this, so going to several days counts as one event attended
+        date: d.date, end_date: null, call: call, start: t.start, wrap: t.wrap,
+        schedule: [d.label + (show ? ': ' + show : ''), d.shifts.length ? 'Shifts: ' + d.shifts.join(', ') : ''].filter(Boolean).join('\n'),
+        location: cells('location').join('\n'), parking: cells('parking').join('\n'),
+        event_contact: cells('eventContact').join('\n'), lagb_contact: cells('lagbContact').join('\n'),
+        notes: cells('notes').join('\n'), conditions: conditions,
+        attendees: d.names, reserve: []
+      };
+    });
+  }
   return {
     tab: tabName, title: title,
     date: y + '-' + pad_(dm[1]) + '-' + pad_(dm[2]),

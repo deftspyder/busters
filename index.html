@@ -1299,10 +1299,12 @@ function editEvent(e, propose = false) {
 
 /* ---------- Me tab (your record, details and settings) ---------- */
 // Personal stats list for the Me tab: this year against the yearly minimum, lifetime counts, money raised, and the crew's Give Back standing.
+// The days of a multi-day event share e.series and count as one event attended, however many days someone goes.
+function oncePerSeries(list) { const seen = new Set(); return list.filter(e => { const k = e.series || e.id; if (seen.has(k)) return false; seen.add(k); return true; }); }
 function myStats(past, hosp) {
   const yr = todayISO().slice(0, 4);
   const myYr = S.events.filter(e => e.status !== 'cancelled' && e.event_date.startsWith(yr) && (myRsvp(e.id) || {}).answer === 'going');
-  const done = myYr.filter(e => e.event_date < todayISO()).length, soon = myYr.length - done, MIN = 2;
+  const done = oncePerSeries(myYr.filter(e => e.event_date < todayISO())).length, soon = oncePerSeries(myYr).length - done, MIN = 2;
   const pips = Array.from({ length: MIN }, (_, i) => `<i class="${i < done ? 'f' : i < done + soon ? 'r' : ''}"></i>`).join('');
   const g = S.gb, raised = myRaised();
   const gbSub = g && g.amount != null ? [`#${g.rank} of ${g.groups} crews`, g.goal ? Math.round(100 * g.amount / g.goal) + '% of the ' + money0(g.goal) + ' goal' : ''].filter(Boolean).join(' · ') : 'Waiting on Sony\'s numbers';
@@ -1325,7 +1327,7 @@ function renderMine(m) {
   const val = (k, live) => k in ch ? (ch[k].new || '') : (live || '');
   const selfOk = can('manage_recruits');
   const mineUp = S.events.filter(e => (e.end_date || e.event_date) >= t && e.status !== 'proposed' && ['going', 'maybe'].includes((myRsvp(e.id) || {}).answer));
-  const past = S.events.filter(e => e.event_date < t && e.status !== 'cancelled' && (myRsvp(e.id) || {}).answer === 'going');
+  const past = oncePerSeries(S.events.filter(e => e.event_date < t && e.status !== 'cancelled' && (myRsvp(e.id) || {}).answer === 'going'));
   const yr = t.slice(0, 4);
   const hosp = past.filter(e => e.category === 'Hospital');
   const me = S.me;
@@ -1602,7 +1604,7 @@ function openPerson(id) {
   const t = todayISO(); const yr = t.slice(0, 4);
   const mine = S.rsvps.filter(r => r.person_id === id && r.answer === 'going').map(r => S.events.find(e => e.id === r.event_id)).filter(e => e && e.status !== 'cancelled');
   const up = mine.filter(e => (e.end_date || e.event_date) >= t).sort((a, b) => a.event_date < b.event_date ? -1 : 1);
-  const doneYr = mine.filter(e => e.event_date.startsWith(yr) && e.event_date < t).length;
+  const doneYr = oncePerSeries(mine.filter(e => e.event_date.startsWith(yr) && e.event_date < t)).length;
   const raised = (S.board.find(b => b.person_id === id) || {}).amount;
   const abil = p.abilities.map(a => (ABILITIES.find(x => x[0] === a) || [a, a])[1]);
   const role = p.abilities.includes('crew_admin') ? 'Admin' : abil.length ? abil.slice(0, 3).join(', ') + (abil.length > 3 ? ' +' + (abil.length - 3) : '') : 'Member';
