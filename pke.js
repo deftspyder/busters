@@ -150,17 +150,19 @@
     }
     // A ghostly light forms on the display while the Buster works the sweep bar: faint at low energy, bright and
     // larger at high energy, and it fades when they stop. It never sits still: it drifts around the screen, and
-    // every so often it sweeps off the left side trailing a tail, then comes back in from the right.
+    // every so often it sweeps off the left side trailing a tail, waits a moment out of sight, then comes back in
+    // from that same side.
     // Drawn first, so the grid and waveform sit over it.
-    const gh = { x: 1.3, y: .46, mode: 'in', next: 0, trail: [], last: 0, n: 0 };
+    const gh = { x: -.4, y: .46, mode: 'in', next: 0, until: 0, trail: [], last: 0, n: 0 };
     function drawGhost(g, w, h) {
       const now = performance.now() / 1000, dt = Math.min(.1, now - (gh.last || now)); gh.last = now;
       st.gh += (clamp(st.energy * 1.15, 0, 1) - st.gh) * .07; const a = st.gh;
       if (a < .02) { gh.trail.length = 0; if (gh.mode === 'hover') gh.next = Math.max(gh.next, now + 2); return; }
       const hx = .56 + .2 * Math.sin(now * .55) + .06 * Math.sin(now * 1.7), hy = .46 + .1 * Math.cos(now * .43) + .03 * Math.sin(now * 2.3);
       if (gh.mode === 'hover') { gh.x += (hx - gh.x) * Math.min(1, dt * 1.6); gh.y += (hy - gh.y) * Math.min(1, dt * 1.6); if (now > gh.next) gh.mode = 'out'; }
-      else if (gh.mode === 'out') { gh.x -= dt * (.75 + .5 * a); gh.y += (hy - .05 - gh.y) * Math.min(1, dt); if (gh.x < -.45) { gh.x = 1.4; gh.y = .3 + Math.random() * .35; gh.mode = 'in'; gh.trail.length = 0; } }
-      else { gh.x -= dt * Math.max(.25, (gh.x - hx) * 1.4); gh.y += (hy - gh.y) * Math.min(1, dt * 1.2); if (gh.x - hx < .04) { gh.mode = 'hover'; gh.next = now + rnd(4, 9); } }
+      else if (gh.mode === 'out') { gh.x -= dt * (.75 + .5 * a); gh.y += (hy - .05 - gh.y) * Math.min(1, dt); if (gh.x < -.45) { gh.mode = 'away'; gh.until = now + rnd(.5, 1.4); } }
+      else if (gh.mode === 'away') { if (now > gh.until) gh.mode = 'in'; }
+      else { gh.x += dt * Math.max(.25, (hx - gh.x) * 1.4); gh.y += (hy - gh.y) * Math.min(1, dt * 1.2); if (hx - gh.x < .04) { gh.mode = 'hover'; gh.next = now + rnd(4, 9); } }
       if (++gh.n % 3 === 0) { gh.trail.unshift([gh.x, gh.y]); if (gh.trail.length > 26) gh.trail.pop(); }
       const R = Math.min(w, h) * (.15 + .2 * a), edge = x => clamp(Math.min(x + .3, 1.3 - x) / .4, 0, 1);
       const blob = (x, y, r, al) => { if (al <= .004) return; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(190,255,228,${al})`); gr.addColorStop(.5, `rgba(120,255,200,${al * .5})`); gr.addColorStop(1, 'rgba(60,255,170,0)');
