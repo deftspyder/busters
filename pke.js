@@ -68,11 +68,12 @@
       g.lineWidth = R * .09; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(R * .08, -R * 1.2 + i * R * .09); g.bezierCurveTo(R * .6, -R * 1.25 + i * R * .15, R * .7, -R * .65 + i * R * .2 + sw, R * 1.15 + i * R * .08, -R * .35 + i * R * .26 + sw * 2); g.stroke(); }
       g.lineWidth = R * .08; g.beginPath(); g.moveTo(-R * .24, -R * .5); g.quadraticCurveTo(-R * .7, -R * .3, -R * 1.0, -R * .58 + sw); g.stroke();
     } else if (type === 'polter') {
-      // no body: orbs circling a faint core, with small flung shapes tumbling around them
-      const gr = g.createRadialGradient(0, 0, 0, 0, 0, R * .7); gr.addColorStop(0, c(al * .45)); gr.addColorStop(1, c(0)); g.fillStyle = gr; g.shadowBlur = 0; el(0, 0, R * .7, R * .7);
-      g.fillStyle = c(al); g.shadowBlur = R * .3;
-      for (let i = 0; i < 10; i++) { const an = t * (1.1 + (i % 3) * .55) + i * 2.4, rr = R * (.4 + (i % 4) * .27); el(Math.cos(an) * rr, Math.sin(an) * rr * .75, R * (.07 + (i % 3) * .04), R * (.07 + (i % 3) * .04)); }
-      for (let i = 0; i < 4; i++) { const an = -t * .9 + i * 1.57; g.save(); g.translate(Math.cos(an) * R * 1.15, Math.sin(an) * R * .85); g.rotate(t * 3 + i * 1.3); g.fillRect(-R * .12, -R * .07, R * .24, R * .14); g.restore(); }
+      // chaos without hard edges: a big restless wisp at the centre with smaller wisps whipping around it, each trailing a tail
+      g.shadowBlur = 0; const soft = (x, y, r, a2) => { if (r <= 0) return; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c(a2)); gr.addColorStop(.5, c(a2 * .45)); gr.addColorStop(1, c(0)); g.fillStyle = gr; el(x, y, r, r); };
+      for (let i = 0; i < 3; i++) soft(Math.sin(t * 2.3 + i * 2.1) * R * .16, Math.cos(t * 1.9 + i * 2.1) * R * .14, R * (.62 + .1 * Math.sin(t * 3.1 + i)), al * .5);
+      for (let i = 0; i < 7; i++) { const dir = i % 2 ? -1 : 1, sp = 1.3 + (i % 3) * .7, ph = i * 2.4, rx = R * (.75 + (i % 4) * .2), ry = rx * (.55 + (i % 3) * .2), tilt = i * .9;
+        for (let k = 7; k >= 0; k--) { const an = dir * (t * sp - k * .11) + ph, wob = 1 + .18 * Math.sin(t * 2.7 + i + k * .2), ox = Math.cos(an) * rx * wob, oy = Math.sin(an) * ry * wob;
+          soft(ox * Math.cos(tilt) - oy * Math.sin(tilt), ox * Math.sin(tilt) + oy * Math.cos(tilt), R * (.15 + (i % 3) * .04) * (1 - k * .1), al * (k ? .34 * (1 - k / 8) : .95)); } }
     } else if (type === 'shadow') {
       // a dark figure that blots out its own pale halo
       const gr = g.createRadialGradient(0, R * .1, R * .3, 0, R * .1, R * 1.9); gr.addColorStop(0, c(al * .7)); gr.addColorStop(1, c(0)); g.fillStyle = gr; g.shadowBlur = 0; el(0, R * .1, R * 1.9, R * 1.9);
@@ -215,10 +216,10 @@
           const on = i < lit, head = on && Math.abs(hd - i) < 1.2, part = clamp(lit - i, 0, 1), [cr, cg, cb] = ledRGB(t);
           for (const side of [-1, 1]) {
             g.beginPath(); const x = cx + side * dx;
-            if (seg) { const sw = across ? 8.5 : 22, sh = across ? 22 : 8.5; if (g.roundRect) g.roundRect(x - sw / 2, y - sh / 2, sw, sh, 2); else g.rect(x - sw / 2, y - sh / 2, sw, sh); }
+            if (seg) { const sw = across ? 8 : 22, sh = across ? 22 : 8; g.rect(Math.round((x - sw / 2) * d) / d, Math.round((y - sh / 2) * d) / d, sw, sh); } // square corners on whole pixels, so every edge is crisp
             else g.arc(x, y, rad, 0, 7);
             if (on) { g.fillStyle = head ? `rgb(${Math.round(cr + (255 - cr) * .7)},${Math.round(cg + (255 - cg) * .7)},${Math.round(cb + (255 - cb) * .7)})` : `rgba(${cr},${cg},${cb},${.55 + .45 * part})`;
-              g.shadowColor = `rgb(${cr},${cg},${cb})`; g.shadowBlur = head ? 16 : 9; }
+              g.shadowColor = `rgb(${cr},${cg},${cb})`; g.shadowBlur = seg ? (head ? 6 : 2.5) : head ? 16 : 9; }
             else { g.fillStyle = `rgb(${Math.round(cr * .16 + 10)},${Math.round(cg * .16 + 10)},${Math.round(cb * .16 + 8)})`; g.shadowBlur = 0; }
             g.fill();
           }
