@@ -33,7 +33,7 @@
   // Ghost types a Buster can set the scan for. [id, button label, log name]
   const GHOSTS = [['wisp', 'WISP', 'FREE-FLOATING VAPOR'], ['friendly', 'FRIENDLY', 'FRIENDLY HAUNT'], ['library', 'LIBRARY', 'LIBRARY APPARITION'], ['polter', 'POLTER', 'POLTERGEIST'], ['eyes', 'EYES', 'UNSEEN WATCHER']];
   // how big each type is drawn on the scanner, next to the others
-  const SIZE = { friendly: .5, polter: .6 };
+  const SIZE = { friendly: .5, polter: .6, eyes: 1.25 };
   // Types shown from art Bill supplied (cut out of their backgrounds and tinted for the scanner). The others are drawn in code.
   const ART = { library: 'img/pke/librarian.png?v=1' }, art = {};
   function artLoad(id, cb) { if (!ART[id]) return; let a = art[id]; if (!a) { a = art[id] = { img: new Image(), ok: false, cbs: [] }; a.img.onload = () => { a.ok = true; a.cbs.forEach(f => f()); a.cbs = []; }; a.img.src = ART[id]; }
@@ -75,7 +75,7 @@
     } else if (type === 'eyes') {
       // nothing but a pair of eyes in the dark: soft, slanted, slowly looking around, and blinking now and then
       g.shadowBlur = 0; const ph = t % 5.3, blink = ph < .22 ? Math.abs(ph - .11) / .11 : 1, look = Math.sin(t * .7) * R * .1, flick = .85 + .15 * Math.sin(t * 6.3);
-      for (const sx of [-1, 1]) { g.save(); g.translate(sx * R * .58, 0); g.rotate(sx * -.24); g.scale(1, .46 * blink + .02);
+      for (const sx of [-1, 1]) { g.save(); g.translate(sx * R * .95, 0); g.rotate(sx * -.24); g.scale(1, .46 * blink + .02);
         const gr = g.createRadialGradient(0, 0, 0, 0, 0, R * .52); gr.addColorStop(0, c(al * flick)); gr.addColorStop(.4, c(al * .6 * flick)); gr.addColorStop(1, c(0)); g.fillStyle = gr; el(0, 0, R * .52, R * .52);
         g.globalCompositeOperation = 'destination-out'; const pg = g.createRadialGradient(look, 0, 0, look, 0, R * .34); pg.addColorStop(0, `rgba(0,0,0,${clamp(al * 1.5, 0, 1)})`); pg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = pg;
         g.beginPath(); g.ellipse(look, 0, R * .1, R * .34, 0, 0, 7); g.fill(); g.restore(); }
@@ -183,7 +183,7 @@
     const paintScan = () => el.querySelectorAll('#pscan button').forEach(b => b.classList.toggle('on', b.dataset.g === scan));
     function setScan(id, quiet) { if (!GHOSTS.some(x => x[0] === id)) return; scan = id; resolved = false; try { localStorage.setItem('pke-scan', id); } catch (e) { /* ignore */ } paintScan(); if (!quiet) { log('SCAN SET: ' + scanName()); buzz(10); } }
     el.querySelectorAll('#pscan button').forEach(b => { const cv = b.querySelector('canvas'), g = cv.getContext('2d'), id = b.dataset.g;
-      const icon = () => { g.clearRect(0, 0, 72, 72); ghostShape(g, id, 36, ART[id] ? 33 : 36, ART[id] ? 20 : id === 'polter' ? 21 : id === 'eyes' ? 28 : 22, 1, ART[id] ? 0 : .6); };
+      const icon = () => { g.clearRect(0, 0, 72, 72); ghostShape(g, id, 36, ART[id] ? 33 : 36, ART[id] ? 20 : id === 'polter' ? 21 : id === 'eyes' ? 19 : 22, 1, ART[id] ? 0 : .6); };
       icon(); artLoad(id, icon); b.onclick = () => setScan(id); });
     paintScan();
 
@@ -256,14 +256,14 @@
       const av = Math.pow(a, .6); // brighter at middling energy, so it shows well before the meter pegs
       g.save(); g.globalCompositeOperation = 'screen';
       // tail: where it has just been, thinning and fading, with a slow ripple
-      for (let i = gh.trail.length - 1; i >= 1; i--) { const k = i / 26, [tx, ty] = gh.trail[i]; blob(tx * w, ty * h + Math.sin(now * 3 + i * .5) * R * .22 * k + k * R * .4, R * (.8 - k * .55), av * .3 * (1 - k) * edge(tx) * far * (1 - gh.res * (scan === 'eyes' ? .95 : .45))); }
-      const cx = px * w, cy = py * h, res = (gh.res += ((scan === 'wisp' ? 0 : clamp((a - .5) / .3, 0, 1)) - gh.res) * Math.min(1, dt * 2.5)), ea = av * edge(gh.x) * far * (1 - res * (scan === 'eyes' ? .97 : .7)); // the eyes hang in the dark with no glow around them
+      for (let i = gh.trail.length - 1; i >= 1; i--) { const k = i / 26, [tx, ty] = gh.trail[i]; blob(tx * w, ty * h + Math.sin(now * 3 + i * .5) * R * .22 * k + k * R * .4, R * (.8 - k * .55), av * .3 * (1 - k) * edge(tx) * far * (scan === 'eyes' ? 0 : 1 - gh.res * .45)); }
+      const cx = px * w, cy = py * h, res = (gh.res += ((scan === 'wisp' ? 0 : scan === 'eyes' ? clamp((a - .04) / .15, 0, 1) : clamp((a - .5) / .3, 0, 1)) - gh.res) * Math.min(1, dt * 2.5)), ea = scan === 'eyes' ? 0 : av * edge(gh.x) * far * (1 - res * .7); // the eyes hang in the dark with no ball of glow at all: they show from low energy and just get brighter
       blob(cx, cy, R * 2.4, ea * .14);
       // a loose, shifting head made of three soft lobes, never a hard ball
       for (let i = 0; i < 3; i++) blob(cx + Math.sin(now * 1.7 + i * 2.1) * R * .28, cy + Math.cos(now * 1.3 + i * 2.1) * R * .24, R * (.78 + .12 * Math.sin(now * 2.6 + i)), ea * (.26 + .05 * Math.sin(now * 9 + i)));
       for (let i = 1; i < 5; i++) { const k = i / 5, lx = Math.sin(now * 2.1 + i) * R * .3 * k, ly = k * R * 1.5; blob(cx + lx * Math.cos(lean) - ly * Math.sin(lean), cy + lx * Math.sin(lean) + ly * Math.cos(lean), R * (.9 - k * .55), ea * .2 * (1 - k)); }
       // above about half energy the wisp takes the shape the scan is set for, sharper the higher it goes
-      if (res > .01) { g.save(); g.translate(cx, cy + R * .15); g.rotate(lean); ghostShape(g, scan, 0, 0, R * 1.05 * (SIZE[scan] || 1), av * edge(gh.x) * far * res * (scan === 'eyes' ? 1 : .8), now); g.restore(); }
+      if (res > .01) { g.save(); g.translate(cx, cy + R * .15); g.rotate(scan === 'eyes' ? Math.sin(tm * 1.1) * .16 : lean); ghostShape(g, scan, 0, 0, R * 1.05 * (SIZE[scan] || 1), av * edge(gh.x) * far * res * (scan === 'eyes' ? 1 : .8), now); g.restore(); }
       if (res > .6 && !resolved) { resolved = true; log('SCAN: ' + scanName() + ' RESOLVED // CLASS ' + classOf(st.lvl)); buzz([20, 30, 20]); } else if (res < .15 && resolved) { resolved = false; if (scan !== 'wisp') log('SCAN: ' + scanName() + ' LOST // SWEEP TO REACQUIRE'); }
       g.restore();
     }
