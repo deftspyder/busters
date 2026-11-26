@@ -101,6 +101,7 @@
 .pke .ib.on{color:#fff;border-color:#ffb000;box-shadow:0 0 8px #ffb00066}
 .pke .frm{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;width:min(620px,100%);margin:0 auto}
 .pke .wing{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.pke .hub{position:absolute;left:50%;top:-6px;width:44px;height:42px;margin-left:-22px;background:none;border:0;z-index:2;cursor:pointer}
 .pke .body{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:36px 34px 10px}
 .pke .scr{position:relative;flex:1;min-height:150px;background:#030805;border-radius:8px;overflow:hidden;box-shadow:inset 0 2px 14px #000,inset 0 0 0 1px #000,0 0 0 2px #2c2c2f,0 0 0 3px #000}
 .pke .scr canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -160,7 +161,7 @@
         <div class="pt"><div class="t1">${esc(short)} // PKE METER</div><div class="t2" id="psub">PSYCHOKINETIC ENERGY // SCANNING</div></div>
         ${api.back ? `<div class="seg"><button id="pbk">PACK</button>${api.ecu ? '<button id="pec">ECU</button>' : ''}<button class="on">PKE</button></div>` : ''}
         <button class="ib" id="psnd" aria-label="Sound">&#9835;</button><button class="ib" id="px" aria-label="Exit">&#10005;</button></div>
-      <div class="frm"><canvas class="wing" id="pwing"></canvas>
+      <div class="frm"><canvas class="wing" id="pwing"></canvas><button class="hub" id="phub" aria-label="Switch light style"></button>
       <div class="body">
         <div class="scr"><canvas id="pscr"></canvas>
           <div class="ro"><div><div class="lb">PKE VALENCE</div><div class="big"><span id="pval">0.0</span><small>GeV</small></div></div>
@@ -197,20 +198,25 @@
     // ---- drawing
     function fit(cv) { const r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); const w = Math.round(r.width * d), h = Math.round(r.height * d);
       if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } return [cv.getContext('2d'), r.width, r.height, d]; }
-    // Two rows of lights per side: flat from the centre hub to the corner, then down the edge to the bottom.
+    let ledStyle = 'seg'; try { if (localStorage.getItem('pke-led') === 'dot') ledStyle = 'dot'; } catch (e) { /* ignore */ }
+    // Lights per side: flat from the centre hub to the corner, then down the edge to the bottom.
     function drawWing() {
       const [g, w, h, d] = fit($('#pwing')); if (!w) return; g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, w, h);
       const l = st.lvl, cx = w / 2, rad = 4.2, hubY = 15;
       g.fillStyle = '#1b1b1d'; g.strokeStyle = '#000'; g.beginPath(); g.arc(cx, hubY, 12, 0, 7); g.fill(); g.stroke();
       const hc = ledRGB(l).join(','); g.fillStyle = `rgba(${hc},${.4 + .6 * l})`; g.shadowColor = `rgb(${hc})`; g.shadowBlur = 6 + 18 * l; g.beginPath(); g.arc(cx, hubY, 6 + 2 * l, 0, 7); g.fill(); g.shadowBlur = 0;
-      for (const inset of [9, 21]) {
-        const top = cx - 20 - inset, len = top + (h - inset - 8 - inset), n = Math.max(6, Math.round(len / 15)), lit = l * n, hd = ((chase % (n + 6)) + n + 6) % (n + 6);
+      // two looks for the bands: 'seg' is one row of bar segments (like a segmented LED bar), 'dot' is two rows of round lights
+      const seg = ledStyle === 'seg';
+      for (const inset of seg ? [15] : [9, 21]) {
+        const top = cx - 20 - inset, y1 = seg ? 31 : inset, len = top + (h - 8 - inset - y1), n = Math.max(6, Math.round(len / (seg ? 12.5 : 15))), lit = l * n, hd = ((chase % (n + 6)) + n + 6) % (n + 6);
         for (let i = 0; i < n; i++) {
           const s = (i + .5) / n * len, t = (i + 1) / n, across = s <= top;
-          const dx = across ? 20 + s : cx - inset, y = across ? inset : inset + (s - top);
+          const dx = across ? 20 + s : cx - inset, y = across ? inset : y1 + (s - top);
           const on = i < lit, head = on && Math.abs(hd - i) < 1.2, part = clamp(lit - i, 0, 1), [cr, cg, cb] = ledRGB(t);
           for (const side of [-1, 1]) {
-            g.beginPath(); g.arc(cx + side * dx, y, rad, 0, 7);
+            g.beginPath(); const x = cx + side * dx;
+            if (seg) { const sw = across ? 8.5 : 22, sh = across ? 22 : 8.5; if (g.roundRect) g.roundRect(x - sw / 2, y - sh / 2, sw, sh, 2); else g.rect(x - sw / 2, y - sh / 2, sw, sh); }
+            else g.arc(x, y, rad, 0, 7);
             if (on) { g.fillStyle = head ? `rgb(${Math.round(cr + (255 - cr) * .7)},${Math.round(cg + (255 - cg) * .7)},${Math.round(cb + (255 - cb) * .7)})` : `rgba(${cr},${cg},${cb},${.55 + .45 * part})`;
               g.shadowColor = `rgb(${cr},${cg},${cb})`; g.shadowBlur = head ? 16 : 9; }
             else { g.fillStyle = `rgb(${Math.round(cr * .16 + 10)},${Math.round(cg * .16 + 10)},${Math.round(cb * .16 + 8)})`; g.shadowBlur = 0; }
@@ -362,6 +368,7 @@
       drawWing(); drawScreen();
     }
 
+    $('#phub').onclick = () => { ledStyle = ledStyle === 'seg' ? 'dot' : 'seg'; try { localStorage.setItem('pke-led', ledStyle); } catch (e) { /* ignore */ } log('LIGHTS: ' + (ledStyle === 'seg' ? 'SEGMENT BARS' : 'ROUND LAMPS')); buzz(10); };
     $('#px').onclick = () => api.exit();
     if (api.back) $('#pbk').onclick = () => api.back();
     if (api.back && api.ecu) $('#pec').onclick = () => api.ecu();
