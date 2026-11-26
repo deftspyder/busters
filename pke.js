@@ -9,6 +9,8 @@
    Sound: snd/pke-meter.mp3 is one recording of the meter (start-up, steady scanning, a burst of strong reading).
    It is cut up in the browser: the start-up plays once on opening, the scanning part loops and speeds up with the
    signal, and the burst plays when the signal turns strong. If the file can't load, a built-in whine stands in.
+   SET SCAN: a row of icons picks the kind of ghost the meter is tuned for (GHOSTS, all original designs). The
+   ghostly light is a plain wisp at low energy and takes the chosen shape above about half energy.
    Everything is simulated; nothing is read from or written to the database.
    window.BustersPKE.mount(ctx, api) -> { tone(audio), destroy() }
      ctx: { S, esc, demo }
@@ -28,6 +30,49 @@
   const LED = [[0, 60, 255, 110], [.3, 190, 255, 60], [.5, 255, 210, 40], [.68, 255, 130, 30], [.84, 255, 45, 30], [1, 150, 0, 12]];
   const ledRGB = t => { let i = 1; while (i < LED.length - 1 && t > LED[i][0]) i++; const a = LED[i - 1], b = LED[i], m = clamp((t - a[0]) / (b[0] - a[0]), 0, 1);
     return [1, 2, 3].map(k => Math.round(a[k] + (b[k] - a[k]) * m)); };
+  // Ghost types a Buster can set the scan for. All original designs. [id, button label, log name]
+  const GHOSTS = [['wisp', 'WISP', 'FREE-FLOATING VAPOR'], ['friendly', 'FRIENDLY', 'FRIENDLY HAUNT'], ['lady', 'LADY', 'LADY IN WHITE'], ['polter', 'POLTER', 'POLTERGEIST'], ['shadow', 'SHADOW', 'SHADOW FIGURE']];
+  // One drawing per type, used for both the menu icon and the shape on the scanner. (cx, cy) centre, R size, al opacity, t seconds.
+  function ghostShape(g, type, cx, cy, R, al, t) {
+    if (al <= .01) return; const c = a => `rgba(205,255,235,${clamp(a, 0, 1)})`;
+    const el = (x, y, rx, ry, rot) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, 7); g.fill(); };
+    g.save(); g.translate(cx, cy); g.fillStyle = c(al); g.strokeStyle = c(al * .6); g.lineCap = 'round'; g.shadowColor = `rgba(110,255,200,${clamp(al, 0, 1)})`; g.shadowBlur = R * .5;
+    if (type === 'wisp') {
+      for (let i = 0; i < 5; i++) { const k = i / 4, x = Math.sin(t * 2 + i) * R * .25 * k + k * R * .5, y = -R * .5 + k * R * 1.2, r = R * (.6 - k * .38), gr = g.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, c(al * (.9 - k * .5))); gr.addColorStop(1, c(0)); g.fillStyle = gr; g.shadowBlur = 0; el(x, y, r, r); }
+    } else if (type === 'friendly') {
+      // a small round bedsheet ghost with a scalloped hem and stubby arms
+      const w = R * .9, bot = R * 1.05, sway = Math.sin(t * 2) * R * .08;
+      g.fillStyle = c(al * .78);
+      g.beginPath(); g.moveTo(-w, bot); g.lineTo(-w, -R * .2); g.bezierCurveTo(-w, -R * 1.45, w, -R * 1.45, w, -R * .2); g.lineTo(w, bot);
+      for (let i = 0; i < 4; i++) g.quadraticCurveTo(w - (i + .5) * w / 2 + sway, bot - R * .38, w - (i + 1) * w / 2, bot);
+      g.closePath(); g.fill();
+      el(-w * 1.08, R * .05, R * .24, R * .14, -.6 + Math.sin(t * 3) * .25); el(w * 1.08, R * .05, R * .24, R * .14, .6 - Math.sin(t * 3) * .25);
+      g.globalCompositeOperation = 'destination-out'; g.shadowBlur = 0; g.fillStyle = g.strokeStyle = `rgba(0,0,0,${clamp(al * 1.6, 0, 1)})`;
+      el(-R * .3, -R * .5, R * .1, R * .16); el(R * .3, -R * .5, R * .1, R * .16);
+      g.lineWidth = R * .07; g.beginPath(); g.arc(0, -R * .28, R * .2, .2 * Math.PI, .8 * Math.PI); g.stroke();
+    } else if (type === 'lady') {
+      // a tall veiled figure: long gown that thins away to nothing, hair and one arm drifting
+      const sw = Math.sin(t * 1.6) * R * .12, gr = g.createLinearGradient(0, -R * 1.2, 0, R * 1.8); gr.addColorStop(0, c(al)); gr.addColorStop(.55, c(al * .8)); gr.addColorStop(1, c(0));
+      g.fillStyle = gr; g.beginPath(); g.moveTo(-R * .2, -R * .72); g.bezierCurveTo(-R * .5, -R * .5, -R * .3, R * .2, -R * .8 + sw, R * 1.8); g.lineTo(R * .8 + sw, R * 1.8); g.bezierCurveTo(R * .3, R * .2, R * .5, -R * .5, R * .2, -R * .72); g.closePath(); g.fill();
+      g.fillStyle = c(al); el(0, -R * 1.02, R * .22, R * .29);
+      g.lineWidth = R * .09; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(R * .08, -R * 1.2 + i * R * .09); g.bezierCurveTo(R * .6, -R * 1.25 + i * R * .15, R * .7, -R * .65 + i * R * .2 + sw, R * 1.15 + i * R * .08, -R * .35 + i * R * .26 + sw * 2); g.stroke(); }
+      g.lineWidth = R * .08; g.beginPath(); g.moveTo(-R * .24, -R * .5); g.quadraticCurveTo(-R * .7, -R * .3, -R * 1.0, -R * .58 + sw); g.stroke();
+    } else if (type === 'polter') {
+      // no body: orbs circling a faint core, with small flung shapes tumbling around them
+      const gr = g.createRadialGradient(0, 0, 0, 0, 0, R * .7); gr.addColorStop(0, c(al * .45)); gr.addColorStop(1, c(0)); g.fillStyle = gr; g.shadowBlur = 0; el(0, 0, R * .7, R * .7);
+      g.fillStyle = c(al); g.shadowBlur = R * .3;
+      for (let i = 0; i < 10; i++) { const an = t * (1.1 + (i % 3) * .55) + i * 2.4, rr = R * (.4 + (i % 4) * .27); el(Math.cos(an) * rr, Math.sin(an) * rr * .75, R * (.07 + (i % 3) * .04), R * (.07 + (i % 3) * .04)); }
+      for (let i = 0; i < 4; i++) { const an = -t * .9 + i * 1.57; g.save(); g.translate(Math.cos(an) * R * 1.15, Math.sin(an) * R * .85); g.rotate(t * 3 + i * 1.3); g.fillRect(-R * .12, -R * .07, R * .24, R * .14); g.restore(); }
+    } else if (type === 'shadow') {
+      // a dark figure that blots out its own pale halo
+      const gr = g.createRadialGradient(0, R * .1, R * .3, 0, R * .1, R * 1.9); gr.addColorStop(0, c(al * .7)); gr.addColorStop(1, c(0)); g.fillStyle = gr; g.shadowBlur = 0; el(0, R * .1, R * 1.9, R * 1.9);
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = `rgba(0,0,0,${clamp(al * 1.7, 0, 1)})`; const sw = Math.sin(t * 1.3) * R * .05;
+      el(sw, -R * .78, R * .29, R * .35);
+      g.beginPath(); g.moveTo(-R * .3 + sw, -R * .48); g.bezierCurveTo(-R * .85, -R * .3, -R * .75, R * .9, -R * .62, R * 1.6); g.lineTo(R * .62, R * 1.6); g.bezierCurveTo(R * .75, R * .9, R * .85, -R * .3, R * .3 + sw, -R * .48); g.closePath(); g.fill();
+    }
+    g.restore();
+  }
   const classOf = l => CLS[clamp(Math.floor(l * 7), 0, 6)];
   const stateOf = l => { let s = STATE[0][1]; for (const [t, n] of STATE) if (l >= t) s = n; return s; };
 
@@ -68,15 +113,21 @@
 .pke .row{display:flex;gap:8px;flex:0 0 auto}
 .pke .btn{font:inherit;flex:1;min-height:40px;border-radius:8px;border:1px solid #ffffff44;background:#0009;color:#ffd77a;letter-spacing:.16em;cursor:pointer}
 .pke .btn.on{background:#ffb000;color:#140a02;border-color:#ffb000;box-shadow:0 0 14px #ffb000aa}
-.pke .log{flex:0 0 auto;height:calc(5 * 1.45em + 14px);font-size:.85em;line-height:1.45;background:#060606;border-radius:6px;padding:7px 9px;overflow:hidden;box-shadow:inset 0 2px 10px #000}
+.pke .cap{flex:0 0 auto;font-size:.7em;letter-spacing:.2em;opacity:.7;margin:1px 2px -4px}
+.pke .scan{display:flex;gap:6px;flex:0 0 auto}
+.pke .scan button{font:inherit;font-size:.62em;letter-spacing:.06em;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 1px 3px;border-radius:8px;border:1px solid #ffffff33;background:#0009;color:#ffd77a;cursor:pointer;overflow:hidden}
+.pke .scan button canvas{width:36px;height:36px;display:block}
+.pke .scan button.on{border-color:#7dffc8;color:#d8ffe2;box-shadow:0 0 10px #2bff6a66,inset 0 0 12px #2bff6a22}
+.pke .log{flex:0 0 auto;height:calc(4 * 1.45em + 14px);font-size:.85em;line-height:1.45;background:#060606;border-radius:6px;padding:7px 9px;overflow:hidden;box-shadow:inset 0 2px 10px #000}
 .pke .log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pke .log div:nth-child(n+3){opacity:.8}.pke .log div:nth-child(n+5){opacity:.55}
 .pke .lc-routine{color:#b98f4a}.pke .lc-boot{color:#ffe9d0;text-shadow:0 0 6px #ff8a00}.pke .lc-advisory{color:#5fe3ff;text-shadow:0 0 6px #35b2e8}
 .pke .lc-warn{color:#ffc24a;text-shadow:0 0 6px #ff9a00}.pke .lc-fail{color:#ff5a46;text-shadow:0 0 8px #ff2a1a}.pke .lc-recover{color:#b6ff6a;text-shadow:0 0 6px #7dff3a}
-@media (min-aspect-ratio:1/1) and (max-height:520px){.pke .log{display:none}.pke .scr{min-height:90px}.pke .sw{height:56px}.pke .ro .big{font-size:2.2em}}`;
+@media (min-aspect-ratio:1/1) and (max-height:520px){.pke .log,.pke .cap{display:none}.pke .scan button span{display:none}.pke .scan button canvas{width:28px;height:28px}.pke .scr{min-height:90px}.pke .sw{height:56px}.pke .ro .big{font-size:2.2em}}`;
 
   function lineClass(t) {
-    if (/^PEAK|^SIGNAL: FULL|^WARN/.test(t)) return 'warn';
+    if (/^PEAK|^SIGNAL: FULL|^WARN|RESOLVED/.test(t)) return 'warn';
+    if (/^SCAN SET/.test(t)) return 'advisory';
     if (/^CRITICAL/.test(t)) return 'fail';
     if (/^OK:|SETTLED|^LAMP: ON/.test(t)) return 'recover';
     if (/^(LINK|BOOT)/.test(t)) return 'boot';
@@ -108,11 +159,22 @@
           <div class="st"><span id="pstt">AMBIENT</span><span id="ppk">PEAK 0.0</span></div></div>
         <div class="sw" id="psw"><div class="tk"></div><div class="fill" id="pfill"></div><div class="fg" id="pfg"></div><div class="tx" id="ptx">&#9664; SLIDE TO SWEEP &#9654;</div></div>
         <div class="row"><button class="btn" id="plamp">LAMP OFF</button><button class="btn" id="pzero">ZERO PEAK</button></div>
+        <div class="cap">SET SCAN</div>
+        <div class="scan" id="pscan">${GHOSTS.map(([id, lb]) => `<button data-g="${id}" aria-label="Scan for ${lb}"><canvas width="72" height="72"></canvas><span>${lb}</span></button>`).join('')}</div>
         <div class="log" id="plog"></div>
       </div></div>`;
 
     function log(t) { logLines.unshift({ t: clock() + '  ' + t, c: lineClass(t) }); logLines = logLines.slice(0, 40);
-      const k = $('#plog'); if (k) k.innerHTML = logLines.slice(0, 6).map(x => `<div class="lc-${x.c}">&gt; ${esc(x.t)}</div>`).join(''); }
+      const k = $('#plog'); if (k) k.innerHTML = logLines.slice(0, 5).map(x => `<div class="lc-${x.c}">&gt; ${esc(x.t)}</div>`).join(''); }
+
+    // ---- set scan: which kind of ghost the meter is tuned for
+    let scan = 'wisp', resolved = false; try { const v = localStorage.getItem('pke-scan'); if (GHOSTS.some(x => x[0] === v)) scan = v; } catch (e) { /* ignore */ }
+    const scanName = () => GHOSTS.find(x => x[0] === scan)[2];
+    const paintScan = () => el.querySelectorAll('#pscan button').forEach(b => b.classList.toggle('on', b.dataset.g === scan));
+    function setScan(id, quiet) { if (!GHOSTS.some(x => x[0] === id)) return; scan = id; resolved = false; try { localStorage.setItem('pke-scan', id); } catch (e) { /* ignore */ } paintScan(); if (!quiet) { log('SCAN SET: ' + scanName()); buzz(10); } }
+    el.querySelectorAll('#pscan button').forEach(b => { const cv = b.querySelector('canvas'), g = cv.getContext('2d'), id = b.dataset.g;
+      ghostShape(g, id, 36, id === 'lady' ? 30 : id === 'shadow' ? 32 : 36, id === 'lady' || id === 'shadow' ? 19 : id === 'polter' ? 21 : 24, 1, .6); b.onclick = () => setScan(id); });
+    paintScan();
 
     // ---- sweep bar: the faster and farther the finger slides, the more energy
     const sw = $('#psw'); let lastX = null;
@@ -170,11 +232,14 @@
       g.save(); g.globalCompositeOperation = 'screen';
       // tail: where it has just been, thinning and fading, with a slow ripple
       for (let i = gh.trail.length - 1; i >= 1; i--) { const k = i / 26, [tx, ty] = gh.trail[i]; blob(tx * w, ty * h + Math.sin(now * 3 + i * .5) * R * .22 * k + k * R * .4, R * (.8 - k * .55), a * .26 * (1 - k) * edge(tx)); }
-      const cx = gh.x * w, cy = gh.y * h, ea = a * edge(gh.x);
+      const cx = gh.x * w, cy = gh.y * h, res = scan === 'wisp' ? 0 : clamp((a - .5) / .3, 0, 1), ea = a * edge(gh.x) * (1 - res * .7);
       blob(cx, cy, R * 2.4, ea * .14);
       // a loose, shifting head made of three soft lobes, never a hard ball
       for (let i = 0; i < 3; i++) blob(cx + Math.sin(now * 1.7 + i * 2.1) * R * .28, cy + Math.cos(now * 1.3 + i * 2.1) * R * .24, R * (.78 + .12 * Math.sin(now * 2.6 + i)), ea * (.26 + .05 * Math.sin(now * 9 + i)));
       for (let i = 1; i < 5; i++) { const k = i / 5; blob(cx + Math.sin(now * 2.1 + i) * R * .3 * k, cy + k * R * 1.5, R * (.9 - k * .55), ea * .2 * (1 - k)); }
+      // above about half energy the wisp takes the shape the scan is set for, sharper the higher it goes
+      if (res > 0) ghostShape(g, scan, cx, cy + R * .15, R * 1.05, a * edge(gh.x) * res * .8, now);
+      if (res > .6 && !resolved) { resolved = true; log('SCAN: ' + scanName() + ' RESOLVED // CLASS ' + classOf(st.lvl)); buzz([20, 30, 20]); } else if (res < .15 && resolved) { resolved = false; if (scan !== 'wisp') log('SCAN: ' + scanName() + ' LOST // SWEEP TO REACQUIRE'); }
       g.restore();
     }
     function drawScreen() {
@@ -302,7 +367,7 @@
     paintSnd(); paintLamp(); raf = requestAnimationFrame(frame);
     const pke = {
       tone,
-      test: { state: st, pump: v => { st.energy = v; }, sampled },
+      test: { state: st, pump: v => { st.energy = v; }, sampled, scan: id => setScan(id, true), ghost: gh },
       destroy() { timers.forEach(clearInterval); cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', onVis); lampOff(); sampleStop(); stopOwn(); if (lock) lock.release().catch(() => {}); el.remove(); }
     };
     window.__pke = pke;
