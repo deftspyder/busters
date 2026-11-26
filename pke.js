@@ -225,30 +225,31 @@
     // every so often it sweeps off the left side trailing a tail, waits a moment out of sight, then comes back in
     // from that same side.
     // Drawn first, so the grid and waveform sit over it.
-    const gh = { x: -.4, y: .46, mode: 'in', next: 0, until: 0, trail: [], last: 0, n: 0 };
+    const gh = { x: -.4, y: .46, vx: 0, res: 0, mode: 'in', next: 0, until: 0, trail: [], last: 0, n: 0 };
     function drawGhost(g, w, h) {
       const now = performance.now() / 1000, dt = Math.min(.1, now - (gh.last || now)); gh.last = now;
       st.gh += (clamp(st.energy * 1.15, 0, 1) - st.gh) * .07; const a = st.gh;
-      if (a < .02) { gh.trail.length = 0; if (gh.mode === 'hover') gh.next = Math.max(gh.next, now + 2); return; }
+      if (a < .02) { gh.trail.length = 0; gh.res = 0; if (gh.mode === 'hover') gh.next = Math.max(gh.next, now + 2); return; }
       const hx = .56 + .2 * Math.sin(now * .55) + .06 * Math.sin(now * 1.7), hy = .46 + .1 * Math.cos(now * .43) + .03 * Math.sin(now * 2.3);
-      if (gh.mode === 'hover') { gh.x += (hx - gh.x) * Math.min(1, dt * 1.6); gh.y += (hy - gh.y) * Math.min(1, dt * 1.6); if (now > gh.next) gh.mode = 'out'; }
-      else if (gh.mode === 'out') { gh.x -= dt * (.75 + .5 * a); gh.y += (hy - .05 - gh.y) * Math.min(1, dt); if (gh.x < -.45) { gh.mode = 'away'; gh.until = now + rnd(.5, 1.4); } }
+      // every move eases: it gathers speed gently on the way out and glides to a stop on the way back, never a jump
+      if (gh.mode === 'hover') { const nx = gh.x + (hx - gh.x) * Math.min(1, dt * 1.6); gh.vx = (nx - gh.x) / Math.max(dt, .001); gh.x = nx; gh.y += (hy - gh.y) * Math.min(1, dt * 1.6); if (now > gh.next) gh.mode = 'out'; }
+      else if (gh.mode === 'out') { gh.vx += (-.5 - gh.vx) * Math.min(1, dt * .9); gh.x += gh.vx * dt; gh.y += (hy - .04 - gh.y) * Math.min(1, dt * .8); if (gh.x < -.55) { gh.mode = 'away'; gh.vx = 0; gh.until = now + rnd(.2, .7); } }
       else if (gh.mode === 'away') { if (now > gh.until) gh.mode = 'in'; }
-      else { gh.x += dt * Math.max(.25, (hx - gh.x) * 1.4); gh.y += (hy - gh.y) * Math.min(1, dt * 1.2); if (hx - gh.x < .04) { gh.mode = 'hover'; gh.next = now + rnd(4, 9); } }
+      else { gh.vx += (Math.max(.08, (hx - gh.x) * 1.1) - gh.vx) * Math.min(1, dt * 2.2); gh.x += gh.vx * dt; gh.y += (hy - gh.y) * Math.min(1, dt * 1.2); if (hx - gh.x < .03) { gh.mode = 'hover'; gh.next = now + rnd(5, 10); } }
       if (++gh.n % 3 === 0) { gh.trail.unshift([gh.x, gh.y]); if (gh.trail.length > 26) gh.trail.pop(); }
-      const R = Math.min(w, h) * (.15 + .2 * a), edge = x => clamp(Math.min(x + .3, 1.3 - x) / .4, 0, 1);
+      const R = Math.min(w, h) * (.15 + .2 * a), edge = x => { const e = clamp(Math.min(x + .5, 1.5 - x) / .62, 0, 1); return e * e * (3 - 2 * e); };
       const blob = (x, y, r, al) => { if (al <= .004) return; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(190,255,228,${al})`); gr.addColorStop(.5, `rgba(120,255,200,${al * .5})`); gr.addColorStop(1, 'rgba(60,255,170,0)');
         g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r * .85, r * 1.2, 0, 0, 7); g.fill(); };
       g.save(); g.globalCompositeOperation = 'screen';
       // tail: where it has just been, thinning and fading, with a slow ripple
       for (let i = gh.trail.length - 1; i >= 1; i--) { const k = i / 26, [tx, ty] = gh.trail[i]; blob(tx * w, ty * h + Math.sin(now * 3 + i * .5) * R * .22 * k + k * R * .4, R * (.8 - k * .55), a * .26 * (1 - k) * edge(tx)); }
-      const cx = gh.x * w, cy = gh.y * h, res = scan === 'wisp' ? 0 : clamp((a - .5) / .3, 0, 1), ea = a * edge(gh.x) * (1 - res * .7);
+      const cx = gh.x * w, cy = gh.y * h, res = (gh.res += ((scan === 'wisp' ? 0 : clamp((a - .5) / .3, 0, 1)) - gh.res) * Math.min(1, dt * 2.5)), ea = a * edge(gh.x) * (1 - res * .7);
       blob(cx, cy, R * 2.4, ea * .14);
       // a loose, shifting head made of three soft lobes, never a hard ball
       for (let i = 0; i < 3; i++) blob(cx + Math.sin(now * 1.7 + i * 2.1) * R * .28, cy + Math.cos(now * 1.3 + i * 2.1) * R * .24, R * (.78 + .12 * Math.sin(now * 2.6 + i)), ea * (.26 + .05 * Math.sin(now * 9 + i)));
       for (let i = 1; i < 5; i++) { const k = i / 5; blob(cx + Math.sin(now * 2.1 + i) * R * .3 * k, cy + k * R * 1.5, R * (.9 - k * .55), ea * .2 * (1 - k)); }
       // above about half energy the wisp takes the shape the scan is set for, sharper the higher it goes
-      if (res > 0) ghostShape(g, scan, cx, cy + R * .15, R * 1.05, a * edge(gh.x) * res * .8, now);
+      if (res > .01) ghostShape(g, scan, cx, cy + R * .15, R * 1.05, a * edge(gh.x) * res * .8, now);
       if (res > .6 && !resolved) { resolved = true; log('SCAN: ' + scanName() + ' RESOLVED // CLASS ' + classOf(st.lvl)); buzz([20, 30, 20]); } else if (res < .15 && resolved) { resolved = false; if (scan !== 'wisp') log('SCAN: ' + scanName() + ' LOST // SWEEP TO REACQUIRE'); }
       g.restore();
     }
