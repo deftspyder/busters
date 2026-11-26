@@ -34,7 +34,7 @@
   const GHOSTS = [['wisp', 'WISP', 'FREE-FLOATING VAPOR'], ['friendly', 'FRIENDLY', 'FRIENDLY HAUNT'], ['lady', 'LADY', 'LADY IN WHITE'], ['library', 'LIBRARY', 'LIBRARY APPARITION'],
     ['polter', 'POLTER', 'POLTERGEIST'], ['shadow', 'SHADOW', 'SHADOW FIGURE']];
   // Types shown from art Bill supplied (cut out of their backgrounds and tinted for the scanner). The others are drawn in code.
-  const ART = { lady: 'img/pke/lady.png?v=1', library: 'img/pke/librarian.png?v=1' }, art = {};
+  const ART = { lady: 'img/pke/lady.png?v=1', library: 'img/pke/librarian.png?v=1', shadow: 'img/pke/shadow.png?v=1' }, art = {};
   function artLoad(id, cb) { if (!ART[id]) return; let a = art[id]; if (!a) { a = art[id] = { img: new Image(), ok: false, cbs: [] }; a.img.onload = () => { a.ok = true; a.cbs.forEach(f => f()); a.cbs = []; }; a.img.src = ART[id]; }
     if (cb) { if (a.ok) cb(); else a.cbs.push(cb); } }
   // One drawing per type, used for both the menu icon and the shape on the scanner. (cx, cy) centre, R size, al opacity, t seconds.
@@ -42,10 +42,15 @@
     if (al <= .01) return; const c = a => `rgba(205,255,235,${clamp(a, 0, 1)})`;
     const el = (x, y, rx, ry, rot) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, 7); g.fill(); };
     g.save(); g.translate(cx, cy); g.fillStyle = c(al); g.strokeStyle = c(al * .6); g.lineCap = 'round'; g.shadowColor = `rgba(110,255,200,${clamp(al, 0, 1)})`; g.shadowBlur = R * .5;
-    if (ART[type] && art[type] && art[type].ok) {
+    if (type === 'shadow' && art.shadow && art.shadow.ok) {
+      // a blurred walking figure, dark against its own pale halo: the photo's darkness is cut out of the glow
+      const im = art.shadow.img, hh = R * 3.3, ww = hh * im.width / im.height, gr = g.createRadialGradient(0, R * .1, R * .2, 0, R * .1, R * 2.1); gr.addColorStop(0, c(al * .75)); gr.addColorStop(.6, c(al * .3)); gr.addColorStop(1, c(0));
+      g.fillStyle = gr; g.shadowBlur = 0; el(0, R * .1, R * 1.5, R * 2.1);
+      g.globalCompositeOperation = 'destination-out'; g.globalAlpha = clamp(al * 1.6, 0, 1); g.drawImage(im, -ww / 2 + Math.sin(t * 1.3) * R * .06, -hh * .47, ww, hh);
+    } else if (ART[type] && art[type] && art[type].ok) {
       const im = art[type].img, hh = R * 3.3, ww = hh * im.width / im.height; g.globalAlpha = clamp(al * (.92 + .08 * Math.sin(t * 7)), 0, 1); g.shadowBlur = R * .35;
       g.rotate(Math.sin(t * 1.1) * .035); g.drawImage(im, -ww / 2 + Math.sin(t * 1.6) * R * .05, -hh * .46, ww, hh);
-    } else if (ART[type] && type !== 'lady') { artLoad(type); // art still loading: nothing yet
+    } else if (ART[type] && type !== 'lady' && type !== 'shadow') { artLoad(type); // art still loading: nothing yet
     } else if (type === 'wisp') {
       for (let i = 0; i < 5; i++) { const k = i / 4, x = Math.sin(t * 2 + i) * R * .25 * k + k * R * .5, y = -R * .5 + k * R * 1.2, r = R * (.6 - k * .38), gr = g.createRadialGradient(x, y, 0, x, y, r);
         gr.addColorStop(0, c(al * (.9 - k * .5))); gr.addColorStop(1, c(0)); g.fillStyle = gr; g.shadowBlur = 0; el(x, y, r, r); }
@@ -184,7 +189,7 @@
     const paintScan = () => el.querySelectorAll('#pscan button').forEach(b => b.classList.toggle('on', b.dataset.g === scan));
     function setScan(id, quiet) { if (!GHOSTS.some(x => x[0] === id)) return; scan = id; resolved = false; try { localStorage.setItem('pke-scan', id); } catch (e) { /* ignore */ } paintScan(); if (!quiet) { log('SCAN SET: ' + scanName()); buzz(10); } }
     el.querySelectorAll('#pscan button').forEach(b => { const cv = b.querySelector('canvas'), g = cv.getContext('2d'), id = b.dataset.g;
-      const icon = () => { g.clearRect(0, 0, 72, 72); ghostShape(g, id, 36, ART[id] ? 33 : id === 'shadow' ? 32 : 36, ART[id] ? 20 : id === 'shadow' ? 19 : id === 'polter' ? 21 : 24, 1, ART[id] ? 0 : .6); };
+      const icon = () => { g.clearRect(0, 0, 72, 72); ghostShape(g, id, 36, ART[id] ? 33 : 36, ART[id] ? 20 : id === 'polter' ? 21 : 24, 1, ART[id] ? 0 : .6); };
       icon(); artLoad(id, icon); b.onclick = () => setScan(id); });
     paintScan();
 
@@ -250,7 +255,7 @@
       g.save(); g.globalCompositeOperation = 'screen';
       // tail: where it has just been, thinning and fading, with a slow ripple
       for (let i = gh.trail.length - 1; i >= 1; i--) { const k = i / 26, [tx, ty] = gh.trail[i]; blob(tx * w, ty * h + Math.sin(now * 3 + i * .5) * R * .22 * k + k * R * .4, R * (.8 - k * .55), a * .26 * (1 - k) * edge(tx)); }
-      const cx = gh.x * w, cy = gh.y * h, res = (gh.res += ((scan === 'wisp' ? 0 : clamp((a - .5) / .3, 0, 1)) - gh.res) * Math.min(1, dt * 2.5)), ea = a * edge(gh.x) * (1 - res * .7);
+      const cx = gh.x * w, cy = gh.y * h, res = (gh.res += ((scan === 'wisp' ? 0 : clamp((a - .5) / .3, 0, 1)) - gh.res) * Math.min(1, dt * 2.5)), ea = a * edge(gh.x) * (1 - res * (scan === 'shadow' ? .95 : .7));
       blob(cx, cy, R * 2.4, ea * .14);
       // a loose, shifting head made of three soft lobes, never a hard ball
       for (let i = 0; i < 3; i++) blob(cx + Math.sin(now * 1.7 + i * 2.1) * R * .28, cy + Math.cos(now * 1.3 + i * 2.1) * R * .24, R * (.78 + .12 * Math.sin(now * 2.6 + i)), ea * (.26 + .05 * Math.sin(now * 9 + i)));
