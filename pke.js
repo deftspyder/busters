@@ -6,6 +6,9 @@
    meter's display screen, and under that a sweep bar: slide a finger along it to build energy (lights, sound,
    buzz). LAMP pulses the phone's flashlight with the signal where the phone allows it; where it doesn't, the
    lamp just stays off. Lamp pulses never go faster than about 2.5 a second.
+   Sound: snd/pke-meter.mp3 is one recording of the meter (start-up, steady scanning, a burst of strong reading).
+   It is cut up in the browser: the start-up plays once on opening, the scanning part loops and speeds up with the
+   signal, and the burst plays when the signal turns strong. If the file can't load, a built-in whine stands in.
    Everything is simulated; nothing is read from or written to the database.
    window.BustersPKE.mount(ctx, api) -> { tone(audio), destroy() }
      ctx: { S, esc, demo }
@@ -157,16 +160,39 @@
       g.stroke(); g.shadowBlur = 0;
     }
 
+    // ---- recorded meter sounds, cut from one file (times in seconds)
+    const CUT = { start: [0, 1.12], loop: [1.25, 3.95], hit: [4.12, 5.42] };
+    let smp = null, booted = false, lastHit = -9;
+    const SND = window.BustersPKE._snd || (window.BustersPKE._snd = fetch('snd/pke-meter.mp3?v=1').then(r => { if (!r.ok) throw new Error('no sound file'); return r.arrayBuffer(); }).catch(() => null));
+    function cut(c, buf, a, b, xf) { const sr = buf.sampleRate, i0 = Math.floor(a * sr), n = Math.floor((b - a) * sr), out = c.createBuffer(buf.numberOfChannels, n, sr), N = Math.floor(xf * sr);
+      for (let ch = 0; ch < buf.numberOfChannels; ch++) { const src = buf.getChannelData(ch), dst = out.getChannelData(ch); dst.set(src.subarray(i0, i0 + n));
+        if (N) for (let k = 0; k < N; k++) { const m = k / N; dst[n - N + k] = dst[n - N + k] * (1 - m) + src[i0 - N + k] * m; } // blend the tail into what comes before the head, so the loop has no seam
+        else for (let k = 0; k < 200 && k < n; k++) { dst[k] *= k / 200; dst[n - 1 - k] *= k / 200; } }
+      return out; }
+    function play(buf, vol, loop, when) { const c = smp.ac, s = c.createBufferSource(), g = c.createGain(); s.buffer = buf; s.loop = !!loop; g.gain.value = vol; s.connect(g); g.connect(c.destination); s.start(when || 0); return { s, g }; }
+    function sampleStop() { if (!smp) return; try { if (smp.bed) smp.bed.s.stop(); } catch (e) { /* ignore */ } smp = null; }
+    async function sampleSetup(c) { const me = smp = { ac: c, ready: false };
+      try { const raw = await SND; if (!raw) return; const buf = await c.decodeAudioData(raw.slice(0)); if (smp !== me || c.state === 'closed') return;
+        me.hit = cut(c, buf, CUT.hit[0], CUT.hit[1], 0); const lp = cut(c, buf, CUT.loop[0], CUT.loop[1], .12);
+        let at = c.currentTime + .02; if (!booted) { booted = true; play(cut(c, buf, CUT.start[0], CUT.start[1], 0), 1.3, false, at); at += CUT.start[1] - CUT.start[0] - .05; }
+        me.bed = play(lp, 0, true, at); me.bedAt = at; me.ready = true;
+      } catch (e) { /* keep the built-in whine */ } }
+    function sampleTick(l, band, rose) { const c = ac(); if (!c) return sampleStop(); if (!smp || smp.ac !== c) sampleSetup(c);
+      if (!smp || !smp.ready) return; const now = c.currentTime; if (now < smp.bedAt) return;
+      smp.bed.s.playbackRate.setTargetAtTime(1 + l * .55, now, .12); smp.bed.g.gain.setTargetAtTime(.9 + l * 1.1, now, .15);
+      if (rose && band >= 3 && now - lastHit > 2.5) { lastHit = now; play(smp.hit, 1.1 + l * .5, false); } }
+    const sampled = () => !!(smp && smp.ready);
+
     // ---- sound: a chirp that gets faster and higher with the signal, over a quiet whine
     const ac = () => { const a = own || (api.sound && api.sound() ? pack : null); return a && a.ac && a.ac.state !== 'closed' ? a.ac : null; };
     function chirp(l) { const c = ac(); if (!c) return; try { const o = c.createOscillator(), g = c.createGain(), t = c.currentTime, f = 850 + l * 1900;
       o.type = 'square'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * (1.15 + l * .5), t + .05);
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.035 + l * .04, t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + .07);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime((.035 + l * .04) * (sampled() ? .45 : 1), t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + .07);
       o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + .08); } catch (e) { /* ignore */ } }
     // the pack's hum is reused as the meter's whine while the meter is open
     function tone(a) { if (!a) return; pack = a; const now = a.ac.currentTime, l = st.lvl;
       a.o1.frequency.setTargetAtTime(110 + l * 520, now, .12); a.o2.frequency.setTargetAtTime(220 + l * 1040, now, .12);
-      a.f.frequency.setTargetAtTime(500 + l * 2600, now, .12); a.g.gain.setTargetAtTime(.012 + l * .04, now, .15); }
+      a.f.frequency.setTargetAtTime(500 + l * 2600, now, .12); a.g.gain.setTargetAtTime(sampled() ? 0 : .012 + l * .04, now, .15); }
     function startOwn() { try { const c = api.audioCtx && api.audioCtx.state !== 'closed' ? api.audioCtx : new (window.AudioContext || window.webkitAudioContext)(); api.audioCtx = null; if (c.state === 'suspended') c.resume().catch(() => {});
       const g = c.createGain(), f = c.createBiquadFilter(), o1 = c.createOscillator(), o2 = c.createOscillator();
       o1.type = 'sawtooth'; o2.type = 'sine'; f.type = 'lowpass'; g.gain.value = 0; o1.connect(f); o2.connect(f); f.connect(g); g.connect(c.destination); o1.start(); o2.start();
@@ -214,6 +240,7 @@
       $('#pfill').style.width = st.energy * 100 + '%';
       el.classList.toggle('hot', l > .56 && l <= .92); el.classList.toggle('max', l > .92);
       const band = STATE.filter(s => l >= s[0]).length - 1;
+      sampleTick(l, band, band > lastBand && lastBand >= 0);
       if (band !== lastBand) { if (band > lastBand && band >= 2) log('SIGNAL: ' + STATE[band][1] + ' // CLASS ' + classOf(l) + ' // ' + (l * 100).toFixed(1)); lastBand = band; $('#psub').textContent = 'PSYCHOKINETIC ENERGY // ' + STATE[band][1]; }
       if (l > .97 && !maxLogged) { maxLogged = true; log('PEAK: METER PEGGED // CALL FOR A TRAP'); buzz([40, 40, 40, 40, 80]); }
       // chirps and buzz
@@ -241,8 +268,8 @@
     paintSnd(); paintLamp(); raf = requestAnimationFrame(frame);
     const pke = {
       tone,
-      test: { state: st, pump: v => { st.energy = v; } },
-      destroy() { timers.forEach(clearInterval); cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', onVis); lampOff(); stopOwn(); if (lock) lock.release().catch(() => {}); el.remove(); }
+      test: { state: st, pump: v => { st.energy = v; }, sampled },
+      destroy() { timers.forEach(clearInterval); cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', onVis); lampOff(); sampleStop(); stopOwn(); if (lock) lock.release().catch(() => {}); el.remove(); }
     };
     window.__pke = pke;
     return pke;
