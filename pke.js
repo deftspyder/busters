@@ -1,11 +1,11 @@
 /* Busters: PKE meter.
    Opens from Proton Pack Diagnostics with the PACK | ECU | PKE switch (the pack is always the default), or on its
    own from pke.html (public demo). Crew agnostic: it only uses the crew's short name.
-   A phone has no arms, so the meter's arm lights are two bands that run from the centre across the top of the
-   screen and spread wider as the signal gets stronger. Under them is the meter's display screen, and under that a
-   sweep bar: slide a finger along it to build energy (lights, sound, buzz). LAMP pulses the phone's flashlight
-   with the signal where the phone allows it, and flashes the screen where it doesn't.
-   Lamp and screen flashes never go faster than about 2.5 a second.
+   A phone has no arms, so the meter's arm lights are two bands that run flat from the centre across the top and
+   then wrap down both edges of the meter: a full signal lights them all the way to the bottom. Inside them is the
+   meter's display screen, and under that a sweep bar: slide a finger along it to build energy (lights, sound,
+   buzz). LAMP pulses the phone's flashlight with the signal where the phone allows it; where it doesn't, the
+   lamp just stays off. Lamp pulses never go faster than about 2.5 a second.
    Everything is simulated; nothing is read from or written to the database.
    window.BustersPKE.mount(ctx, api) -> { tone(audio), destroy() }
      ctx: { S, esc, demo }
@@ -38,8 +38,9 @@
 .pke .seg button.on{background:#ffb00033;color:#fff}
 .pke .ib{font:inherit;width:32px;height:32px;border-radius:50%;border:1px solid #ffffff55;background:#0008;color:#ffd77a;cursor:pointer;flex:0 0 auto;font-size:.9em}
 .pke .ib.on{color:#fff;border-color:#ffb000;box-shadow:0 0 8px #ffb00066}
-.pke .wing{display:block;width:100%;height:clamp(64px,13vh,120px);flex:0 0 auto}
-.pke .body{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:0 8px 8px;width:min(560px,100%);margin:0 auto}
+.pke .frm{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;width:min(620px,100%);margin:0 auto}
+.pke .wing{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.pke .body{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:36px 34px 10px}
 .pke .scr{position:relative;flex:1;min-height:150px;background:#030805;border-radius:8px;overflow:hidden;box-shadow:inset 0 2px 14px #000,inset 0 0 0 1px #000,0 0 0 2px #2c2c2f,0 0 0 3px #000}
 .pke .scr canvas{position:absolute;inset:0;width:100%;height:100%}
 .pke .scr::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#0000 0 2px,#0005 2px 3px)}
@@ -65,8 +66,7 @@
 .pke .log div:nth-child(n+3){opacity:.8}.pke .log div:nth-child(n+5){opacity:.55}
 .pke .lc-routine{color:#b98f4a}.pke .lc-boot{color:#ffe9d0;text-shadow:0 0 6px #ff8a00}.pke .lc-advisory{color:#5fe3ff;text-shadow:0 0 6px #35b2e8}
 .pke .lc-warn{color:#ffc24a;text-shadow:0 0 6px #ff9a00}.pke .lc-fail{color:#ff5a46;text-shadow:0 0 8px #ff2a1a}.pke .lc-recover{color:#b6ff6a;text-shadow:0 0 6px #7dff3a}
-.pke .fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9;transition:opacity .08s}
-@media (min-aspect-ratio:1/1) and (max-height:520px){.pke .wing{height:54px}.pke .log{display:none}.pke .scr{min-height:90px}.pke .sw{height:56px}.pke .ro .big{font-size:2.2em}}`;
+@media (min-aspect-ratio:1/1) and (max-height:520px){.pke .log{display:none}.pke .scr{min-height:90px}.pke .sw{height:56px}.pke .ro .big{font-size:2.2em}}`;
 
   function lineClass(t) {
     if (/^PEAK|^SIGNAL: FULL|^WARN/.test(t)) return 'warn';
@@ -93,7 +93,7 @@
         <div class="pt"><div class="t1">${esc(short)} // PKE METER</div><div class="t2" id="psub">PSYCHOKINETIC ENERGY // SCANNING</div></div>
         ${api.back ? `<div class="seg"><button id="pbk">PACK</button>${api.ecu ? '<button id="pec">ECU</button>' : ''}<button class="on">PKE</button></div>` : ''}
         <button class="ib" id="psnd" aria-label="Sound">&#9835;</button><button class="ib" id="px" aria-label="Exit">&#10005;</button></div>
-      <canvas class="wing" id="pwing"></canvas>
+      <div class="frm"><canvas class="wing" id="pwing"></canvas>
       <div class="body">
         <div class="scr"><canvas id="pscr"></canvas>
           <div class="ro"><div><div class="lb">PKE VALENCE</div><div class="big"><span id="pval">0.0</span><small>GeV</small></div></div>
@@ -102,7 +102,7 @@
         <div class="sw" id="psw"><div class="tk"></div><div class="fill" id="pfill"></div><div class="fg" id="pfg"></div><div class="tx" id="ptx">&#9664; SLIDE TO SWEEP &#9654;</div></div>
         <div class="row"><button class="btn" id="plamp">LAMP OFF</button><button class="btn" id="pzero">ZERO PEAK</button></div>
         <div class="log" id="plog"></div>
-      </div><div class="fl" id="pfl"></div>`;
+      </div></div>`;
 
     function log(t) { logLines.unshift({ t: clock() + '  ' + t, c: lineClass(t) }); logLines = logLines.slice(0, 40);
       const k = $('#plog'); if (k) k.innerHTML = logLines.slice(0, 6).map(x => `<div class="lc-${x.c}">&gt; ${esc(x.t)}</div>`).join(''); }
@@ -118,24 +118,25 @@
     // ---- drawing
     function fit(cv) { const r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); const w = Math.round(r.width * d), h = Math.round(r.height * d);
       if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } return [cv.getContext('2d'), r.width, r.height, d]; }
+    // Two rows of lights per side: flat from the centre hub to the corner, then down the edge to the bottom.
     function drawWing() {
       const [g, w, h, d] = fit($('#pwing')); if (!w) return; g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, w, h);
-      const l = st.lvl, cx = w / 2, n = Math.max(8, Math.min(18, Math.floor(w / 26))), reach = (w / 2 - 14);
-      // the bands hang folded at rest and lift and spread as the signal climbs, like the meter's arms
-      const gap = 5 + 13 * l, rad = 3.2 + 2.2 * l, lit = l * n, y0 = h - 20, lift = (h - 34 - gap) * l;
-      // centre hub
-      g.fillStyle = '#1b1b1d'; g.strokeStyle = '#000'; g.beginPath(); g.arc(cx, y0, 13, 0, 7); g.fill(); g.stroke();
-      g.fillStyle = `rgba(255,${Math.round(176 - 110 * l)},${Math.round(40 * (1 - l))},${.35 + .65 * l})`; g.shadowColor = '#ffb000'; g.shadowBlur = 6 + 18 * l; g.beginPath(); g.arc(cx, y0, 6 + 2 * l, 0, 7); g.fill(); g.shadowBlur = 0;
-      for (const side of [-1, 1]) for (let i = 0; i < n; i++) {
-        const t = (i + 1) / n, x = cx + side * (16 + t * (reach - 16)), y = y0 - lift * Math.pow(t, 1.25);
-        const on = i < lit, head = on && Math.abs(((chase % n) + n) % n - i) < 1.2, part = clamp(lit - i, 0, 1);
-        for (const row of [-1, 1]) {
-          const yy = y + row * gap * (.35 + .65 * t);
-          g.beginPath(); g.arc(x, yy, rad, 0, 7);
-          if (on) { const hot = t > .8 && l > .8; g.fillStyle = head ? '#fff' : hot ? `rgba(255,90,60,${part})` : `rgba(255,${200 - Math.round(60 * t)},40,${.55 + .45 * part})`;
-            g.shadowColor = hot ? '#ff2a1a' : '#ffb000'; g.shadowBlur = head ? 16 : 9; }
-          else { g.fillStyle = '#3a2c10'; g.shadowBlur = 0; }
-          g.fill();
+      const l = st.lvl, cx = w / 2, rad = 4.2, hubY = 15;
+      g.fillStyle = '#1b1b1d'; g.strokeStyle = '#000'; g.beginPath(); g.arc(cx, hubY, 12, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = `rgba(255,${Math.round(176 - 110 * l)},${Math.round(40 * (1 - l))},${.35 + .65 * l})`; g.shadowColor = '#ffb000'; g.shadowBlur = 6 + 18 * l; g.beginPath(); g.arc(cx, hubY, 6 + 2 * l, 0, 7); g.fill(); g.shadowBlur = 0;
+      for (const inset of [9, 21]) {
+        const top = cx - 20 - inset, len = top + (h - inset - 8 - inset), n = Math.max(6, Math.round(len / 15)), lit = l * n, hd = ((chase % (n + 6)) + n + 6) % (n + 6);
+        for (let i = 0; i < n; i++) {
+          const s = (i + .5) / n * len, t = (i + 1) / n, across = s <= top;
+          const dx = across ? 20 + s : cx - inset, y = across ? inset : inset + (s - top);
+          const on = i < lit, head = on && Math.abs(hd - i) < 1.2, part = clamp(lit - i, 0, 1), hot = t > .82;
+          for (const side of [-1, 1]) {
+            g.beginPath(); g.arc(cx + side * dx, y, rad, 0, 7);
+            if (on) { g.fillStyle = head ? '#fff' : hot ? `rgba(255,90,60,${.55 + .45 * part})` : `rgba(255,${200 - Math.round(60 * t)},40,${.55 + .45 * part})`;
+              g.shadowColor = hot ? '#ff2a1a' : '#ffb000'; g.shadowBlur = head ? 16 : 9; }
+            else { g.fillStyle = '#3a2c10'; g.shadowBlur = 0; }
+            g.fill();
+          }
         }
       }
       g.shadowBlur = 0;
@@ -174,19 +175,21 @@
     const soundOn = () => api.sound ? api.sound() : !!own;
     const paintSnd = () => { const b = $('#psnd'); b.classList.toggle('on', soundOn()); b.title = soundOn() ? 'Sound on' : 'Sound off'; };
 
-    // ---- lamp: the phone's flashlight where the browser allows it, a screen flash where it doesn't
+    // ---- lamp: the phone's flashlight. It works or it doesn't; there is no stand-in.
     const torch = on => { if (track) track.applyConstraints({ advanced: [{ torch: on }] }).catch(() => {}); };
-    const lampOff = () => { st.lamp = false; st.lit = false; if (track) { torch(false); const t = track; track = null; setTimeout(() => { try { t.stop(); } catch (e) { /* ignore */ } }, 150); } $('#pfl').style.opacity = 0; paintLamp(); };
-    const paintLamp = () => { const b = $('#plamp'); b.classList.toggle('on', st.lamp); b.textContent = st.lamp ? (st.lampMode === 'torch' ? 'LAMP ON' : 'FLASH ON') : 'LAMP OFF'; };
+    const lampOff = () => { st.lamp = false; st.lit = false; if (track) { torch(false); const t = track; track = null; setTimeout(() => { try { t.stop(); } catch (e) { /* ignore */ } }, 150); } paintLamp(); };
+    const paintLamp = () => { const b = $('#plamp'); b.classList.toggle('on', st.lamp); b.textContent = st.lamp ? 'LAMP ON' : st.lampMode === 'none' ? 'NO LAMP' : 'LAMP OFF'; };
+    let lampBusy = false;
     async function lampOn() {
-      st.lamp = true; st.lampMode = 'screen'; paintLamp();
+      if (lampBusy) return; lampBusy = true;
       try { if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('none');
         const ms = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } }), t = ms.getVideoTracks()[0];
-        if (!st.lamp || !el.isConnected) { t.stop(); return; }
+        if (!el.isConnected) { t.stop(); return; }
         const caps = t.getCapabilities ? t.getCapabilities() : {};
         if (!caps.torch) { t.stop(); throw new Error('no torch'); }
-        track = t; st.lampMode = 'torch'; log('LAMP: ON // FLASHLIGHT PULSING WITH SIGNAL');
-      } catch (e) { if (st.lamp) log('LAMP: FLASHLIGHT NOT AVAILABLE // FLASHING SCREEN INSTEAD'); }
+        track = t; st.lamp = true; st.lampMode = 'torch'; log('LAMP: ON // FLASHLIGHT PULSING WITH SIGNAL');
+      } catch (e) { st.lamp = false; st.lampMode = 'none'; log('LAMP: FLASHLIGHT NOT AVAILABLE ON THIS PHONE'); }
+      finally { lampBusy = false; }
       paintLamp();
     }
     $('#plamp').onclick = () => { if (st.lamp) { lampOff(); log('LAMP: OFF'); } else lampOn(); };
@@ -217,7 +220,7 @@
       if (now >= nextChirp) { nextChirp = now + (760 - 690 * Math.pow(l, .8)); if (soundOn()) chirp(l); if (l > .3) buzz(l > .8 ? 18 : 8); }
       // lamp pulses: capped at about 2.5 a second
       if (st.lamp && now >= nextFlash) { const gapMs = Math.max(200, 900 - 760 * l); nextFlash = now + gapMs; st.lit = !st.lit;
-        if (st.lampMode === 'torch') torch(st.lit); else $('#pfl').style.opacity = st.lit ? .1 + .5 * l : 0; }
+        torch(st.lit); }
       if (pack && soundOn() && !own) tone(pack); else if (own) tone(own);
       drawWing(); drawScreen();
     }
