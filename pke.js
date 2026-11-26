@@ -236,15 +236,17 @@
       st.gh += (clamp(st.energy * 1.15, 0, 1) - st.gh) * .07; const a = st.gh;
       if (a < .02) { gh.trail.length = 0; gh.res = 0; if (gh.mode === 'hover') gh.next = Math.max(gh.next, now + 2); return; }
       // the more energy, the wilder it gets: its own clock runs faster, it roams wider, and it rushes toward the glass and away again
-      const calm = scan === 'friendly' ? .3 : 1, wild = clamp((a - .12) * 1.6, 0, 1) * calm; gh.tm += dt * ((calm < 1 ? .9 : 1.5) + 4.5 * wild); const tm = gh.tm; // the friendly one is for kids, so it stays gentle
-      const hx = .54 + (.2 + .14 * wild) * Math.sin(tm * .55) + .06 * Math.sin(tm * 1.7), hy = .46 + (.1 + .1 * wild) * Math.cos(tm * .43) + .03 * Math.sin(tm * 2.3);
-      gh.z += ((1 + (.12 + .88 * wild) * (.6 * Math.sin(tm * .8) + .3 * Math.sin(tm * 1.9 + 1))) - gh.z) * Math.min(1, dt * 4);
+      const still = scan === 'library', calm = still ? 0 : scan === 'friendly' ? .3 : 1, wild = clamp((a - .12) * 1.6, 0, 1) * calm; gh.tm += dt * ((calm < 1 ? .9 : 1.5) + 4.5 * wild); const tm = gh.tm; // the friendly one is for kids, so it stays gentle
+      // the library apparition is old and unhurried: she stays put near the middle and only floats a little, whatever the energy
+      const hx = still ? .52 + .012 * Math.sin(tm * .8) : .54 + (.2 + .14 * wild) * Math.sin(tm * .55) + .06 * Math.sin(tm * 1.7), hy = still ? .47 + .022 * Math.cos(tm * .6) : .46 + (.1 + .1 * wild) * Math.cos(tm * .43) + .03 * Math.sin(tm * 2.3);
+      if (still) { gh.mode = 'hover'; gh.spin = 0; gh.rot = 0; if (gh.x < .2 || gh.x > .85) { gh.x = hx; gh.y = hy; gh.trail.length = 0; } }
+      gh.z += ((1 + (still ? .03 : .12 + .88 * wild) * (.6 * Math.sin(tm * .8) + .3 * Math.sin(tm * 1.9 + 1))) - gh.z) * Math.min(1, dt * 4);
       // spins: every so often it whips round in a full turn, looping the loop as it goes (more often the more energy there is)
-      if (!gh.spin && now > gh.nextSpin && a > .12 && gh.mode === 'hover') { gh.spin = (Math.random() < .5 ? -1 : 1) * 2 * Math.PI * (Math.random() < .3 ? 2 : 1); gh.nextSpin = now + rnd(2.2, 5) / (1 + 1.5 * wild); }
+      if (!still && !gh.spin && now > gh.nextSpin && a > .12 && gh.mode === 'hover') { gh.spin = (Math.random() < .5 ? -1 : 1) * 2 * Math.PI * (Math.random() < .3 ? 2 : 1); gh.nextSpin = now + rnd(2.2, 5) / (1 + 1.5 * wild); }
       if (gh.spin) { const stp = Math.sign(gh.spin) * Math.min(Math.abs(gh.spin), dt * (5 + 6 * wild)); gh.rot += stp; gh.spin -= stp; }
-      const loop = .07 + .06 * wild, px = gh.x + loop * Math.sin(gh.rot), py = gh.y + loop * (1 - Math.cos(gh.rot)) * (w / h), lean = gh.rot + (.1 + .3 * wild) * Math.sin(tm * 1.7);
+      const loop = still ? 0 : .07 + .06 * wild, px = gh.x + loop * Math.sin(gh.rot), py = gh.y + loop * (1 - Math.cos(gh.rot)) * (w / h), lean = gh.rot + (.1 + .3 * wild) * Math.sin(tm * 1.7);
       // every move eases: it gathers speed gently on the way out and glides to a stop on the way back, never a jump
-      if (gh.mode === 'hover') { const fl = Math.min(1, dt * (1.6 + 3 * wild)), nx = gh.x + (hx - gh.x) * fl; gh.vx = (nx - gh.x) / Math.max(dt, .001); gh.x = nx; gh.y += (hy - gh.y) * fl; if (now > gh.next && !gh.spin) gh.mode = 'out'; }
+      if (gh.mode === 'hover') { const fl = Math.min(1, dt * (1.6 + 3 * wild)), nx = gh.x + (hx - gh.x) * fl; gh.vx = (nx - gh.x) / Math.max(dt, .001); gh.x = nx; gh.y += (hy - gh.y) * fl; if (now > gh.next && !gh.spin && !still) gh.mode = 'out'; }
       else if (gh.mode === 'out') { gh.vx += (-.5 - .5 * wild - gh.vx) * Math.min(1, dt * .9); gh.x += gh.vx * dt; gh.y += (hy - .04 - gh.y) * Math.min(1, dt * .8); if (gh.x < -.55) { gh.mode = 'away'; gh.vx = 0; gh.until = now + rnd(.2, .7); } }
       else if (gh.mode === 'away') { if (now > gh.until) gh.mode = 'in'; }
       else { gh.vx += (Math.max(.08, (hx - gh.x) * 1.1) - gh.vx) * Math.min(1, dt * 2.2); gh.x += gh.vx * dt; gh.y += (hy - gh.y) * Math.min(1, dt * 1.2); if (hx - gh.x < .03) { gh.mode = 'hover'; gh.next = now + rnd(4, 9) / (1 + wild); } }
@@ -262,7 +264,7 @@
       for (let i = 0; i < 3; i++) blob(cx + Math.sin(now * 1.7 + i * 2.1) * R * .28, cy + Math.cos(now * 1.3 + i * 2.1) * R * .24, R * (.78 + .12 * Math.sin(now * 2.6 + i)), ea * (.26 + .05 * Math.sin(now * 9 + i)));
       for (let i = 1; i < 5; i++) { const k = i / 5, lx = Math.sin(now * 2.1 + i) * R * .3 * k, ly = k * R * 1.5; blob(cx + lx * Math.cos(lean) - ly * Math.sin(lean), cy + lx * Math.sin(lean) + ly * Math.cos(lean), R * (.9 - k * .55), ea * .2 * (1 - k)); }
       // above about half energy the wisp takes the shape the scan is set for, sharper the higher it goes
-      if (res > .01) { g.save(); g.translate(cx, cy + R * .15); g.rotate(scan === 'eyes' || scan === 'library' ? Math.sin(tm * 1.1) * .16 : lean); /* the eyes and the library apparition stay upright and only sway; the others may flip */ ghostShape(g, scan, 0, 0, R * 1.05 * (SIZE[scan] || 1), av * edge(gh.x) * far * res * (scan === 'eyes' ? 1 : .8), now); g.restore(); }
+      if (res > .01) { g.save(); g.translate(cx, cy + R * .15); g.rotate(still ? Math.sin(tm * .9) * .03 : scan === 'eyes' ? Math.sin(tm * 1.1) * .16 : lean); /* the eyes stay upright and only sway, the library apparition barely moves at all; the others may flip */ ghostShape(g, scan, 0, 0, R * 1.05 * (SIZE[scan] || 1), av * edge(gh.x) * far * res * (scan === 'eyes' ? 1 : .8), now); g.restore(); }
       if (res > .6 && !resolved) { resolved = true; log('SCAN: ' + scanName() + ' RESOLVED // CLASS ' + classOf(st.lvl)); buzz([20, 30, 20]); } else if (res < .15 && resolved) { resolved = false; if (scan !== 'wisp') log('SCAN: ' + scanName() + ' LOST // SWEEP TO REACQUIRE'); }
       g.restore();
     }
