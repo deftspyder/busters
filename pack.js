@@ -286,12 +286,24 @@
       try { if (!window.BustersECU && ctx.loadECU) await ctx.loadECU(); } catch (e) { return toast('Could not load the containment unit. Check your connection.'); }
       if (!window.BustersECU || !el.isConnected) return;
       try {
-        ecu = window.BustersECU.mount({ S, esc, todayISO }, { back: closeECU, exit: close, sound: () => !!audio,
+        ecu = window.BustersECU.mount({ S, esc, todayISO }, { back: closeECU, pke: pkeOK() ? () => openPKE() : null, exit: close, sound: () => !!audio,
           setSound: on => { if (on && !audio) startAudio(); else if (!on && audio) stopAudio(); frame(); } });
       } catch (e) { console.error(e); ecu = null; return toast('The containment unit hit an error: ' + e.message); }
       tone();
     }
     function closeECU() { if (!ecu) return; ecu.destroy(); ecu = null; tone(); }
+    // The PKE meter shares the same slot as the ECU: only one of them is ever open over the pack.
+    const pkeOK = () => !ctx.sim && !!(window.BustersPKE || ctx.loadPKE);
+    async function openPKE() {
+      closeECU();
+      try { if (!window.BustersPKE && ctx.loadPKE) await ctx.loadPKE(); } catch (e) { return toast('Could not load the PKE meter. Check your connection.'); }
+      if (!window.BustersPKE || !el.isConnected || ecu) return;
+      try {
+        ecu = window.BustersPKE.mount({ S, esc }, { back: closeECU, ecu: ecuOK() ? () => { closeECU(); openECU(); } : null, exit: close, sound: () => !!audio,
+          setSound: on => { if (on && !audio) startAudio(); else if (!on && audio) stopAudio(); frame(); } });
+      } catch (e) { console.error(e); ecu = null; return toast('The PKE meter hit an error: ' + e.message); }
+      tone();
+    }
     let cur = who, edit = null, timers = [], lock = null, mode = 0, firing = false, audio = null, logLines = [];
     const V = {}; Object.keys(R).forEach(k => { V[k] = 0; });
 
@@ -303,7 +315,7 @@
     function frame() {
       const p = person();
       el.innerHTML = `<div class="hd box"><img class="emb" id="pkemb" alt="">
-        <div style="min-width:0"><div class="ttl gl">${esc(crewShort)} // PROTON PACK</div><div class="sub">${ctx.sim ? 'PACK INTEGRITY SIMULATION' : 'LOS ANGELES DIVISION'}</div>${ecuOK() ? '<div class="tp"><button class="on">PACK</button><button id="pkecu">ECU</button></div>' : ''}</div>
+        <div style="min-width:0"><div class="ttl gl">${esc(crewShort)} // PROTON PACK</div><div class="sub">${ctx.sim ? 'PACK INTEGRITY SIMULATION' : 'LOS ANGELES DIVISION'}</div>${ecuOK() || pkeOK() ? `<div class="tp"><button class="on">PACK</button>${ecuOK() ? '<button id="pkecu">ECU</button>' : ''}${pkeOK() ? '<button id="pkpke">PKE</button>' : ''}</div>` : ''}</div>
         <div class="who"><div class="nm">${esc(shortName(p))}</div><div class="md gl"><i></i><span id="pkmode">${MODES[mode]}</span><span id="pkclk" style="opacity:.7">${clock()}</span></div></div></div>
       <button class="x" id="pkx2" aria-label="Exit">&#10005;</button>
       <div class="bd">
@@ -435,7 +447,7 @@
       on('bm', () => $('#pkmore', el).classList.toggle('open'));
       on('pkx', close); on('pkx2', close);
       on('pkfs', () => (document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()).catch(() => toast('Full screen is not available here. On iPhone, add Busters to your home screen.')));
-      on('pkset', setup); on('pkskip', advance); on('pkecu', openECU);
+      on('pkset', setup); on('pkskip', advance); on('pkecu', openECU); on('pkpke', openPKE);
       const bf = $('#bf', el);
       bf.onpointerdown = e => { e.preventDefault(); startFire(); }; bf.onpointerup = bf.onpointerleave = bf.onpointercancel = () => stopFire();
       bf.oncontextmenu = e => e.preventDefault();

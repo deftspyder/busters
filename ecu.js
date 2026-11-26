@@ -7,7 +7,7 @@
    (field, power, faults, the inspector) is simulated.
    window.BustersECU.mount(ctx, api) -> { tone(audio), destroy() }
      ctx: { S, esc, todayISO, demo }
-     api: { back() (to the pack, optional), exit(), sound() -> bool, setSound(on), audioCtx (standalone only) } */
+     api: { back() (to the pack, optional), pke() (to the PKE meter, optional), exit(), sound() -> bool, setSound(on), audioCtx (standalone only) } */
 (function () {
   // Never any ghosts from these (category Hospital is checked too).
   const NO_GHOSTS = /hospital|child|kids|pediatric|patient|medical|clinic|hospice|ronald mcdonald|cancer|chla/i;
@@ -286,7 +286,7 @@
     el.innerHTML = `<div class="eh pl">
         <span class="lamp gr" id="eL1"></span>
         <div class="et"><div class="t1">${esc(short)} // <span class="wd">CONTAINMENT UNIT</span><span class="nr">ECU</span></div><div class="t2" id="esub">ECU REMOTE LINK // ${spirits.length} ENTITIES</div></div>
-        ${api.back ? '<div class="seg"><button id="ebk">PACK</button><button class="on">ECU</button></div>' : ''}
+        ${api.back ? `<div class="seg"><button id="ebk">PACK</button><button class="on">ECU</button>${api.pke ? '<button id="epk">PKE</button>' : ''}</div>` : ''}
         <button class="ib" id="esnd" aria-label="Sound">&#9835;</button><button class="ib" id="ex" aria-label="Exit">&#10005;</button>
         <span class="lamp dim" id="eL2"></span></div>
       <div class="haz"></div>
@@ -520,6 +520,7 @@
 
     $('#ex').onclick = () => api.exit();
     if (api.back) $('#ebk').onclick = () => api.back();
+    if (api.back && api.pke) $('#epk').onclick = () => api.pke();
     $('#esnd').onclick = () => { const on = !soundOn(); if (api.setSound) api.setSound(on); else if (on) startOwn(); else stopOwn(); try { on ? localStorage.removeItem('pk-sound') : localStorage.setItem('pk-sound', 'off'); } catch (e) { /* ignore */ } paintSnd(); };
     $('#eaux').onclick = () => { if (!st.aux && st.batt < 20) return; st.aux = !st.aux;
       log(st.aux ? 'AUX: POWER ROUTED TO CONTAINMENT FIELD' : 'AUX: DISENGAGED // CELLS RECHARGING'); buzz(st.aux ? [20, 30, 40] : 15); };
