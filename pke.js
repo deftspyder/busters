@@ -24,6 +24,10 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clock = () => new Date().toLocaleTimeString('en-US', { hour12: false });
+  // light colour along the bands: green at the centre, through yellow and orange to red, then deep red at the far end
+  const LED = [[0, 60, 255, 110], [.3, 190, 255, 60], [.5, 255, 210, 40], [.68, 255, 130, 30], [.84, 255, 45, 30], [1, 150, 0, 12]];
+  const ledRGB = t => { let i = 1; while (i < LED.length - 1 && t > LED[i][0]) i++; const a = LED[i - 1], b = LED[i], m = clamp((t - a[0]) / (b[0] - a[0]), 0, 1);
+    return [1, 2, 3].map(k => Math.round(a[k] + (b[k] - a[k]) * m)); };
   const classOf = l => CLS[clamp(Math.floor(l * 7), 0, 6)];
   const stateOf = l => { let s = STATE[0][1]; for (const [t, n] of STATE) if (l >= t) s = n; return s; };
 
@@ -86,7 +90,7 @@
     if (!document.getElementById('pk-font')) { const l = document.createElement('link'); l.id = 'pk-font'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'; document.head.appendChild(l); }
     const short = String((S.crew && S.crew.short) || 'CREW').toUpperCase();
     const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* ignore */ } };
-    const st = { amb: .08, ambT: .08, energy: 0, lvl: 0, peak: 0, peakAt: 0, spikeEnd: 0, nextSpike: rnd(14, 30), lamp: false, lampMode: '', lit: false, band: 0, down: false };
+    const st = { amb: .08, ambT: .08, energy: 0, lvl: 0, peak: 0, peakAt: 0, spikeEnd: 0, nextSpike: rnd(14, 30), lamp: false, lampMode: '', lit: false, band: 0, down: false, gh: 0 };
     let timers = [], raf = 0, logLines = [], lastLine = '', pack = null, own = null, nextChirp = 0, nextFlash = 0, last = performance.now(), phase = 0, chase = 0;
     let track = null, lock = null, lastBand = -1, maxLogged = false;
 
@@ -126,27 +130,43 @@
       const [g, w, h, d] = fit($('#pwing')); if (!w) return; g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, w, h);
       const l = st.lvl, cx = w / 2, rad = 4.2, hubY = 15;
       g.fillStyle = '#1b1b1d'; g.strokeStyle = '#000'; g.beginPath(); g.arc(cx, hubY, 12, 0, 7); g.fill(); g.stroke();
-      g.fillStyle = `rgba(255,${Math.round(176 - 110 * l)},${Math.round(40 * (1 - l))},${.35 + .65 * l})`; g.shadowColor = '#ffb000'; g.shadowBlur = 6 + 18 * l; g.beginPath(); g.arc(cx, hubY, 6 + 2 * l, 0, 7); g.fill(); g.shadowBlur = 0;
+      const hc = ledRGB(l).join(','); g.fillStyle = `rgba(${hc},${.4 + .6 * l})`; g.shadowColor = `rgb(${hc})`; g.shadowBlur = 6 + 18 * l; g.beginPath(); g.arc(cx, hubY, 6 + 2 * l, 0, 7); g.fill(); g.shadowBlur = 0;
       for (const inset of [9, 21]) {
         const top = cx - 20 - inset, len = top + (h - inset - 8 - inset), n = Math.max(6, Math.round(len / 15)), lit = l * n, hd = ((chase % (n + 6)) + n + 6) % (n + 6);
         for (let i = 0; i < n; i++) {
           const s = (i + .5) / n * len, t = (i + 1) / n, across = s <= top;
           const dx = across ? 20 + s : cx - inset, y = across ? inset : inset + (s - top);
-          const on = i < lit, head = on && Math.abs(hd - i) < 1.2, part = clamp(lit - i, 0, 1), hot = t > .82;
+          const on = i < lit, head = on && Math.abs(hd - i) < 1.2, part = clamp(lit - i, 0, 1), [cr, cg, cb] = ledRGB(t);
           for (const side of [-1, 1]) {
             g.beginPath(); g.arc(cx + side * dx, y, rad, 0, 7);
-            if (on) { g.fillStyle = head ? '#fff' : hot ? `rgba(255,90,60,${.55 + .45 * part})` : `rgba(255,${200 - Math.round(60 * t)},40,${.55 + .45 * part})`;
-              g.shadowColor = hot ? '#ff2a1a' : '#ffb000'; g.shadowBlur = head ? 16 : 9; }
-            else { g.fillStyle = '#3a2c10'; g.shadowBlur = 0; }
+            if (on) { g.fillStyle = head ? `rgb(${Math.round(cr + (255 - cr) * .7)},${Math.round(cg + (255 - cg) * .7)},${Math.round(cb + (255 - cb) * .7)})` : `rgba(${cr},${cg},${cb},${.55 + .45 * part})`;
+              g.shadowColor = `rgb(${cr},${cg},${cb})`; g.shadowBlur = head ? 16 : 9; }
+            else { g.fillStyle = `rgb(${Math.round(cr * .16 + 10)},${Math.round(cg * .16 + 10)},${Math.round(cb * .16 + 8)})`; g.shadowBlur = 0; }
             g.fill();
           }
         }
       }
       g.shadowBlur = 0;
     }
+    // A ghostly light forms on the display while the Buster works the sweep bar: faint at low energy, bright and
+    // larger at high energy, and it fades when they stop. Drawn first, so the grid and waveform sit over it.
+    function drawGhost(g, w, h) {
+      st.gh += (clamp(st.energy * 1.15, 0, 1) - st.gh) * .07; const a = st.gh; if (a < .02) return;
+      const t = performance.now() / 1000, cx = w * .57 + Math.sin(t * .9) * w * .06, cy = h * .46 + Math.cos(t * .7) * h * .04, R = Math.min(w, h) * (.15 + .2 * a);
+      const blob = (x, y, r, al) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(215,255,240,${al})`); gr.addColorStop(.45, `rgba(120,255,200,${al * .45})`); gr.addColorStop(1, 'rgba(60,255,170,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+      g.save(); g.globalCompositeOperation = 'lighter';
+      blob(cx, cy + R * .5, R * 2.6, a * .22);
+      for (let i = 0; i < 7; i++) { const k = i / 6; blob(cx + Math.sin(t * 2.1 + i * .9) * R * .4 * k, cy + k * R * 2, R * (1 - k * .62), a * (.6 - k * .42) * (.85 + .15 * Math.sin(t * 9 + i))); }
+      if (a > .4) { g.globalCompositeOperation = 'destination-out'; const ea = clamp((a - .4) * 1.8, 0, .9);
+        for (const sx of [-1, 1]) { const gr = g.createRadialGradient(cx + sx * R * .3, cy - R * .08, 0, cx + sx * R * .3, cy - R * .08, R * .2); gr.addColorStop(0, `rgba(0,0,0,${ea})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = gr; g.beginPath(); g.ellipse(cx + sx * R * .3, cy - R * .08, R * .16, R * .22, 0, 0, 7); g.fill(); } }
+      g.restore();
+    }
     function drawScreen() {
       const [g, w, h, d] = fit($('#pscr')); if (!w) return; g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, w, h);
       const l = st.lvl, col = l > .92 ? '#ff5a46' : l > .56 ? '#ffd24a' : '#4dff88';
+      drawGhost(g, w, h);
       g.strokeStyle = '#1d5a33'; g.globalAlpha = .45; g.lineWidth = 1; g.beginPath();
       for (let x = 0; x <= w; x += w / 10) { g.moveTo(x, 0); g.lineTo(x, h); } for (let y = 0; y <= h; y += h / 6) { g.moveTo(0, y); g.lineTo(w, y); } g.stroke(); g.globalAlpha = 1;
       // bar graph down the left side, like the meter's level column
