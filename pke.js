@@ -30,14 +30,23 @@
   const LED = [[0, 60, 255, 110], [.3, 190, 255, 60], [.5, 255, 210, 40], [.68, 255, 130, 30], [.84, 255, 45, 30], [1, 150, 0, 12]];
   const ledRGB = t => { let i = 1; while (i < LED.length - 1 && t > LED[i][0]) i++; const a = LED[i - 1], b = LED[i], m = clamp((t - a[0]) / (b[0] - a[0]), 0, 1);
     return [1, 2, 3].map(k => Math.round(a[k] + (b[k] - a[k]) * m)); };
-  // Ghost types a Buster can set the scan for. All original designs. [id, button label, log name]
-  const GHOSTS = [['wisp', 'WISP', 'FREE-FLOATING VAPOR'], ['friendly', 'FRIENDLY', 'FRIENDLY HAUNT'], ['lady', 'LADY', 'LADY IN WHITE'], ['polter', 'POLTER', 'POLTERGEIST'], ['shadow', 'SHADOW', 'SHADOW FIGURE']];
+  // Ghost types a Buster can set the scan for. [id, button label, log name]
+  const GHOSTS = [['wisp', 'WISP', 'FREE-FLOATING VAPOR'], ['friendly', 'FRIENDLY', 'FRIENDLY HAUNT'], ['lady', 'LADY', 'LADY IN WHITE'], ['library', 'LIBRARY', 'LIBRARY APPARITION'],
+    ['polter', 'POLTER', 'POLTERGEIST'], ['shadow', 'SHADOW', 'SHADOW FIGURE']];
+  // Types shown from art Bill supplied (cut out of their backgrounds and tinted for the scanner). The others are drawn in code.
+  const ART = { lady: 'img/pke/lady.png?v=1', library: 'img/pke/librarian.png?v=1' }, art = {};
+  function artLoad(id, cb) { if (!ART[id]) return; let a = art[id]; if (!a) { a = art[id] = { img: new Image(), ok: false, cbs: [] }; a.img.onload = () => { a.ok = true; a.cbs.forEach(f => f()); a.cbs = []; }; a.img.src = ART[id]; }
+    if (cb) { if (a.ok) cb(); else a.cbs.push(cb); } }
   // One drawing per type, used for both the menu icon and the shape on the scanner. (cx, cy) centre, R size, al opacity, t seconds.
   function ghostShape(g, type, cx, cy, R, al, t) {
     if (al <= .01) return; const c = a => `rgba(205,255,235,${clamp(a, 0, 1)})`;
     const el = (x, y, rx, ry, rot) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, 7); g.fill(); };
     g.save(); g.translate(cx, cy); g.fillStyle = c(al); g.strokeStyle = c(al * .6); g.lineCap = 'round'; g.shadowColor = `rgba(110,255,200,${clamp(al, 0, 1)})`; g.shadowBlur = R * .5;
-    if (type === 'wisp') {
+    if (ART[type] && art[type] && art[type].ok) {
+      const im = art[type].img, hh = R * 3.3, ww = hh * im.width / im.height; g.globalAlpha = clamp(al * (.92 + .08 * Math.sin(t * 7)), 0, 1); g.shadowBlur = R * .35;
+      g.rotate(Math.sin(t * 1.1) * .035); g.drawImage(im, -ww / 2 + Math.sin(t * 1.6) * R * .05, -hh * .46, ww, hh);
+    } else if (ART[type] && type !== 'lady') { artLoad(type); // art still loading: nothing yet
+    } else if (type === 'wisp') {
       for (let i = 0; i < 5; i++) { const k = i / 4, x = Math.sin(t * 2 + i) * R * .25 * k + k * R * .5, y = -R * .5 + k * R * 1.2, r = R * (.6 - k * .38), gr = g.createRadialGradient(x, y, 0, x, y, r);
         gr.addColorStop(0, c(al * (.9 - k * .5))); gr.addColorStop(1, c(0)); g.fillStyle = gr; g.shadowBlur = 0; el(x, y, r, r); }
     } else if (type === 'friendly') {
@@ -114,8 +123,8 @@
 .pke .btn{font:inherit;flex:1;min-height:40px;border-radius:8px;border:1px solid #ffffff44;background:#0009;color:#ffd77a;letter-spacing:.16em;cursor:pointer}
 .pke .btn.on{background:#ffb000;color:#140a02;border-color:#ffb000;box-shadow:0 0 14px #ffb000aa}
 .pke .cap{flex:0 0 auto;font-size:.7em;letter-spacing:.2em;opacity:.7;margin:1px 2px -4px}
-.pke .scan{display:flex;gap:6px;flex:0 0 auto}
-.pke .scan button{font:inherit;font-size:.62em;letter-spacing:.06em;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 1px 3px;border-radius:8px;border:1px solid #ffffff33;background:#0009;color:#ffd77a;cursor:pointer;overflow:hidden}
+.pke .scan{display:flex;gap:5px;flex:0 0 auto}
+.pke .scan button{font:inherit;font-size:.58em;letter-spacing:.03em;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 1px 3px;border-radius:8px;border:1px solid #ffffff33;background:#0009;color:#ffd77a;cursor:pointer;overflow:hidden}
 .pke .scan button canvas{width:36px;height:36px;display:block}
 .pke .scan button.on{border-color:#7dffc8;color:#d8ffe2;box-shadow:0 0 10px #2bff6a66,inset 0 0 12px #2bff6a22}
 .pke .log{flex:0 0 auto;height:calc(4 * 1.45em + 14px);font-size:.85em;line-height:1.45;background:#060606;border-radius:6px;padding:7px 9px;overflow:hidden;box-shadow:inset 0 2px 10px #000}
@@ -173,7 +182,8 @@
     const paintScan = () => el.querySelectorAll('#pscan button').forEach(b => b.classList.toggle('on', b.dataset.g === scan));
     function setScan(id, quiet) { if (!GHOSTS.some(x => x[0] === id)) return; scan = id; resolved = false; try { localStorage.setItem('pke-scan', id); } catch (e) { /* ignore */ } paintScan(); if (!quiet) { log('SCAN SET: ' + scanName()); buzz(10); } }
     el.querySelectorAll('#pscan button').forEach(b => { const cv = b.querySelector('canvas'), g = cv.getContext('2d'), id = b.dataset.g;
-      ghostShape(g, id, 36, id === 'lady' ? 30 : id === 'shadow' ? 32 : 36, id === 'lady' || id === 'shadow' ? 19 : id === 'polter' ? 21 : 24, 1, .6); b.onclick = () => setScan(id); });
+      const icon = () => { g.clearRect(0, 0, 72, 72); ghostShape(g, id, 36, ART[id] ? 33 : id === 'shadow' ? 32 : 36, ART[id] ? 20 : id === 'shadow' ? 19 : id === 'polter' ? 21 : 24, 1, ART[id] ? 0 : .6); };
+      icon(); artLoad(id, icon); b.onclick = () => setScan(id); });
     paintScan();
 
     // ---- sweep bar: the faster and farther the finger slides, the more energy
