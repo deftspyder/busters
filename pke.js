@@ -122,18 +122,18 @@
 .pke .sw .tx{position:absolute;inset:0;display:grid;place-items:center;letter-spacing:.22em;font-size:.95em;color:#ffe9b0;text-shadow:0 0 6px #000,0 0 10px #ffb000;pointer-events:none}
 .pke .row{display:flex;gap:8px;flex:0 0 auto}
 .pke .btn{font:inherit;flex:1;min-height:40px;border-radius:8px;border:1px solid #ffffff44;background:#0009;color:#ffd77a;letter-spacing:.16em;cursor:pointer}
+.pke .btn.lamp{flex:0 0 62px;min-height:0;font-size:.78em;letter-spacing:.08em;line-height:1.25;padding:2px}
 .pke .btn.on{background:#ffb000;color:#140a02;border-color:#ffb000;box-shadow:0 0 14px #ffb000aa}
-.pke .cap{flex:0 0 auto;font-size:.7em;letter-spacing:.2em;opacity:.7;margin:1px 2px -4px}
-.pke .scan{display:flex;gap:5px;flex:0 0 auto}
+.pke .scan{display:flex;gap:5px;flex:1;min-width:0}
 .pke .scan button{font:inherit;font-size:.58em;letter-spacing:.03em;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 1px 3px;border-radius:8px;border:1px solid #ffffff33;background:#0009;color:#ffd77a;cursor:pointer;overflow:hidden}
 .pke .scan button canvas{width:36px;height:36px;display:block}
 .pke .scan button.on{border-color:#7dffc8;color:#d8ffe2;box-shadow:0 0 10px #2bff6a66,inset 0 0 12px #2bff6a22}
-.pke .log{flex:0 0 auto;height:calc(4 * 1.45em + 14px);font-size:.85em;line-height:1.45;background:#060606;border-radius:6px;padding:7px 9px;overflow:hidden;box-shadow:inset 0 2px 10px #000}
+.pke .log{flex:0 0 auto;height:calc(5 * 1.45em + 14px);font-size:.85em;line-height:1.45;background:#060606;border-radius:6px;padding:7px 9px;overflow:hidden;box-shadow:inset 0 2px 10px #000}
 .pke .log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pke .log div:nth-child(n+3){opacity:.8}.pke .log div:nth-child(n+5){opacity:.55}
 .pke .lc-routine{color:#b98f4a}.pke .lc-boot{color:#ffe9d0;text-shadow:0 0 6px #ff8a00}.pke .lc-advisory{color:#5fe3ff;text-shadow:0 0 6px #35b2e8}
 .pke .lc-warn{color:#ffc24a;text-shadow:0 0 6px #ff9a00}.pke .lc-fail{color:#ff5a46;text-shadow:0 0 8px #ff2a1a}.pke .lc-recover{color:#b6ff6a;text-shadow:0 0 6px #7dff3a}
-@media (min-aspect-ratio:1/1) and (max-height:520px){.pke .log,.pke .cap{display:none}.pke .scan button span{display:none}.pke .scan button canvas{width:28px;height:28px}.pke .scr{min-height:90px}.pke .sw{height:56px}.pke .ro .big{font-size:2.2em}}`;
+@media (min-aspect-ratio:1/1) and (max-height:520px){.pke .log{display:none}.pke .scan button span{display:none}.pke .scan button canvas{width:28px;height:28px}.pke .scr{min-height:90px}.pke .sw{height:56px}.pke .ro .big{font-size:2.2em}}`;
 
   function lineClass(t) {
     if (/^PEAK|^SIGNAL: FULL|^WARN|RESOLVED/.test(t)) return 'warn';
@@ -168,14 +168,13 @@
             <div class="cl"><div class="lb">CLASS</div><b id="pcl">I</b></div></div>
           <div class="st"><span id="pstt">AMBIENT</span><span id="ppk">PEAK 0.0</span></div></div>
         <div class="sw" id="psw"><div class="tk"></div><div class="fill" id="pfill"></div><div class="fg" id="pfg"></div><div class="tx" id="ptx">&#9664; SLIDE TO SWEEP &#9654;</div></div>
-        <div class="row"><button class="btn" id="plamp">LAMP OFF</button><button class="btn" id="pzero">ZERO PEAK</button></div>
-        <div class="cap">SET SCAN</div>
-        <div class="scan" id="pscan">${GHOSTS.map(([id, lb]) => `<button data-g="${id}" aria-label="Scan for ${lb}"><canvas width="72" height="72"></canvas><span>${lb}</span></button>`).join('')}</div>
+        <div class="row"><button class="btn lamp" id="plamp">LAMP OFF</button>
+        <div class="scan" id="pscan">${GHOSTS.map(([id, lb]) => `<button data-g="${id}" aria-label="Scan for ${lb}"><canvas width="72" height="72"></canvas><span>${lb}</span></button>`).join('')}</div></div>
         <div class="log" id="plog"></div>
       </div></div>`;
 
     function log(t) { logLines.unshift({ t: clock() + '  ' + t, c: lineClass(t) }); logLines = logLines.slice(0, 40);
-      const k = $('#plog'); if (k) k.innerHTML = logLines.slice(0, 5).map(x => `<div class="lc-${x.c}">&gt; ${esc(x.t)}</div>`).join(''); }
+      const k = $('#plog'); if (k) k.innerHTML = logLines.slice(0, 6).map(x => `<div class="lc-${x.c}">&gt; ${esc(x.t)}</div>`).join(''); }
 
     // ---- set scan: which kind of ghost the meter is tuned for
     let scan = 'wisp', resolved = false; try { const v = localStorage.getItem('pke-scan'); if (GHOSTS.some(x => x[0] === v)) scan = v; } catch (e) { /* ignore */ }
@@ -237,7 +236,7 @@
       st.gh += (clamp(st.energy * 1.15, 0, 1) - st.gh) * .07; const a = st.gh;
       if (a < .02) { gh.trail.length = 0; gh.res = 0; if (gh.mode === 'hover') gh.next = Math.max(gh.next, now + 2); return; }
       // the more energy, the wilder it gets: its own clock runs faster, it roams wider, and it rushes toward the glass and away again
-      const wild = clamp((a - .12) * 1.6, 0, 1); gh.tm += dt * (1.5 + 4.5 * wild); const tm = gh.tm;
+      const calm = scan === 'friendly' ? .3 : 1, wild = clamp((a - .12) * 1.6, 0, 1) * calm; gh.tm += dt * ((calm < 1 ? .9 : 1.5) + 4.5 * wild); const tm = gh.tm; // the friendly one is for kids, so it stays gentle
       const hx = .54 + (.2 + .14 * wild) * Math.sin(tm * .55) + .06 * Math.sin(tm * 1.7), hy = .46 + (.1 + .1 * wild) * Math.cos(tm * .43) + .03 * Math.sin(tm * 2.3);
       gh.z += ((1 + (.12 + .88 * wild) * (.6 * Math.sin(tm * .8) + .3 * Math.sin(tm * 1.9 + 1))) - gh.z) * Math.min(1, dt * 4);
       // spins: every so often it whips round in a full turn, looping the loop as it goes (more often the more energy there is)
@@ -263,7 +262,7 @@
       for (let i = 0; i < 3; i++) blob(cx + Math.sin(now * 1.7 + i * 2.1) * R * .28, cy + Math.cos(now * 1.3 + i * 2.1) * R * .24, R * (.78 + .12 * Math.sin(now * 2.6 + i)), ea * (.26 + .05 * Math.sin(now * 9 + i)));
       for (let i = 1; i < 5; i++) { const k = i / 5, lx = Math.sin(now * 2.1 + i) * R * .3 * k, ly = k * R * 1.5; blob(cx + lx * Math.cos(lean) - ly * Math.sin(lean), cy + lx * Math.sin(lean) + ly * Math.cos(lean), R * (.9 - k * .55), ea * .2 * (1 - k)); }
       // above about half energy the wisp takes the shape the scan is set for, sharper the higher it goes
-      if (res > .01) { g.save(); g.translate(cx, cy + R * .15); g.rotate(scan === 'eyes' ? Math.sin(tm * 1.1) * .16 : lean); ghostShape(g, scan, 0, 0, R * 1.05 * (SIZE[scan] || 1), av * edge(gh.x) * far * res * (scan === 'eyes' ? 1 : .8), now); g.restore(); }
+      if (res > .01) { g.save(); g.translate(cx, cy + R * .15); g.rotate(scan === 'eyes' || scan === 'library' ? Math.sin(tm * 1.1) * .16 : lean); /* the eyes and the library apparition stay upright and only sway; the others may flip */ ghostShape(g, scan, 0, 0, R * 1.05 * (SIZE[scan] || 1), av * edge(gh.x) * far * res * (scan === 'eyes' ? 1 : .8), now); g.restore(); }
       if (res > .6 && !resolved) { resolved = true; log('SCAN: ' + scanName() + ' RESOLVED // CLASS ' + classOf(st.lvl)); buzz([20, 30, 20]); } else if (res < .15 && resolved) { resolved = false; if (scan !== 'wisp') log('SCAN: ' + scanName() + ' LOST // SWEEP TO REACQUIRE'); }
       g.restore();
     }
@@ -343,7 +342,6 @@
       paintLamp();
     }
     $('#plamp').onclick = () => { if (st.lamp) { lampOff(); log('LAMP: OFF'); } else lampOn(); };
-    $('#pzero').onclick = () => { st.peak = 0; maxLogged = false; log('OK: PEAK ZEROED'); buzz(10); };
 
     // ---- the loop
     function frame(now) {
