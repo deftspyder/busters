@@ -249,7 +249,7 @@
       else if (gh.mode === 'away') { if (now > gh.until) gh.mode = 'in'; }
       else { gh.vx += (Math.max(.08, (hx - gh.x) * 1.1) - gh.vx) * Math.min(1, dt * 2.2); gh.x += gh.vx * dt; gh.y += (hy - gh.y) * Math.min(1, dt * 1.2); if (hx - gh.x < .03) { gh.mode = 'hover'; gh.next = now + rnd(5, 10); } }
       if (++gh.n % 3 === 0) { gh.trail.unshift([gh.x, gh.y]); if (gh.trail.length > 26) gh.trail.pop(); }
-      const R = Math.min(w, h) * (.15 + .2 * a), edge = x => { const e = clamp(Math.min(x + .5, 1.5 - x) / .62, 0, 1); return e * e * (3 - 2 * e); };
+      const R = Math.min(w, h) * (.15 + .2 * a) * .65, edge = x => { const e = clamp(Math.min(x + .5, 1.5 - x) / .62, 0, 1); return e * e * (3 - 2 * e); };
       const blob = (x, y, r, al) => { if (al <= .004) return; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(190,255,228,${al})`); gr.addColorStop(.5, `rgba(120,255,200,${al * .5})`); gr.addColorStop(1, 'rgba(60,255,170,0)');
         g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r * .85, r * 1.2, 0, 0, 7); g.fill(); };
       g.save(); g.globalCompositeOperation = 'screen';
